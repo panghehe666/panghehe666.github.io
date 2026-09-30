@@ -11,7 +11,8 @@ tags:
   - UX/UI 
 ---
 # markdown常用语法技巧
-[toc]
+* TOC
+{:toc}
 
 # 1.强调
 ```markdown
