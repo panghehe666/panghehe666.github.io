@@ -11,7 +11,9 @@ tags:
   - UX/UI 
 ---
 # markdown常用语法技巧
-[toc]
+* TOC
+{:toc}
+
 # 1.强调
 ```markdown
 *斜体* 或 _斜体_
@@ -69,8 +71,10 @@ ___
 > - 列表
 > - 等
 ```
+
 example:
 > 我好帅 --庞和合
+
 ---
 # 5.分割线
 ```markdown
