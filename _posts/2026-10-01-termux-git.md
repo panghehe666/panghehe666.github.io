@@ -49,7 +49,7 @@ ___
 
 | 场景 | 命令 |
 |---|---|
-| 克隆全部公开仓库 | `curl -s https://api.github.com/users/panghehe666/repos?per_page=100 \| jq -r '.[].ssh_url' \| while read url; do git clone "$url"; done` |
+| 克隆全部公开仓库 | `curl -s https://api.github.com/users/panghehe666/repos?per_page=100` \| `jq -r '.[].ssh_url'` \| `while read url; do git clone "$url"; done` |
 | 已存在本地仓库 | 仅需把远程地址改成 SSH：<br>`git remote set-url origin git@github.com:panghehe666/仓库名.git` |
 
 ___
@@ -91,7 +91,7 @@ ___
 | 问题 | 解决 |
 |---|---|
 | `Permission denied (publickey)` | 未添加公钥或 SSH agent 未启动，重新执行第 3 步 |
-| `remote: Invalid username or password` | 远程地址仍是 HTTPS，执行<br>`git remote set-url origin git@github.com:<用户名>/<仓库>.git` |
+| `remote: Invalid username or password` | 远程地址仍是 HTTPS，执行<br>`git remote set-url origin git@github.com:用户名/仓库名.git` |
 | 端口 22 被墙 | 在 `~/.ssh/config` 中添加：<br><pre>Host github.com<br>  Hostname ssh.github.com<br>  Port 443</pre> |
 
 ---
