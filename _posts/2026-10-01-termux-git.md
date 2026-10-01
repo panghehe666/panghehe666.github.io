@@ -56,7 +56,7 @@ ___
 # 5.日常 Git 常用操作速查
 
 | 操作 | 命令 |
-|---|---|
+|:--: |:--: |
 | 查看状态 | `git status` |
 | 添加文件到暂存区 | `git add 文件名` 或 `git add .` |
 | 提交 | `git commit -m "描述"` |
@@ -70,6 +70,7 @@ ___
 | 撤销上一次 commit（保留改动） | `git reset --soft HEAD~1` |
 | 撤销上一次 commit（丢弃改动） | `git reset --hard HEAD~1` |
 | 删除已跟踪文件 | `git rm 文件名 && git commit -m "remove 文件名"` |
+
 ___
 
 # 6.一键模板：新增文件并推送
