@@ -7,7 +7,7 @@ author:     "庞和合"
 header-img: "img/post-bg-os-metro.jpg"
 catalog: true
 tags:
-  - hUX 开源技巧
+  - 开源分享
   - UX/UI 
 ---
 # markdown常用语法技巧
