@@ -64,5 +64,8 @@ gkd:https://github.com/gkd-kit/gkd
 ## 7.音乐
 Musicfree:https://github.com/maotoumao/MusicFree
 
+## 8.vpn
+ 远航：https://yhfast.top/zh/download/
+ 
 ---
 > 以上所以开源软件均可从Github Store中获取
