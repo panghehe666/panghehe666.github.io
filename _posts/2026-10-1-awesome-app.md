@@ -66,7 +66,8 @@ Musicfree:https://github.com/maotoumao/MusicFree
 
 ## 8.vpn
  远航：https://yhfast.top/zh/download/
- 着重推荐FreeSocks+fclash,使用方法不做赘述，可以以远航为跳板在youtobe上自行研究
+ 着重推荐FreeSocks+fclash,使用方法不做赘述，可以以远航为跳板在youtobe上自行研究。
+ 
 
  ## 9.浏览器
  iceraven:https://github.com/fork-maintainers/iceraven-browser
