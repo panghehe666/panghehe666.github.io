@@ -29,7 +29,7 @@ tags:
 
 结果只会来自 GitHub。想找官方仓库、Issue、命令备忘录时特别好用。
 
-![](/img/in-post/google-search-skill/site-github.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/google-search-skill/site-github.jpg)
 *搜索 `termux site:github.com`：结果全是 GitHub 上的 Termux 相关页面*
 
 小提示：域名写成 `github.com`，中间不要空格。写成 `github com` 就失效了。
@@ -46,7 +46,7 @@ tags:
 
 适合找书名、报错原文、某一句固定说法。不加引号时，页面里只要零散出现这些字也可能被搜出来。
 
-![](/img/in-post/google-search-skill/exact-phrase.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/google-search-skill/exact-phrase.jpg)
 *搜索 `"你的问题"`：命中的是书名里完整出现这四个字的结果*
 
 ## 3. `filetype:` 只要某类文件
@@ -63,7 +63,7 @@ tags:
 
 结果会带 PDF 标记，教程、讲义、官方文档都能直接下。
 
-![](/img/in-post/google-search-skill/filetype-pdf.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/google-search-skill/filetype-pdf.jpg)
 *搜索 `python filetype:pdf`：第一条就是 Python Tutorial 的 PDF*
 
 常用后缀还有 `ppt`、`doc`、`xls`、`txt`。
@@ -80,7 +80,7 @@ the * of money
 
 可能出现 *the psychology of money*、*the use of money*、*the role of money* 等等。
 
-![](/img/in-post/google-search-skill/wildcard.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/google-search-skill/wildcard.jpg)
 *搜索 `the * of money`：第一条就是 The Psychology of Money*
 
 记不清书名、歌词或固定搭配时，这个最省事。

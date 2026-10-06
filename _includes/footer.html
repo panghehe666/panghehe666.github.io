@@ -33,6 +33,9 @@
 <!-- Simple Jekyll Search -->
 <script src="{{ "/js/simple-jekyll-search.min.js" | prepend: site.baseurl }}"></script>
 
+<!-- Image lazy-load + CDN optimization -->
+<script src="{{ "/js/img-optimize.js" | prepend: site.baseurl }}"></script>
+
 <!-- Service Worker -->
 {% if site.service-worker %}
 <script src="{{ "/js/snackbar.js " | prepend: site.baseurl }}"></script>
@@ -51,30 +54,9 @@
     }
 </script>
 
-<!--
-     Because of the native support for backtick-style fenced code blocks
-     right within the Markdown is landed in Github Pages,
-     From V1.6, There is no need for Highlight.js,
-     so Huxblog drops it officially.
-
-     - https://github.com/blog/2100-github-pages-now-faster-and-simpler-with-jekyll-3-0
-     - https://help.github.com/articles/creating-and-highlighting-code-blocks/
-     - https://github.com/jneen/rouge/wiki/list-of-supported-languages-and-lexers
--->
-<!--
-    <script>
-        async("http://cdn.bootcss.com/highlight.js/8.6/highlight.min.js", function(){
-            hljs.initHighlightingOnLoad();
-        })
-    </script>
-    <link href="http://cdn.bootcss.com/highlight.js/8.6/styles/github.min.css" rel="stylesheet">
--->
-
-
 {% if page.plchart %}
 <!-- jquery.tagcloud.js -->
 <script>
-    // https://stackoverflow.com/questions/9975810/make-iframe-automatically-adjust-height-according-to-the-contents-without-using
     function resizeIframe(obj) {
         obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
     }
@@ -97,7 +79,6 @@
 <script>
     async('{{ "/js/jquery.tagcloud.js" | prepend: site.baseurl }}', function () {
         $.fn.tagcloud.defaults = {
-            //size: {start: 1, end: 1, unit: 'em'},
             color: { start: '#bbbbee', end: '#2f93b4' },
         };
         $('#tag_cloud a').tagcloud();
@@ -118,11 +99,9 @@
 <!-- Google Analytics -->
 {% if site.ga_track_id %}
 <script>
-    // dynamic User by Hux
     var _gaId = '{{ site.ga_track_id }}';
     var _gaDomain = '{{ site.ga_domain }}';
 
-    // Originial
     (function (i, s, o, g, r, a, m) {
         i['GoogleAnalyticsObject'] = r; i[r] = i[r] || function () {
             (i[r].q = i[r].q || []).push(arguments)
@@ -139,10 +118,8 @@
 <!-- Baidu Tongji -->
 {% if site.ba_track_id %}
 <script>
-    // dynamic User by Hux
     var _baId = '{{ site.ba_track_id }}';
 
-    // Originial
     var _hmt = _hmt || [];
     (function () {
         var hm = document.createElement("script");
@@ -159,21 +136,17 @@
 <script type="text/javascript">
     function generateCatalog(selector) {
 
-        // interop with multilangual 
         if ('{{ page.multilingual }}' == 'true') {
             _containerSelector = 'div.post-container.active'
         } else {
             _containerSelector = 'div.post-container'
         }
 
-        // init
         var P = $(_containerSelector), a, n, t, l, i, c;
         a = P.find('h1,h2,h3,h4,h5,h6');
 
-        // clean
         $(selector).html('')
 
-        // appending
         a.each(function () {
             n = $(this).prop('tagName').toLowerCase();
             i = "#" + $(this).prop('id');
@@ -187,16 +160,11 @@
 
     generateCatalog(".catalog-body");
 
-    // toggle side catalog
     $(".catalog-toggle").click((function (e) {
         e.preventDefault();
         $('.side-catalog').toggleClass("fold")
     }))
 
-    /*
-     * Doc: https://github.com/davist11/jQuery-One-Page-Nav
-     * Fork by Hux to support padding
-     */
     async("{{ '/js/jquery.nav.js' | prepend: site.baseurl }}", function () {
         $('.catalog-body').onePageNav({
             currentClass: "active",
@@ -218,33 +186,27 @@
 
 <!-- Multi-Lingual -->
 {% if page.multilingual %}
-<!-- Handle Language Change -->
 <script type="text/javascript">
-    // get nodes
     var $zh = document.querySelector(".zh");
     var $en = document.querySelector(".en");
     var $select = document.querySelector("select");
 
-    // Changes at v1.8.1: include lang flag as a url query. This interop well with catalog hash anchors.
     function getLang() { return new URLSearchParams(document.location.search).get("lang") }
 
     function setLang(newLang) {
         var params = new URLSearchParams(document.location.search)
         params.set("lang", newLang)
-        document.location.search = params.toString()  // refresh.
+        document.location.search = params.toString()
     }
 
-    // handle render
     function _render() {
         var lang = getLang()
-        // en
         if (lang == "en") {
             $select.selectedIndex = 1;
             $en.style.display = "block";
             $en.classList.add("active");
             $zh.style.display = "none";
             $zh.classList.remove("active");
-            // default to zh-cn
         } else {
             $select.selectedIndex = 0;
             $zh.style.display = "block";
@@ -252,11 +214,9 @@
             $en.style.display = "none";
             $en.classList.remove("active");
         }
-        // interop with catalog 
         generateCatalog(".catalog-body");
     }
 
-    // handle select change
     function onLanChange(index) {
         if (index == 0) {
             lang = "zh"
@@ -266,18 +226,15 @@
         setLang(lang)
     }
 
-    // init
     _render();
 </script>
 {% endif %}
 
 <!-- Simple Jekyll Search -->
 <script>
-    // https://stackoverflow.com/questions/1912501/unescape-html-entities-in-javascript
     function htmlDecode(input) {
         var e = document.createElement('textarea');
         e.innerHTML = input;
-        // handle case of empty input
         return e.childNodes.length === 0 ? "" : e.childNodes[0].nodeValue;
     }
 
@@ -289,8 +246,6 @@
         noResultsText: 'No results',
         limit: 50,
         fuzzy: false,
-        // a hack to get escaped subtitle unescaped. for some reason, 
-        // post.subtitle w/o escape filter nuke entire search.
         templateMiddleware: function (prop, value, template) {
             if (prop === 'subtitle' || prop === 'title') {
                 if (value.indexOf("code")) {
@@ -321,7 +276,7 @@
                 $searchClose.on('click', function (e) {
                     e.preventDefault();
                     $searchPage.removeClass('search-active');
-                    $body.attr('class', prevClasses);  // from closure 
+                    $body.attr('class', prevClasses);
                 });
                 $searchInput.focus();
             }
