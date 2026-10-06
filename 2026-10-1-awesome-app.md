@@ -67,5 +67,17 @@ Musicfree:https://github.com/maotoumao/MusicFree
 ## 8.浏览器
 Iceraven：https://github.com/fork-maintainers/iceraven-browser
 
+## 9.玩机权限框架（Shizuku 及相关）
+
+**Shizuku** 是免 Root 玩机生态的核心工具，能让普通 App 通过 ADB 直接调用系统 API，无需 Root 也能实现深度系统操作。
+
+相关推荐：
+- **Shevery**：Shizuku 的增强管理器（Material 3 界面 + 开机自启等）
+- **Gama**：一键切换 Vulkan / OpenGL 渲染
+- **GKD**：基于无障碍的广告自动跳过工具
+- **冰雹（Hail）**：应用冻结，省内存省电
+
+详细激活与使用教程见：[玩转Shizuku](/2026/10/06/wan-zhuan-shizuku/)
+
 ---
 > 以上所以开源软件均可从Github Store中获取
