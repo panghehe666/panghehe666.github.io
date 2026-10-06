@@ -66,11 +66,16 @@ tags:
 
 - [MusicFree](https://github.com/maotoumao/MusicFree)
 
-## 8.浏览器
+## 8.vpn
+
+- [远航](https://yhfast.top/zh/download/)  
+  着重推荐 FreeSocks + fclash，使用方法不做赘述，可以以远航为跳板在 YouTube 上自行研究。
+
+## 9.浏览器
 
 - [Iceraven](https://github.com/fork-maintainers/iceraven-browser)
 
-## 9.玩机权限框架（Shizuku 及相关）
+## 10.玩机权限框架（Shizuku 及相关）
 
 **[Shizuku](https://github.com/RikkaApps/Shizuku)** 是免 Root 玩机生态的核心工具，能让普通 App 通过 ADB 直接调用系统 API，无需 Root 也能实现深度系统操作。
 
