@@ -6,9 +6,8 @@ header-style: text
 catalog:      true
 tags:
     - 开源分享
-    - Vim
-    - Termux
 ---
+
 * TOC
 {:toc}
 
