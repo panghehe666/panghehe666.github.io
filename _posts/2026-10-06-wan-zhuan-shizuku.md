@@ -17,7 +17,7 @@ tags:
 
 ## 1. Shizuku：玩机界的「瑞士军刀」
 
-**GitHub 地址**：https://github.com/RikkaApps/Shizuku
+**GitHub**：[RikkaApps/Shizuku](https://github.com/RikkaApps/Shizuku)
 
 Shizuku 是整个玩机生态的基石。它能让普通 App 通过 ADB 直接调用系统 API，不用 Root 也能干大事！
 
@@ -36,7 +36,7 @@ Shizuku 是整个玩机生态的基石。它能让普通 App 通过 ADB 直接�
 
 ## 2. Shevery：Shizuku 的「豪华升级版」
 
-**GitHub 地址**：https://github.com/HmnDev-Tech/shevery
+**GitHub**：[HmnDev-Tech/shevery](https://github.com/HmnDev-Tech/shevery)
 
 Shevery 是 Shizuku 的现代化分支，换了 Material 3 界面，还加了开机自启、ADB 模块、终端（甚至带 AI）等超多好用功能。
 
@@ -65,7 +65,7 @@ Shevery 是 Shizuku 的现代化分支，换了 Material 3 界面，还加了开
 
 ## 3. Gama：一键切换 Vulkan / OpenGL
 
-**GitHub 地址**：https://github.com/palincat/gama
+**GitHub**：[palincat/gama](https://github.com/palincat/gama)
 
 Gama（Graphics API Manager）可以让你不 Root 就切换 GPU 渲染 API。
 
@@ -88,7 +88,7 @@ Gama（Graphics API Manager）可以让你不 Root 就切换 GPU 渲染 API。
 
 ## 4. GKD：广告终结者
 
-**GitHub 地址**：https://github.com/gkd-kit/gkd
+**GitHub**：[gkd-kit/gkd](https://github.com/gkd-kit/gkd)
 
 GKD 是基于无障碍服务的「自动点击」神器，专门用来跳过开屏广告、关闭各种弹窗。规则全靠订阅，社区维护得非常猛。
 
@@ -104,15 +104,15 @@ GKD 是基于无障碍服务的「自动点击」神器，专门用来跳过开�
 
 **推荐订阅链接**（任选一个，国内友好）：
 
-- 奥怪订阅：`https://cdn.jsdelivr.net/gh/aoguai/subscription@custom/dist/aoguai_gkd.json5`
-- 甘霖订阅：`https://cdn.jsdelivr.net/npm/@ganlinte/gkd-subscription@latest/dist/ganlin_gkd.json5`
-- 整合懒人版：`https://cdn.jsdelivr.net/gh/oklazeno/gkd-subscription@main/gkd.json5`
+- [奥怪订阅](https://cdn.jsdelivr.net/gh/aoguai/subscription@custom/dist/aoguai_gkd.json5)
+- [甘霖订阅](https://cdn.jsdelivr.net/npm/@ganlinte/gkd-subscription@latest/dist/ganlin_gkd.json5)
+- [整合懒人版](https://cdn.jsdelivr.net/gh/oklazeno/gkd-subscription@main/gkd.json5)
 
 广告？不存在的！😎
 
 ## 5. 雹（Hail）：应用冻结专家
 
-**GitHub 地址**：https://github.com/aistra0528/Hail
+**GitHub**：[aistra0528/Hail](https://github.com/aistra0528/Hail)
 
 雹可以「冻结」不常用的 App，让它们彻底休息，省内存、省电、还干净。支持停用、隐藏、暂停等多种模式。
 
