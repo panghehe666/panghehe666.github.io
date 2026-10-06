@@ -40,7 +40,7 @@ Shizuku 是整个玩机生态的基石。它能让普通 App 通过 ADB 直接�
 
 Shevery 是 Shizuku 的现代化分支，换了 Material 3 界面，还加了开机自启、ADB 模块、终端（甚至带 AI）等超多好用功能。
 
-![](/img/in-post/wan-zhuan-shizuku/shevery-running.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@b11fd1ce5a0a50c4f767cc3bb4e0190e2ae52981/img/in-post/wan-zhuan-shizuku/shevery-running.jpg)
 *Shevery 14.1 运行中（adb 模式），已授权 4 个应用*
 
 ### 它和 Shizuku 的关系
@@ -58,7 +58,7 @@ Shevery 是 Shizuku 的现代化分支，换了 Material 3 界面，还加了开
 5. 首次可能需要授权「写入安全设置」权限，同意就行。
 6. 重启后它会自动恢复无线调试并启动服务（小米用户可能还要手动确认一下「USB 调试安全设置」）。
 
-![](/img/in-post/wan-zhuan-shizuku/shevery-autostart.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/wan-zhuan-shizuku/shevery-autostart.jpg)
 *设置页：开机自启（无线调试）+ 错误保护。注意：Shevery 和官方 Shizuku 只能装一个*
 
 搞定后，重启再也不用手动激活，真香！✨
@@ -74,7 +74,7 @@ Gama（Graphics API Manager）可以让你不 Root 就切换 GPU 渲染 API。
 
 **强烈推荐改用 Vulkan！** 温度下来了，电池也更耐用。
 
-![](/img/in-post/wan-zhuan-shizuku/gama-vulkan.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/wan-zhuan-shizuku/gama-vulkan.jpg)
 *GAMA v1.4：当前渲染器已经切到 Vulkan*
 
 ### 使用教程
@@ -92,7 +92,7 @@ Gama（Graphics API Manager）可以让你不 Root 就切换 GPU 渲染 API。
 
 GKD 是基于无障碍服务的「自动点击」神器，专门用来跳过开屏广告、关闭各种弹窗。规则全靠订阅，社区维护得非常猛。
 
-![](/img/in-post/wan-zhuan-shizuku/gkd-home.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/wan-zhuan-shizuku/gkd-home.jpg)
 *GKD 首页：无障碍正在运行，已开启 3 条订阅*
 
 ### 使用教程
@@ -116,7 +116,7 @@ GKD 是基于无障碍服务的「自动点击」神器，专门用来跳过开�
 
 雹可以「冻结」不常用的 App，让它们彻底休息，省内存、省电、还干净。支持停用、隐藏、暂停等多种模式。
 
-![](/img/in-post/wan-zhuan-shizuku/hail-home.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/wan-zhuan-shizuku/hail-home.jpg)
 *雹首页：被冻结的应用会变成灰色，点右下角雪花就能一键冻结*
 
 ### 使用教程
@@ -126,7 +126,7 @@ GKD 是基于无障碍服务的「自动点击」神器，专门用来跳过开�
 3. 切到「应用」页，勾选想冻的 App，再回首页点冻结就行。
 4. 需要用的时候再解冻，秒回原状。
 
-![](/img/in-post/wan-zhuan-shizuku/hail-apps.jpg)
+![](https://cdn.jsdelivr.net/gh/panghehe666/panghehe666.github.io@master/img/in-post/wan-zhuan-shizuku/hail-apps.jpg)
 *应用列表：打勾就是准备冻结的对象*
 
 系统预装的垃圾 App 直接冻起来，手机瞬间清爽！❄️
