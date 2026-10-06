@@ -1,6 +1,6 @@
 ---
 layout:       post
-title:        "google搜索技巧"
+title:        "Google 搜索技巧"
 author:       "PHH"
 header-style: text
 catalog:      true
@@ -11,27 +11,97 @@ tags:
 * TOC
 {:toc}
 
-> 众所周知，google是一种好用的搜索引擎，用好它不仅需要魔法，还需要搜索技巧
+> 众所周知，Google 是一种好用的搜索引擎。用好它不仅需要魔法，还需要一点搜索技巧。
 
-# 一. 方法
-## 1. site: 网址
-搜索内容将仅包含网址中的内容
-eg: termux site:github com 
-搜索内容仅从github中查询有关termux的内容
+四个运算符就够日常用：指定站点、精确匹配、限定文件类型、通配符补全。下面每条都配一张实机截图。
 
-## 2. "你的问题"
-搜索内容将与"你的问题"完全重合
+## 1. `site:` 指定网站
 
-## 3. 使用filetype:搜索特定文件类型
-eg: 如何用好google搜索 filetype:pdf
-搜索内容将仅展示有关如何用好google的pdf
+搜索范围会被锁在某个站点里，不会满世界乱跑。
 
-## 4. 在搜索中使用通配符*
-如果你不确定搜索查询/问题或者忘记了其中的词汇，你可以在搜索中使用通配符*，Google会用相关的词汇来替换通配符。
-例如，如果你搜索 => the * of money（钱的 *），会产生如下结果。 Google会返回一系列搜索页面，包括 "the exchange of money"（金钱交易）、 "the use of money"（金钱的用途）、 "the role of money"（金钱的角色）、 "the psychology of money"（金钱心理学）等。
+**写法：**
 
-___
+```
+关键词 site:域名
+```
 
-# 二. 总结
-感谢阅读！希望你喜欢这篇关于提高Google搜索效率的简短教程。
+**例子：** `termux site:github.com`
 
+结果只会来自 GitHub。想找官方仓库、Issue、命令备忘录时特别好用。
+
+![](/img/in-post/google-search-skill/site-github.jpg)
+*搜索 `termux site:github.com`：结果全是 GitHub 上的 Termux 相关页面*
+
+小提示：域名写成 `github.com`，中间不要空格。写成 `github com` 就失效了。
+
+## 2. `"精确短语"` 一字不差
+
+把关键词用英文双引号包起来，Google 会按整句匹配，而不是拆开每个字分别搜。
+
+**写法：**
+
+```
+"你的问题"
+```
+
+适合找书名、报错原文、某一句固定说法。不加引号时，页面里只要零散出现这些字也可能被搜出来。
+
+![](/img/in-post/google-search-skill/exact-phrase.jpg)
+*搜索 `"你的问题"`：命中的是书名里完整出现这四个字的结果*
+
+## 3. `filetype:` 只要某类文件
+
+只看 PDF、PPT、DOC 这类文档时，加上文件类型即可。
+
+**写法：**
+
+```
+关键词 filetype:pdf
+```
+
+**例子：** `python filetype:pdf`
+
+结果会带 PDF 标记，教程、讲义、官方文档都能直接下。
+
+![](/img/in-post/google-search-skill/filetype-pdf.jpg)
+*搜索 `python filetype:pdf`：第一条就是 Python Tutorial 的 PDF*
+
+常用后缀还有 `ppt`、`doc`、`xls`、`txt`。
+
+## 4. `*` 通配符：忘了中间那个词
+
+不确定中间缺哪个词，或者想一次覆盖多种说法，用 `*` 占位。Google 会拿相关词填进去。
+
+**写法：**
+
+```
+the * of money
+```
+
+可能出现 *the psychology of money*、*the use of money*、*the role of money* 等等。
+
+![](/img/in-post/google-search-skill/wildcard.jpg)
+*搜索 `the * of money`：第一条就是 The Psychology of Money*
+
+记不清书名、歌词或固定搭配时，这个最省事。
+
+---
+
+## 速查
+
+| 技巧 | 写法 | 作用 |
+| --- | --- | --- |
+| 指定站点 | `termux site:github.com` | 只在某个网站里搜 |
+| 精确匹配 | `"你的问题"` | 按完整短语搜 |
+| 文件类型 | `python filetype:pdf` | 只要 PDF 等文档 |
+| 通配符 | `the * of money` | 让 Google 补上中间的词 |
+
+四个一起用也没问题，例如：
+
+```
+"python tutorial" filetype:pdf site:docs.python.org
+```
+
+## 总结
+
+会这四招，搜东西会准很多：指定场地、锁死原句、只要文档、漏词用星号顶上。去搜索框里试一遍，比看教程记得更牢。
