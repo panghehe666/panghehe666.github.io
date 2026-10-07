@@ -1,9 +1,12 @@
 /**
  * One-click copy for code blocks (Rouge / highlighter-rouge)
- * Works with the table-based line-number layout used by Hux Blog.
+ * Subtle icon button + green checkmark feedback.
  */
 (function () {
   'use strict';
+
+  var COPY_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+  var CHECK_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
   // Inject styles
   var style = document.createElement('style');
@@ -11,47 +14,51 @@
     '.highlight { position: relative; }',
     '.code-copy-btn {',
     '  position: absolute;',
-    '  top: 8px;',
-    '  right: 8px;',
+    '  top: 6px;',
+    '  right: 6px;',
     '  z-index: 10;',
-    '  padding: 4px 10px;',
-    '  font-size: 12px;',
-    '  line-height: 1.4;',
-    '  color: #abb2bf;',
-    '  background: rgba(0,0,0,0.35);',
-    '  border: 1px solid rgba(255,255,255,0.15);',
+    '  display: flex;',
+    '  align-items: center;',
+    '  justify-content: center;',
+    '  width: 28px;',
+    '  height: 28px;',
+    '  padding: 0;',
+    '  color: #7f848e;',
+    '  background: transparent;',
+    '  border: none;',
     '  border-radius: 4px;',
     '  cursor: pointer;',
     '  opacity: 0;',
-    '  transition: opacity 0.2s, background 0.2s, color 0.2s;',
-    '  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;',
+    '  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;',
     '  user-select: none;',
     '}',
     '.highlight:hover .code-copy-btn,',
-    '.code-copy-btn:focus { opacity: 1; }',
+    '.code-copy-btn:focus { opacity: 0.7; }',
     '.code-copy-btn:hover {',
-    '  background: rgba(0,0,0,0.55);',
-    '  color: #fff;',
+    '  opacity: 1;',
+    '  color: #abb2bf;',
+    '  background: rgba(255,255,255,0.08);',
     '}',
     '.code-copy-btn.copied {',
-    '  background: #0085a1;',
-    '  color: #fff;',
-    '  border-color: #0085a1;',
     '  opacity: 1;',
+    '  color: #3dd68c;',
+    '  background: transparent;',
+    '}',
+    '.code-copy-btn svg {',
+    '  display: block;',
+    '  pointer-events: none;',
     '}',
     '@media (max-width: 480px) {',
-    '  .code-copy-btn { opacity: 0.85; top: 6px; right: 6px; font-size: 11px; padding: 3px 8px; }',
+    '  .code-copy-btn { opacity: 0.55; width: 26px; height: 26px; }',
     '}'
   ].join('\n');
   document.head.appendChild(style);
 
   function getCodeText(highlightEl) {
-    // Prefer the actual code cell (skip line numbers)
     var codePre = highlightEl.querySelector('.rouge-code pre');
     if (codePre) {
       return codePre.innerText || codePre.textContent || '';
     }
-    // Fallback: whole pre/code
     var pre = highlightEl.querySelector('pre') || highlightEl;
     return pre.innerText || pre.textContent || '';
   }
@@ -61,7 +68,8 @@
     btn.type = 'button';
     btn.className = 'code-copy-btn';
     btn.setAttribute('aria-label', '复制代码');
-    btn.textContent = '复制';
+    btn.setAttribute('title', '复制');
+    btn.innerHTML = COPY_ICON;
     return btn;
   }
 
@@ -69,7 +77,6 @@
     if (navigator.clipboard && window.isSecureContext) {
       return navigator.clipboard.writeText(text);
     }
-    // Fallback for older browsers / non-HTTPS
     return new Promise(function (resolve, reject) {
       var ta = document.createElement('textarea');
       ta.value = text;
@@ -94,10 +101,8 @@
   function init() {
     var blocks = document.querySelectorAll('div.highlight, pre.highlight');
     blocks.forEach(function (block) {
-      // Avoid double-init
       if (block.querySelector('.code-copy-btn')) return;
 
-      // Make sure the container can position the button
       if (window.getComputedStyle(block).position === 'static') {
         block.style.position = 'relative';
       }
@@ -108,20 +113,18 @@
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var text = getCodeText(block).replace(/\n$/, ''); // trim trailing newline often added by pre
+        var text = getCodeText(block).replace(/\n$/, '');
         copyText(text).then(function () {
-          var original = btn.textContent;
-          btn.textContent = '已复制';
+          btn.innerHTML = CHECK_ICON;
           btn.classList.add('copied');
+          btn.setAttribute('title', '已复制');
           setTimeout(function () {
-            btn.textContent = original;
+            btn.innerHTML = COPY_ICON;
             btn.classList.remove('copied');
-          }, 1600);
+            btn.setAttribute('title', '复制');
+          }, 1500);
         }).catch(function () {
-          btn.textContent = '失败';
-          setTimeout(function () {
-            btn.textContent = '复制';
-          }, 1600);
+          // silent fail, keep icon
         });
       });
     });
