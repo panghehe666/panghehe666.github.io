@@ -33,28 +33,13 @@
                         </a>
                     </li>
                     <li>
-                        <a href="javascript:void(0)" id="admin-login-btn">登录</a>
+                        <a href="{{ site.baseurl }}/admin/" id="admin-login-btn"><i class="fa fa-sign-in"></i> 管理员</a>
                     </li>
                 </ul>
             </div>
         </div>
     </div>
 </nav>
-
-<div id="admin-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.45);">
-    <form id="admin-form" style="background:#fff;max-width:360px;margin:18vh auto;padding:24px 22px;border-radius:6px;">
-        <h3 style="margin-top:0;">管理员登录</h3>
-        <label style="display:block;margin-bottom:10px;">用户名
-            <input id="admin-user" type="text" autocomplete="username" style="display:block;width:100%;margin-top:4px;padding:6px 8px;">
-        </label>
-        <label style="display:block;margin-bottom:10px;">密码
-            <input id="admin-pass" type="password" autocomplete="current-password" style="display:block;width:100%;margin-top:4px;padding:6px 8px;">
-        </label>
-        <p id="admin-error" style="color:#c0392b;min-height:1.2em;margin:0 0 10px;"></p>
-        <button type="submit" class="btn btn-default">登录</button>
-        <button type="button" id="admin-cancel" class="btn btn-default">取消</button>
-    </form>
-</div>
 
 <script>
     var $toggle = document.querySelector('.navbar-toggle');
@@ -76,7 +61,7 @@
         }
     }
 
-    $toggle.addEventListener('click', function (e) {
+    $toggle.addEventListener('click', function () {
         if ($navbar.className.indexOf('in') > 0) {
             __HuxNav__.close()
         } else {
@@ -87,7 +72,6 @@
     document.addEventListener('click', function (e) {
         if (e.target == $toggle) return;
         if (e.target.className == 'icon-bar') return;
-        if (e.target.closest && (e.target.closest('#admin-modal') || e.target.id === 'admin-login-btn')) return;
         __HuxNav__.close();
     })
 </script>

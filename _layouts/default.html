@@ -8,6 +8,7 @@
     html:not(.is-admin) body.is-private-page .intro-header,
     html:not(.is-admin) body.is-private-page article { display: none !important; }
     html:not(.is-admin) body.is-private-page #private-gate { display: block !important; }
+    #admin-login-btn .fa { margin-right: 6px; }
 </style>
 <script>
     try {
@@ -23,7 +24,7 @@
 
     <div id="private-gate" class="container" style="display:none;padding:140px 20px 80px;text-align:center;">
         <h2>这篇文章仅管理员可见</h2>
-        <p>请使用导航栏右侧的登录。</p>
+        <p><a href="{{ site.baseurl }}/admin/?next={{ page.url | url_encode }}">前往管理员页登录</a></p>
     </div>
 
     {% include search.html %}

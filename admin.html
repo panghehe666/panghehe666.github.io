@@ -1,0 +1,168 @@
+---
+layout: default
+title: 管理员
+description: "仅限本人"
+permalink: /admin/
+---
+
+<style>
+  .admin-stage {
+    min-height: 100vh;
+    margin-top: -50px;
+    padding: 120px 20px 80px;
+    background:
+      linear-gradient(165deg, rgba(8,10,16,.72), rgba(8,10,16,.88)),
+      url('{{ site.baseurl }}/img/home-bg.jpg') center/cover no-repeat;
+    color: #f4f1ea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .admin-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 42px 36px 32px;
+    border: 1px solid rgba(255,255,255,.14);
+    background: rgba(12,14,20,.55);
+    box-shadow: 0 30px 80px rgba(0,0,0,.35);
+    backdrop-filter: blur(10px);
+  }
+  .admin-mark {
+    width: 54px;
+    height: 54px;
+    border: 1px solid rgba(255,255,255,.35);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin-bottom: 22px;
+  }
+  .admin-card h1 {
+    font-family: "Open Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+    font-weight: 800;
+    letter-spacing: .18em;
+    font-size: 22px;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+  }
+  .admin-card .lead {
+    color: rgba(244,241,234,.72);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+  .admin-card label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: .22em;
+    text-transform: uppercase;
+    color: rgba(244,241,234,.55);
+    margin-bottom: 16px;
+  }
+  .admin-card input {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255,255,255,.28);
+    color: #fff;
+    font-size: 16px;
+    outline: none;
+  }
+  .admin-card input:focus { border-bottom-color: #fff; }
+  .admin-card button[type=submit] {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 16px;
+    background: #f4f1ea;
+    color: #111;
+    border: none;
+    letter-spacing: .28em;
+    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .admin-card button[type=submit]:hover { background: #fff; }
+  #admin-error { min-height: 1.4em; color: #ffb4a2; font-size: 13px; margin: 4px 0 12px; }
+  .admin-back { display: inline-block; margin-top: 18px; color: rgba(244,241,234,.6); font-size: 13px; }
+  .admin-back:hover { color: #fff; }
+  #admin-done { display: none; }
+  .admin-stage.is-in #admin-form { display: none; }
+  .admin-stage.is-in #admin-done { display: block; }
+</style>
+
+<section class="admin-stage" id="admin-stage">
+  <div class="admin-card">
+    <div class="admin-mark"><i class="fa fa-user-secret"></i></div>
+    <form id="admin-form">
+      <h1>Admin</h1>
+      <p class="lead">进入管理员，查看标记为「隐私」的文章。</p>
+      <label>用户名
+        <input id="admin-user" type="text" autocomplete="username" spellcheck="false">
+      </label>
+      <label>密码
+        <input id="admin-pass" type="password" autocomplete="current-password">
+      </label>
+      <p id="admin-error"></p>
+      <button type="submit">Enter</button>
+    </form>
+    <div id="admin-done">
+      <h1>Inside</h1>
+      <p class="lead">已是管理员。隐私文章已对你打开。</p>
+      <button type="button" id="admin-logout" style="width:100%;padding:12px 16px;background:transparent;color:#f4f1ea;border:1px solid rgba(255,255,255,.4);letter-spacing:.28em;text-transform:uppercase;font-size:12px;">登出</button>
+    </div>
+    <a class="admin-back" href="{{ site.baseurl }}/">← 返回博客</a>
+  </div>
+</section>
+
+<script>
+(function () {
+  var USER = "panghehe666";
+  var PASS_HASH = "ae5260f88dee7b3aecf76ed91945ef3567d0683960c6f94cc5b515d59db1fa89";
+  var KEY = "blog_admin";
+  var stage = document.getElementById("admin-stage");
+
+  function on() {
+    try { return localStorage.getItem(KEY) === "1"; } catch (e) { return false; }
+  }
+  function paint() {
+    stage.classList.toggle("is-in", on());
+    document.documentElement.classList.toggle("is-admin", on());
+  }
+  function nextUrl() {
+    var q = new URLSearchParams(location.search).get("next");
+    if (q && q.charAt(0) === "/" && q.indexOf("//") !== 0) return q;
+    return "/";
+  }
+  function sha256Hex(text) {
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (buf) {
+      return Array.from(new Uint8Array(buf)).map(function (b) {
+        return b.toString(16).padStart(2, "0");
+      }).join("");
+    });
+  }
+
+  paint();
+  document.getElementById("admin-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var user = (document.getElementById("admin-user").value || "").trim();
+    var pass = document.getElementById("admin-pass").value || "";
+    var err = document.getElementById("admin-error");
+    if (user !== USER) { err.textContent = "用户名或密码错误"; return; }
+    sha256Hex(pass).then(function (hex) {
+      if (hex !== PASS_HASH) { err.textContent = "用户名或密码错误"; return; }
+      localStorage.setItem(KEY, "1");
+      location.href = nextUrl();
+    });
+  });
+  document.getElementById("admin-logout").addEventListener("click", function () {
+    localStorage.removeItem(KEY);
+    document.documentElement.classList.remove("is-admin");
+    paint();
+    var nav = document.getElementById("admin-login-btn");
+    if (nav) nav.innerHTML = '<i class="fa fa-sign-in"></i> 管理员';
+  });
+})();
+</script>
