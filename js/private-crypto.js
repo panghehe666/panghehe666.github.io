@@ -114,6 +114,145 @@
       });
   }
 
+  /* Lightweight Markdown -> HTML for private posts */
+  function looksLikeMarkdown(text) {
+    if (!text) return false;
+    var t = text.trim();
+    if (t.charAt(0) === "<") return false; /* already HTML */
+    return (
+      /^#{1,6}\s/m.test(t) ||
+      /^[-*+]\s/m.test(t) ||
+      /^\d+\.\s/m.test(t) ||
+      /\*\*[^*]+\*\*/.test(t) ||
+      /^>\s/m.test(t) ||
+      /\[[^\]]+\]\([^)]+\)/.test(t)
+    );
+  }
+
+  function escapeHtml(s) {
+    return s
+      .replace(/&/g, "&")
+      .replace(/</g, "<")
+      .replace(/>/g, ">");
+  }
+
+  function inlineFormat(s) {
+    s = escapeHtml(s);
+    s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
+
+  function markdownToHtml(src) {
+    var lines = src.replace(/\r\n/g, "\n").split("\n");
+    var out = [];
+    var i = 0;
+    var inUl = false;
+    var inOl = false;
+    var inP = false;
+
+    function closeLists() {
+      if (inUl) {
+        out.push("</ul>");
+        inUl = false;
+      }
+      if (inOl) {
+        out.push("</ol>");
+        inOl = false;
+      }
+    }
+    function closeP() {
+      if (inP) {
+        out.push("</p>");
+        inP = false;
+      }
+    }
+
+    while (i < lines.length) {
+      var line = lines[i];
+      var trimmed = line.trim();
+
+      if (trimmed === "" || trimmed === "---" || trimmed === "***") {
+        closeP();
+        closeLists();
+        if (trimmed === "---" || trimmed === "***") out.push("<hr>");
+        i++;
+        continue;
+      }
+
+      var hm = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      if (hm) {
+        closeP();
+        closeLists();
+        var lv = hm[1].length;
+        out.push("<h" + lv + ">" + inlineFormat(hm[2]) + "</h" + lv + ">");
+        i++;
+        continue;
+      }
+
+      if (/^>\s?/.test(trimmed)) {
+        closeP();
+        closeLists();
+        var q = [];
+        while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
+          q.push(lines[i].trim().replace(/^>\s?/, ""));
+          i++;
+        }
+        out.push("<blockquote><p>" + inlineFormat(q.join(" ")) + "</p></blockquote>");
+        continue;
+      }
+
+      if (/^[-*+]\s+/.test(trimmed)) {
+        closeP();
+        if (inOl) {
+          out.push("</ol>");
+          inOl = false;
+        }
+        if (!inUl) {
+          out.push("<ul>");
+          inUl = true;
+        }
+        out.push("<li>" + inlineFormat(trimmed.replace(/^[-*+]\s+/, "")) + "</li>");
+        i++;
+        continue;
+      }
+
+      if (/^\d+\.\s+/.test(trimmed)) {
+        closeP();
+        if (inUl) {
+          out.push("</ul>");
+          inUl = false;
+        }
+        if (!inOl) {
+          out.push("<ol>");
+          inOl = true;
+        }
+        out.push("<li>" + inlineFormat(trimmed.replace(/^\d+\.\s+/, "")) + "</li>");
+        i++;
+        continue;
+      }
+
+      closeLists();
+      if (!inP) {
+        out.push("<p>");
+        inP = true;
+        out.push(inlineFormat(trimmed));
+      } else {
+        out.push("<br>" + inlineFormat(trimmed));
+      }
+      i++;
+    }
+    closeP();
+    closeLists();
+    return out.join("\n");
+  }
+
+  function toRenderableHtml(text) {
+    if (looksLikeMarkdown(text)) return markdownToHtml(text);
+    return text;
+  }
+
   function tryRevealEncryptedPosts() {
     var nodes = document.querySelectorAll("[data-private-cipher]");
     if (!nodes.length) return;
@@ -124,8 +263,8 @@
         var payload = el.getAttribute("data-private-cipher");
         if (!payload) return;
         decryptText(payload, key)
-          .then(function (html) {
-            el.innerHTML = html;
+          .then(function (text) {
+            el.innerHTML = toRenderableHtml(text);
             el.removeAttribute("data-private-cipher");
             el.classList.add("private-decrypted");
           })
