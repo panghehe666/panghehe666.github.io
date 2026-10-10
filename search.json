@@ -2,13 +2,18 @@
 layout: null
 ---
 [
+  {% assign first = true %}
   {% for post in site.posts %}
+    {% unless post.tags contains '隐私' %}
+    {% unless first %},{% endunless %}
+    {% assign first = false %}
     {
       "title"    : "{{ post.title | escape }}",
       "subtitle" : "{{ post.subtitle | escape }}",
       "tags"     : "{{ post.tags | join: ', ' }}",
       "url"      : "{{ site.baseurl }}{{ post.url }}",
       "date"     : "{{ post.date }}"
-    } {% unless forloop.last %},{% endunless %}
+    }
+    {% endunless %}
   {% endfor %}
 ]
