@@ -3,20 +3,38 @@
 
 {% include head.html %}
 
-<!-- hack iOS CSS :active style -->
-<body ontouchstart="">
+<style>
+    html:not(.is-admin) .post-private { display: none !important; }
+    html:not(.is-admin) body.is-private-page .intro-header,
+    html:not(.is-admin) body.is-private-page article { display: none !important; }
+    html:not(.is-admin) body.is-private-page #private-gate { display: block !important; }
+</style>
+<script>
+    try {
+        if (localStorage.getItem('blog_admin') === '1') {
+            document.documentElement.classList.add('is-admin');
+        }
+    } catch (e) {}
+</script>
+
+<body ontouchstart="" class="{% if page.tags contains '隐私' %}is-private-page{% endif %}">
 
     {% include nav.html %}
+
+    <div id="private-gate" class="container" style="display:none;padding:140px 20px 80px;text-align:center;">
+        <h2>这篇文章仅管理员可见</h2>
+        <p>请使用导航栏右侧的登录。</p>
+    </div>
+
     {% include search.html %}
 
     {{ content }}
 
     {% include footer.html %}
 
+    <script src="{{ '/js/admin.js' | prepend: site.baseurl }}"></script>
 
-<!-- Image to hack wechat -->
 <img src="/img/icon_wechat.png" width="0" height="0" />
-<!-- Migrate from head to bottom, no longer block render and still work -->
 
 </body>
 
