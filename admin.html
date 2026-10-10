@@ -178,6 +178,7 @@ nav-style: invert
   var KEY = "blog_admin";
   var stage = document.getElementById("admin-stage");
   var toast = document.getElementById("admin-toast");
+  var toastTimer = null;
 
   function on() {
     try { return localStorage.getItem(KEY) === "1"; } catch (e) { return false; }
@@ -198,9 +199,17 @@ nav-style: invert
       }).join("");
     });
   }
-  function showToast(then) {
+  function showToast(messageHtml, then) {
+    if (toastTimer) clearTimeout(toastTimer);
+    toast.classList.remove("show");
+    // force reflow so animation can replay
+    void toast.offsetWidth;
+    if (messageHtml) toast.innerHTML = messageHtml;
     toast.classList.add("show");
-    setTimeout(then, 1100);
+    toastTimer = setTimeout(function () {
+      toast.classList.remove("show");
+      if (typeof then === "function") then();
+    }, 1100);
   }
 
   paint();
@@ -224,7 +233,9 @@ nav-style: invert
       if (hex !== PASS_HASH) { err.textContent = "用户名或密码错误"; return; }
       localStorage.setItem(KEY, "1");
       document.documentElement.classList.add("is-admin");
-      showToast(function () { location.href = nextUrl(); });
+      showToast('<i class="fa fa-check"></i> 你已是管理员', function () {
+        location.href = nextUrl();
+      });
     });
   });
 
@@ -234,6 +245,7 @@ nav-style: invert
     paint();
     var nav = document.getElementById("admin-login-btn");
     if (nav) nav.innerHTML = '<i class="fa fa-sign-in"></i> 管理员';
+    showToast('<i class="fa fa-sign-out"></i> 已登出管理员');
   });
 })();
 </script>
