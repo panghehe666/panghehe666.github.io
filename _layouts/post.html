@@ -2,10 +2,6 @@
 layout: default
 ---
 
-<!-- Image to hack wechat -->
-<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
-<!-- <img src="{{ site.baseurl }}/{% if page.header-img %}{{ page.header-img }}{% else %}{{ site.header-img }}{% endif %}" width="0" height="0"> -->
-
 <!-- Post Header -->
 {% include intro-header.html type='post' %}
 
@@ -14,18 +10,24 @@ layout: default
     <div class="container">
         <div class="row">
 
-    <!-- Post Container -->
             <div class="
                 col-lg-8 col-lg-offset-2
                 col-md-10 col-md-offset-1
                 post-container">
 
-                <!-- Multi-Lingual -->
                 {% if page.multilingual %}
                     {% include multilingual-sel.html %}
                 {% endif %}
 
+                {% if page.tags contains '隐私' and page.private_cipher %}
+                <div
+                  class="private-cipher-shell"
+                  data-private-cipher="{{ page.private_cipher }}">
+                  <p>此文已客户端加密。登录管理员后自动解密。</p>
+                </div>
+                {% else %}
 				{{ content }}
+                {% endif %}
 
                 <hr style="visibility: hidden;">
                 <ul class="pager">
@@ -49,21 +51,16 @@ layout: default
                 <hr style="visibility: hidden;">
 
                 {% if site.disqus_username %}
-                <!-- disqus 评论框 start -->
                 <div class="comment">
                     <div id="disqus_thread" class="disqus-thread"></div>
                 </div>
-                <!-- disqus 评论框 end -->
                 {% endif %}
 
                 {% if site.netease_comment %}
-                <!-- 网易云跟帖 评论框 start -->
                 <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
-                <!-- 网易云跟帖 评论框 end -->
                 {% endif %}
-            </div>  
+            </div>
 
-    <!-- Side Catalog Container -->
         {% unless page.no-catalog %}
             <div class="
                 col-lg-2 col-lg-offset-0
@@ -80,33 +77,26 @@ layout: default
             </div>
         {% endunless %}
 
-    <!-- Sidebar Container -->
             <div class="
                 col-lg-8 col-lg-offset-2
                 col-md-10 col-md-offset-1
                 sidebar-container">
-
-                <!-- Featured Tags -->
                 {% include featured-tags.html bottom=true %}
-
-                <!-- Friends Blog -->
                 {% include friends.html %}
             </div>
         </div>
     </div>
 </article>
 
-<!-- add support for mathjax by voleking-->
 {% if page.mathjax %}
   {% include mathjax_support.html %}
 {% endif %}
 
 {% if site.netease_comment %}
-<!-- 网易云跟帖JS代码 start -->
 <script src="https://img1.cache.netease.com/f2e/tie/yun/sdk/loader.js"></script>
 <script>
   var cloudTieConfig = {
-    url: document.location.href, 
+    url: document.location.href,
     sourceId: "",
     productKey: "de25fc98a6fe48b3bc8a7ae765da99a0",
     target: "cloud-tie-wrapper"
@@ -114,30 +104,22 @@ layout: default
   var yunManualLoad = true;
   Tie.loader("aHR0cHM6Ly9hcGkuZ2VudGllLjE2My5jb20vcGMvbGl2ZXNjcmlwdC5odG1s", true);
 </script>
-<!-- 网易云跟帖JS代码 end -->
 {% endif %}
 
-
 {% if site.disqus_username %}
-<!-- disqus 公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
-    /* * * CONFIGURATION VARIABLES * * */
     var disqus_shortname = "{{site.disqus_username}}";
     var disqus_identifier = "{{page.id}}";
     var disqus_url = "{{site.url}}{{page.url}}";
-
     (function() {
         var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
         dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
         (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
     })();
 </script>
-<!-- disqus 公共JS代码 end -->
 {% endif %}
 
-
 {% if site.anchorjs %}
-<!-- async load function -->
 <script>
     function async(u, c) {
       var d = document, t = 'script',
@@ -148,19 +130,16 @@ layout: default
       s.parentNode.insertBefore(o, s);
     }
 </script>
-<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
 <script>
     async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js",function(){
         anchors.options = {
           visible: 'hover',
-          placement: 'right',
-          // icon: '#'
+          placement: 'right'
         };
         anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
     })
 </script>
 <style>
-    /* place left on bigger screen */
     @media all and (min-width: 800px) {
         .anchorjs-link{
             position: absolute;

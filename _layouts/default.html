@@ -9,6 +9,13 @@
     html:not(.is-admin) body.is-private-page article { display: none !important; }
     html:not(.is-admin) body.is-private-page #private-gate { display: block !important; }
     #admin-login-btn .fa { margin-right: 6px; }
+    .private-cipher-shell {
+      min-height: 120px;
+      padding: 28px 0;
+      color: #888;
+      letter-spacing: .04em;
+    }
+    .private-decrypt-error { color: #c0392b; }
 </style>
 <script>
     try {
@@ -33,6 +40,7 @@
 
     {% include footer.html %}
 
+    <script src="{{ '/js/private-crypto.js' | prepend: site.baseurl }}"></script>
     <script src="{{ '/js/admin.js' | prepend: site.baseurl }}"></script>
 
 <img src="/img/icon_wechat.png" width="0" height="0" />
