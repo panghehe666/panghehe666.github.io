@@ -114,11 +114,10 @@
       });
   }
 
-  /* Lightweight Markdown -> HTML for private posts */
   function looksLikeMarkdown(text) {
     if (!text) return false;
     var t = text.trim();
-    if (t.charAt(0) === "<") return false; /* already HTML */
+    if (t.charAt(0) === "<") return false;
     return (
       /^#{1,6}\s/m.test(t) ||
       /^[-*+]\s/m.test(t) ||
@@ -253,20 +252,99 @@
     return text;
   }
 
+  function slugify(text) {
+    return String(text || "")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w\u4e00-\u9fff-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "") || "section";
+  }
+
+  function ensureHeadingIds(root) {
+    var used = {};
+    var heads = root.querySelectorAll("h1,h2,h3,h4,h5,h6");
+    for (var i = 0; i < heads.length; i++) {
+      var h = heads[i];
+      if (h.id) {
+        used[h.id] = true;
+        continue;
+      }
+      var base = slugify(h.textContent);
+      var id = base;
+      var n = 2;
+      while (used[id] || document.getElementById(id)) {
+        id = base + "-" + n;
+        n++;
+      }
+      h.id = id;
+      used[id] = true;
+    }
+  }
+
+  function rebuildCatalog() {
+    try {
+      if (typeof window.jQuery === "undefined") return;
+      var $ = window.jQuery;
+      var body = $(".catalog-body");
+      if (!body.length) return;
+
+      var container = $("div.post-container");
+      var heads = container.find("h1,h2,h3,h4,h5,h6");
+      body.html("");
+      heads.each(function () {
+        var n = $(this).prop("tagName").toLowerCase();
+        var id = $(this).prop("id");
+        if (!id) return;
+        var t = $(this).text();
+        var c = $('<a href="#' + id + '" rel="nofollow">' + t + "</a>");
+        var l = $('<li class="' + n + '_nav"></li>').append(c);
+        body.append(l);
+      });
+
+      if (body.children().length && typeof body.onePageNav === "function") {
+        body.onePageNav({
+          currentClass: "active",
+          changeHash: false,
+          easing: "swing",
+          filter: "",
+          scrollSpeed: 700,
+          scrollOffset: 0,
+          scrollThreshold: 0.2,
+          begin: null,
+        });
+      }
+    } catch (e) {}
+  }
+
+  function afterReveal(el) {
+    ensureHeadingIds(el);
+    // also scan whole post-container in case shell is nested
+    var post = document.querySelector("div.post-container");
+    if (post) ensureHeadingIds(post);
+    rebuildCatalog();
+  }
+
   function tryRevealEncryptedPosts() {
     var nodes = document.querySelectorAll("[data-private-cipher]");
     if (!nodes.length) return;
     var b64 = loadSessionKey();
     if (!b64) return;
     importKeyFromB64(b64).then(function (key) {
+      var pending = nodes.length;
       nodes.forEach(function (el) {
         var payload = el.getAttribute("data-private-cipher");
-        if (!payload) return;
+        if (!payload) {
+          pending--;
+          return;
+        }
         decryptText(payload, key)
           .then(function (text) {
             el.innerHTML = toRenderableHtml(text);
             el.removeAttribute("data-private-cipher");
             el.classList.add("private-decrypted");
+            afterReveal(el);
           })
           .catch(function () {
             el.innerHTML =
