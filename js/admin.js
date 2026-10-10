@@ -16,8 +16,8 @@
     if (!btn) return;
     // Always link to /admin/ so encrypt tool stays reachable after login.
     if (on) {
-      btn.innerHTML = '<i class="fa fa-user-secret"></i> 管理台';
-      btn.setAttribute("title", "进入管理员页（加密工具）");
+      btn.innerHTML = '<i class="fa fa-user-secret"></i> 管理台·密文';
+      btn.setAttribute("title", "进入管理员页 · 生成密文");
     } else {
       btn.innerHTML = '<i class="fa fa-sign-in"></i> 管理员';
       btn.setAttribute("title", "管理员登录");
