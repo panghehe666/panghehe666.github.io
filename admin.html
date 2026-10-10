@@ -49,7 +49,7 @@ nav-style: invert
     color: #6b6b6b;
     font-size: 15px;
     line-height: 1.7;
-    margin-bottom: 28px;
+    margin-bottom: 36px;
   }
   .admin-card label {
     display: block;
@@ -111,72 +111,16 @@ nav-style: invert
   .admin-action:hover { background: #333; }
   #admin-error { min-height: 1.4em; color: #c0392b; font-size: 13px; margin: 4px 0 12px; }
   .admin-back {
-    display: none;
+    display: inline-block;
     margin-top: 22px;
     color: #888;
     font-size: 13px;
     letter-spacing: .04em;
   }
-  .admin-stage:not(.is-in) .admin-back { display: inline-block; }
   .admin-back:hover { color: #111; }
   #admin-done { display: none; }
   .admin-stage.is-in #admin-form { display: none; }
   .admin-stage.is-in #admin-done { display: block; }
-
-  .admin-portal {
-    margin: 8px 0 28px;
-    padding: 22px 20px;
-    border: 1px solid #111;
-    background: #111;
-    color: #fff;
-  }
-  .admin-portal-label {
-    font-size: 11px;
-    letter-spacing: .32em;
-    text-transform: uppercase;
-    color: rgba(255,255,255,.55);
-    margin: 0 0 10px;
-  }
-  .admin-portal-title {
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: -.01em;
-    margin: 0 0 8px;
-  }
-  .admin-portal-desc {
-    font-size: 13px;
-    line-height: 1.6;
-    color: rgba(255,255,255,.65);
-    margin: 0 0 18px;
-  }
-  .admin-portal-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .admin-portal-actions a {
-    display: inline-block;
-    padding: 11px 16px;
-    font-size: 12px;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    text-decoration: none;
-    font-weight: 700;
-  }
-  .admin-portal-actions a.primary {
-    background: #fff;
-    color: #111;
-  }
-  .admin-portal-actions a.primary:hover { background: #f0f0f0; }
-  .admin-portal-actions a.ghost {
-    border: 1px solid rgba(255,255,255,.35);
-    color: #fff;
-  }
-  .admin-portal-actions a.ghost:hover {
-    border-color: #fff;
-    color: #fff;
-  }
-
   #admin-logout {
     width: 100%;
     padding: 14px 16px;
@@ -275,18 +219,7 @@ nav-style: invert
       <p class="admin-kicker">Inside</p>
       <h1>Admin</h1>
       <div class="admin-rule"></div>
-      <p class="lead">已是管理员。隐私文章会在浏览器中用 AES-GCM 解密。</p>
-
-      <div class="admin-portal">
-        <p class="admin-portal-label">Blog</p>
-        <p class="admin-portal-title">进入博客</p>
-        <p class="admin-portal-desc">以管理员身份浏览全部文章，包括标记为「隐私」的内容。</p>
-        <div class="admin-portal-actions">
-          <a class="primary" href="{{ site.baseurl }}/">首页</a>
-          <a class="ghost" href="{{ site.baseurl }}/archive/">归档</a>
-        </div>
-      </div>
-
+      <p class="lead">已是管理员。隐私文章会在浏览器中用 AES-GCM 解密。可在下方生成密文。</p>
       <button type="button" id="admin-logout">登出</button>
 
       <div class="admin-tool">
@@ -383,9 +316,8 @@ nav-style: invert
         document.documentElement.classList.add("is-admin");
         paint();
         showToast('<i class="fa fa-check"></i> 你已是管理员', function () {
-          // stay on admin if already on admin and no next; otherwise go next
           var n = nextUrl();
-          if (n !== "/" || new URLSearchParams(location.search).get("next")) {
+          if (new URLSearchParams(location.search).get("next")) {
             location.href = n;
           }
         });
@@ -399,7 +331,10 @@ nav-style: invert
     document.documentElement.classList.remove("is-admin");
     paint();
     var nav = document.getElementById("admin-login-btn");
-    if (nav) nav.innerHTML = '<i class="fa fa-sign-in"></i> 管理员';
+    if (nav) {
+      nav.innerHTML = '<i class="fa fa-sign-in"></i> 管理员';
+      nav.setAttribute("title", "管理员登录");
+    }
     showToast('<i class="fa fa-sign-out"></i> 已登出管理员');
   });
 
