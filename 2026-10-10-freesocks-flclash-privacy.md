@@ -8,5 +8,7 @@ tags:
     - 隐私
     - 开源分享
     - 代理
-private_cipher: SEE_NEXT
+private_cipher: ""
 ---
+
+<!-- 正文已客户端加密。请登录 /admin/ 使用 Encrypt 工具生成密文，填入上方 private_cipher 字段。 -->
