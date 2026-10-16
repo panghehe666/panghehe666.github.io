@@ -110,6 +110,13 @@ nav-style: invert
   .admin-card button[type=submit]:hover,
   .admin-action:hover { background: #333; }
   #admin-error { min-height: 1.4em; color: #c0392b; font-size: 13px; margin: 4px 0 12px; }
+  .admin-recall {
+    margin: 18px 0 0;
+    color: #9a9a9a;
+    font-size: 12px;
+    line-height: 1.7;
+    letter-spacing: .02em;
+  }
   .admin-back {
     display: inline-block;
     margin-top: 22px;
@@ -213,6 +220,7 @@ nav-style: invert
       </label>
       <p id="admin-error"></p>
       <button type="submit">Enter</button>
+      <p class="admin-recall">试不出来就别看源码。这段登录是 Grok 生成的，密码在那次聊天记录里。</p>
     </form>
 
     <div id="admin-done">
