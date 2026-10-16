@@ -11,7 +11,10 @@ layout: null
     <pubDate>{{ site.time | date_to_rfc822 }}</pubDate>
     <lastBuildDate>{{ site.time | date_to_rfc822 }}</lastBuildDate>
     <generator>Jekyll v{{ jekyll.version }}</generator>
-    {% for post in site.posts limit:10 %}
+    {% assign n = 0 %}
+    {% for post in site.posts %}
+      {% unless post.tags contains '隐私' %}
+      {% if n < 10 %}
       <item>
         <title>{{ post.title | xml_escape }}</title>
         <description>{{ post.content | xml_escape }}</description>
@@ -25,6 +28,9 @@ layout: null
         <category>{{ cat | xml_escape }}</category>
         {% endfor %}
       </item>
+      {% assign n = n | plus: 1 %}
+      {% endif %}
+      {% endunless %}
     {% endfor %}
   </channel>
 </rss>

@@ -1,10 +1,10 @@
 ---
 layout: page
-description: "「离开世界之前 一切都是过程」"
+description: "「天地本宽 而鄙者自隘」"
 ---
 
 {% for post in paginator.posts %}
-<div class="post-preview">
+<div class="post-preview{% if post.tags contains '隐私' %} post-private{% endif %}">
     <a href="{{ post.url | prepend: site.baseurl }}">
         <h2 class="post-title">
             {{ post.title }}
@@ -26,7 +26,7 @@ description: "「离开世界之前 一切都是过程」"
         Posted by {% if post.author %}{{ post.author }}{% else %}{{ site.title }}{% endif %} on {{ post.date | date: "%B %-d, %Y" }}
     </p>
 </div>
-<hr>
+<hr class="{% if post.tags contains '隐私' %}post-private{% endif %}">
 {% endfor %}
 
 <!-- Pager -->

@@ -1,0 +1,43 @@
+name: Optimize images
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'img/**'
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ImageMagick
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
+
+      - name: Compress large JPEG/PNG under img/
+        run: |
+          set -e
+          # Resize max width 1080, quality 78, strip metadata
+          find img -type f \( -iname '*.jpg' -o -iname '*.jpeg' \) -size +120k | while read -r f; do
+            echo "Compressing $f ($(du -h "$f" | cut -f1))..."
+            convert "$f" -resize '1080x>' -quality 78 -strip "$f"
+          done
+          find img -type f -iname '*.png' -size +200k | while read -r f; do
+            echo "Compressing PNG $f..."
+            convert "$f" -resize '1080x>' -strip "$f" || true
+          done
+
+      - name: Commit compressed images
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A img
+          if git diff --staged --quiet; then
+            echo "No image changes"
+          else
+            git commit -m "chore: compress oversized images for faster loading"
+            git push
+          fi
