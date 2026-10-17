@@ -265,7 +265,13 @@ nav-style: invert
   var toastTimer = null;
 
   function on() {
-    try { return localStorage.getItem(KEY) === "1"; } catch (e) { return false; }
+    try {
+      var flag = localStorage.getItem(KEY) === "1";
+      if (!flag) return false;
+      // 有登录标志但本设备无解密密钥(新会话/新设备):视为未解锁,直接显示登录表单,无需先登出再登录
+      if (window.PrivateCrypto && !PrivateCrypto.loadSessionKey()) return false;
+      return true;
+    } catch (e) { return false; }
   }
   function paint() {
     stage.classList.toggle("is-in", on());
