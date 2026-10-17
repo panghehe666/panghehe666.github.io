@@ -19,7 +19,9 @@ tags:
 
 - 直接跟你对话、写文章、写代码、改文件
 - 操作手机（配合 Shizuku / ADB，免 root 也能用）
-- 甚至让 AI 帮你把文章写好了直接推到 GitHub Pages 博客（这篇文章就是这么来的）
+- 甚至让 AI 帮你把文章写好了直接推到 GitHub Pages 博客
+
+![dsh-mobile 启动界面：探索未至之境](/img/in-post/2026-10-17-dsh-android/02-app-main.jpg)
 
 ## 二、配置教程（小米）
 
@@ -30,6 +32,8 @@ tags:
 - 发布页：<https://github.com/kelai141/dsh-mobile-apk/releases/tag/v0.14.7>
 - arm64 直链：<https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-arm64.apk>
 - x86_64（模拟器用）：<https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-x86_64.apk>
+
+![dsh-mobile-apk v0.14.7 发布页](/img/in-post/2026-10-17-dsh-android/01-release-v0.14.7.jpg)
 
 装好后如果能正常打开、正常对话，那**直接开耍**就行，下面一节可以跳过。
 
@@ -43,7 +47,9 @@ tags:
 
 1. 打开「设置 → 我的设备 → 全部参数」，连续点击「MIUI 版本」7 次，开启**开发者选项**
 2. 进入「设置 → 更多设置 → 开发者选项」
-3. 找到「**MIUI 优化**」，把它**关闭**
+3. 找到「**启用 MIUI 优化**」，把它**关闭**
+
+![开发者选项里的「启用 MIUI 优化」开关，默认是开着的，关掉它](/img/in-post/2026-10-17-dsh-android/03-miui-optimization.jpg)
 
 > 小米的 MIUI 优化有时会干扰 WebView 组件的加载和更新，关掉后能减少不少诡异问题。
 
@@ -52,6 +58,8 @@ tags:
 去 apklinker 下载最新的 Android System WebView 并安装（注意：下载源在境外，**需要魔法**）：
 
 - Android System WebView 149.0.7827.164：<https://www.apklinker.com/apk/google-llc/android-system-webview/android-system-webview-149-0-7827-164-release/android-system-webview-149-0-7827-164-android-apk-download/start/>
+
+![apklinker 上的 Android System WebView 149.0.7827.164](/img/in-post/2026-10-17-dsh-android/04-apklinker-webview.jpg)
 
 下载安装后，重新打开 dsh-mobile，一般就能正常跑起来了。
 
@@ -65,6 +73,8 @@ DSH 本身不内置模型服务，调用 DeepSeek 模型需要 API Key，这一�
 2. 进入「API Keys」页面，点「创建 API Key」，复制并妥善保存（Key 只显示一次）
 3. 回到 DSH，在设置里配置模型提供方（Provider / 模型路由），把 API Key 填进去
 4. 配置好之后就能正常对话了
+
+![DeepSeek 开放平台，API Key 在「API Keys」页面创建](/img/in-post/2026-10-17-dsh-android/05-deepseek-platform.jpg)
 
 ### 3.2 配置插件（可选）
 
@@ -87,6 +97,18 @@ DSH 本身不内置模型服务，调用 DeepSeek 模型需要 API Key，这一�
 
 > ⚠️ 安全提示：token 相当于你的账号密码，用完记得回 GitHub 里 **Revoke（撤销）**；也不要把它贴到公开的地方。
 
+#### ⚠️ 容易踩的坑（我亲测踩过）
+
+生成 token 时有几个细节特别容易选错，选错之后推文章时的报错很迷惑：
+
+1. **Repository access 别选「Public repositories (read-only)」**——这个选项名字里就带 read-only，选它只能读不能写，推送时直接 403。
+   - 正确做法：选「Only select repositories」，然后手动勾选你的博客仓库。
+2. **Contents 权限必须是 Read and write**——fine-grained token 默认不带任何仓库权限，必须点「+」手动把 `Contents` 加成 **Read and write**，否则一样 403。
+3. **报错认准这一条**：如果推送时看到 `Resource not accessible by personal access token`，基本就是上面两条之一没配对，回去检查 token 权限即可。
+4. **token 只显示一次**：生成后立刻复制保存，关掉页面就再也看不到了。
+
+我第一次就是选了「Public repositories (read-only)」，被 403 卡了半天，重新生成正确权限的 token 后一次就通了。所以这一步别嫌麻烦，权限对着设好，后面就顺了。
+
 ### 3.4 使用体验：和 Grok 比一比
 
 用了这段时间，简单说下主观感受：
@@ -107,4 +129,4 @@ DSH 本身不内置模型服务，调用 DeepSeek 模型需要 API Key，这一�
 
 DeepSeek Harness 安卓端，让「AI 装进手机、替我干活」这件事变得触手可及——而且是开源的、免翻墙的、能自己折腾的。虽然联通性和发布流程还有改进空间，但作为一个刚起步不久的开源项目，它的插件化思路和本地运行能力已经很能打了。
 
-如果你也喜欢折腾，不妨装上试试；说不定下一篇文章，就是你的 AI 帮你写、帮你发的。😉
+如果你也喜欢折腾，不妨装上试试，把手机变成自己的 AI 工作台。
