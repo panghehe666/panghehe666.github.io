@@ -1,0 +1,869 @@
+---
+layout: lab
+title: 可视化模型实验室
+subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
+---
+
+<div markdown="0">
+<style>
+.lab-root{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#2b3138;line-height:1.6;}
+.lab-intro{background:#f7f9fb;border:1px solid #e3e8ee;border-left:4px solid #0a84ff;border-radius:8px;padding:14px 18px;margin:0 0 24px;font-size:14px;color:#47505c;}
+.lab-intro p{margin:4px 0;}
+.lab-intro ul{margin:6px 0 2px;padding-left:20px;}
+.lab-card{background:#fff;border:1px solid #e3e8ee;border-radius:10px;box-shadow:0 2px 10px rgba(30,40,60,.06);padding:20px;margin:0 0 28px;}
+.lab-head h2{margin:0 0 2px;font-size:21px;color:#1c232b;}
+.lab-head h2 .lab-tag{display:inline-block;vertical-align:3px;font-size:11px;font-weight:600;color:#fff;background:#0a84ff;border-radius:4px;padding:1px 7px;margin-left:8px;}
+.lab-head h2 .lab-tag.math{background:#16a085;}
+.lab-sub{margin:2px 0 0;font-size:13px;color:#8a94a6;}
+.lab-grid{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0 0;}
+.lab-stage{flex:1 1 560px;min-width:0;}
+.lab-stage canvas{display:block;width:100%;height:auto;background:#fbfcfe;border:1px solid #e3e8ee;}
+.lab-stage canvas.cv-top{border-radius:8px 8px 0 0;}
+.lab-stage canvas.cv-bot{border-radius:0 0 8px 8px;border-top:none;}
+.lab-stage canvas.cv-single{border-radius:8px;}
+.lab-ctrl{flex:0 1 250px;min-width:230px;background:#f7f9fb;border:1px solid #e3e8ee;border-radius:8px;padding:12px 14px;}
+.lab-ctrl h4{margin:2px 0 8px;font-size:13px;color:#1c232b;}
+.lab-row{display:block;margin:7px 0;font-size:12.5px;color:#47505c;}
+.lab-row input[type=range]{display:block;width:100%;margin:3px 0 0;accent-color:#0a84ff;}
+.lab-row output{float:right;font-weight:600;color:#0a84ff;font-variant-numeric:tabular-nums;}
+.lab-btns{margin-top:10px;}
+.lab-btns button{margin:3px 4px 3px 0;padding:5px 11px;font-size:12.5px;border-radius:6px;border:none;cursor:pointer;background:#3b4252;color:#fff;transition:background .15s;}
+.lab-btns button:hover{background:#0a84ff;}
+.lab-btns button.on{background:#0a84ff;}
+.lab-check{display:block;margin:6px 0;font-size:12.5px;color:#47505c;cursor:pointer;user-select:none;}
+.lab-check input{margin-right:5px;}
+.lab-data{margin-top:14px;background:#f7f9fb;border:1px solid #e3e8ee;border-radius:8px;padding:10px 12px;}
+.lab-kvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;}
+.lab-kv{background:#fff;border:1px solid #e8edf3;border-radius:6px;padding:5px 8px;}
+.lab-kv b{display:block;font-size:11px;color:#8a94a6;font-weight:500;}
+.lab-kv span{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;}
+.lab-kv span.warn{color:#c0392b;}
+.lab-kv span.ok{color:#16a085;}
+.lab-status{margin:8px 0 0;font-size:13px;font-weight:600;color:#1c232b;}
+.lab-status .warn{color:#c0392b;}
+.lab-note{margin:10px 0 0;font-size:12.5px;color:#8a94a6;}
+.lab-readout{margin:8px 0 0;font-size:12.5px;color:#47505c;background:#fff;border:1px dashed #cfd8e3;border-radius:6px;padding:6px 10px;font-variant-numeric:tabular-nums;}
+.lab-table{border-collapse:collapse;margin:8px 0 0;width:100%;max-width:520px;font-size:12.5px;}
+.lab-table th,.lab-table td{border:1px solid #e3e8ee;padding:4px 8px;text-align:center;}
+.lab-table th{background:#eef2f7;font-weight:600;}
+.lab-table td{font-variant-numeric:tabular-nums;}
+@media (max-width:768px){.lab-ctrl{flex:1 1 100%;}}
+</style>
+
+<div class="lab-root">
+
+<div class="lab-intro">
+<p>三个可交互模型,拖动滑块、按播放、点预设,图像和数据实时联动:</p>
+<ul>
+<li><a href="#sec-block">① 板块模型</a>(物理 · 摩擦力/相对运动/滑落临界)</li>
+<li><a href="#sec-boat">② 小船渡河</a>(物理 · 运动的合成与分解 · 最短时间/最短位移)</li>
+<li><a href="#sec-trig">③ 三角函数图像变换</a>(数学 · y = A·sin(kx+b) + c 与 sinx 的关系)</li>
+</ul>
+<p>提示:在三角函数图上按住拖动,可读任意 x 处的函数值;改任何参数,图像与数据立刻刷新。</p>
+</div>
+
+<!-- ============ ① 板块模型 ============ -->
+<section class="lab-card" id="sec-block">
+<div class="lab-head">
+<h2>① 板块模型<span class="lab-tag">物理</span></h2>
+<p class="lab-sub">物块 A 放在木板 B 上,给 A 一个水平外力 F。看摩擦力怎么分配、什么时候一起动、什么时候滑落。</p>
+</div>
+<div class="lab-grid">
+<div class="lab-stage">
+<canvas id="cvBlock" class="cv-top" width="720" height="300"></canvas>
+<canvas id="cvBlockVT" class="cv-bot" width="720" height="220"></canvas>
+</div>
+<div class="lab-ctrl">
+<h4>参数(拖动即时生效)</h4>
+<label class="lab-row">外力 F(N)<input type="range" id="blkF" min="-20" max="20" step="0.5" value="8"><output id="blkFo">8</output></label>
+<label class="lab-row">A 质量 m₁(kg)<input type="range" id="blkM1" min="0.5" max="5" step="0.1" value="1"><output id="blkM1o">1</output></label>
+<label class="lab-row">B 质量 m₂(kg)<input type="range" id="blkM2" min="0.5" max="5" step="0.1" value="2"><output id="blkM2o">2</output></label>
+<label class="lab-row">A-B 摩擦因数 μ<input type="range" id="blkMu" min="0" max="0.8" step="0.01" value="0.3"><output id="blkMuo">0.3</output></label>
+<label class="lab-row">地面摩擦因数 μ₂<input type="range" id="blkMu2" min="0" max="0.5" step="0.01" value="0"><output id="blkMu2o">0</output></label>
+<label class="lab-row">木板长 L(m)<input type="range" id="blkL" min="1" max="6" step="0.5" value="4"><output id="blkLo">4</output></label>
+<label class="lab-row">A 初速 vA₀(m/s)<input type="range" id="blkVA0" min="-5" max="5" step="0.5" value="0"><output id="blkVA0o">0</output></label>
+<label class="lab-row">B 初速 vB₀(m/s)<input type="range" id="blkVB0" min="-5" max="5" step="0.5" value="0"><output id="blkVB0o">0</output></label>
+<label class="lab-check"><input type="checkbox" id="blkForces" checked> 显示受力箭头</label>
+<label class="lab-check"><input type="checkbox" id="blkAuto" checked> 改参数后自动重跑</label>
+<div class="lab-btns">
+<button id="blkPlay">▶ 播放</button>
+<button id="blkReset">↺ 重置</button>
+<select id="blkSpeed" style="margin-left:4px;padding:4px 6px;border-radius:6px;border:1px solid #cfd8e3;">
+<option value="0.5">0.5×</option>
+<option value="1" selected>1×</option>
+<option value="2">2×</option>
+</select>
+</div>
+<div class="lab-btns">
+<button class="lab-mini" data-blkpreset="together">一起加速</button>
+<button class="lab-mini" data-blkpreset="slide">相对滑动·滑出</button>
+<button class="lab-mini" data-blkpreset="carry">木板带物块</button>
+<button class="lab-mini" data-blkpreset="ground">地面粗糙对比</button>
+</div>
+</div>
+</div>
+<div class="lab-data">
+<div class="lab-kvs" id="dataBlock"></div>
+<div class="lab-status" id="statusBlock"></div>
+</div>
+<p class="lab-note">要点:滑动摩擦力 f = μ·m₁g;两物体是否"一起动"看所需静摩擦力是否超过 μ·m₁g;|x<sub>A</sub>−x<sub>B</sub>| ≥ L/2 时物块滑落。</p>
+</section>
+
+<!-- ============ ② 小船渡河 ============ -->
+<section class="lab-card" id="sec-boat">
+<div class="lab-head">
+<h2>② 小船渡河<span class="lab-tag">物理</span></h2>
+<p class="lab-sub">船对水速度 v<sub>船</sub>,水流速度 v<sub>水</sub>。合速度 = v<sub>水</sub> + v<sub>船</sub>(矢量)。调整船头方向 θ,看航线、时间、漂移怎么变。</p>
+</div>
+<div class="lab-grid">
+<div class="lab-stage">
+<canvas id="cvBoat" class="cv-single" width="720" height="360"></canvas>
+</div>
+<div class="lab-ctrl">
+<h4>参数</h4>
+<label class="lab-row">船速 v<sub>船</sub>(m/s)<input type="range" id="btVB" min="0.5" max="5" step="0.1" value="2"><output id="btVBo">2</output></label>
+<label class="lab-row">水速 v<sub>水</sub>(m/s)<input type="range" id="btVW" min="0" max="4" step="0.1" value="1.2"><output id="btVWo">1.2</output></label>
+<label class="lab-row">河宽 d(m)<input type="range" id="btD" min="40" max="300" step="5" value="100"><output id="btDo">100</output></label>
+<label class="lab-row">船头角 θ(与下游夹角,°)<input type="range" id="btTH" min="5" max="175" step="1" value="90"><output id="btTHo">90°</output></label>
+<label class="lab-check"><input type="checkbox" id="btLineT" checked> 对比线:最短时间航线</label>
+<label class="lab-check"><input type="checkbox" id="btLineD" checked> 对比线:最短位移航线</label>
+<div class="lab-btns">
+<button id="btPlay">▶ 播放</button>
+<button id="btReset">↺ 重置</button>
+</div>
+<div class="lab-btns">
+<button class="lab-mini" id="btPresetT">最短时间(θ=90°)</button>
+<button class="lab-mini" id="btPresetD">最短位移</button>
+<button class="lab-mini" id="btPresetFast">水速过快·挑战</button>
+</div>
+</div>
+</div>
+<div class="lab-data">
+<div class="lab-kvs" id="dataBoat"></div>
+<div class="lab-status" id="statusBoat"></div>
+</div>
+<p class="lab-note">要点:渡河时间只看垂直分量 t = d / v<sub>⊥</sub>;最短时间 θ=90°;垂直渡河要求 v<sub>船</sub> ≥ v<sub>水</sub>,θ* = arccos(−v<sub>水</sub>/v<sub>船</sub>)。</p>
+</section>
+
+<!-- ============ ③ 三角函数 ============ -->
+<section class="lab-card" id="sec-trig">
+<div class="lab-head">
+<h2>③ 三角函数图像变换<span class="lab-tag math">数学</span></h2>
+<p class="lab-sub">y = A·sin(kx + b) + c 是怎么从 y = sinx 变出来的?一步一步看:伸缩 → 平移 → 振幅 → 上下。</p>
+</div>
+<div class="lab-grid">
+<div class="lab-stage">
+<canvas id="cvTrig" class="cv-single" width="720" height="380"></canvas>
+<div class="lab-readout" id="trigReadout">在图上按住拖动可读点…</div>
+</div>
+<div class="lab-ctrl">
+<h4>参数</h4>
+<label class="lab-row">振幅 A<input type="range" id="tgA" min="0.2" max="3" step="0.05" value="1"><output id="tgAo">1</output></label>
+<label class="lab-row">频率 k<input type="range" id="tgK" min="0.25" max="4" step="0.05" value="1"><output id="tgKo">1</output></label>
+<label class="lab-row">相位 b<input type="range" id="tgB" min="-6.28" max="6.28" step="0.05" value="0"><output id="tgBo">0</output></label>
+<label class="lab-row">纵向平移 c<input type="range" id="tgC" min="-3" max="3" step="0.1" value="0"><output id="tgCo">0</output></label>
+<h4>变换步骤(可勾选对比)</h4>
+<label class="lab-check"><input type="checkbox" id="tgS1" checked> ① y = sinx(参考)</label>
+<label class="lab-check"><input type="checkbox" id="tgS2" checked> ② y = sin(kx) 横伸缩</label>
+<label class="lab-check"><input type="checkbox" id="tgS3" checked> ③ y = sin(kx+b) 平移</label>
+<label class="lab-check"><input type="checkbox" id="tgS4" checked> ④ y = A·sin(kx+b) 纵伸缩</label>
+<label class="lab-check"><input type="checkbox" id="tgS5" checked> ⑤ 最终:加 c</label>
+<div class="lab-btns">
+<button id="tgPlay">▶ 相位动画</button>
+<button id="tgReset">↺ 还原 sinx</button>
+</div>
+<div class="lab-btns">
+<button class="lab-mini" data-tgpreset="compress">压缩:sin2x</button>
+<button class="lab-mini" data-tgpreset="full">2sin(x+π/3)+1</button>
+<button class="lab-mini" data-tgpreset="hard">½sin(3x−π)+0.8</button>
+<button class="lab-mini" data-tgpreset="flip">振幅/下移</button>
+</div>
+</div>
+</div>
+<div class="lab-data">
+<div class="lab-kvs" id="dataTrig"></div>
+<div id="tableTrig"></div>
+</div>
+<p class="lab-note">要点:y = sin(kx+b) = sin(k(x + b/k)),即先横坐标缩为 1/k,再向左平移 b/k;周期 T = 2π/|k|;五点法作图取 x = (−b + nπ/2)/k。</p>
+</section>
+
+<script>
+(function(){
+"use strict";
+/* ---------- 通用 ---------- */
+function $(id){ return document.getElementById(id); }
+function sgn(x){ return x>0?1:(x<0?-1:0); }
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function round(x,n){ n=n==null?2:n; var p=Math.pow(10,n); return Math.round(x*p)/p; }
+function fmt(x,n){ n=n==null?2:n; if(!isFinite(x)) return "—"; return String(round(x,n)); }
+function piFmt(x){
+  var r = x/Math.PI;
+  for(var d=1; d<=6; d++){
+    for(var n=-6*d; n<=6*d; n++){
+      if (Math.abs(r - n/d) < 1e-9){
+        if (n===0) return "0";
+        var s = n<0?"-":"", an = Math.abs(n);
+        if (d===1) return s + (an===1?"π":an+"π");
+        return s + (an===1?"π/"+d : an+"π/"+d);
+      }
+    }
+  }
+  return fmt(x,3);
+}
+function setup(cv){
+  var dpr = window.devicePixelRatio||1;
+  var w = cv.getAttribute("width"), h = cv.getAttribute("height");
+  cv.width = w*dpr; cv.height = h*dpr;
+  var c = cv.getContext("2d");
+  c.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx:c, w:+w, h:+h};
+}
+function arrow(ctx,x1,y1,x2,y2,color,lw,head){
+  lw = lw||2; head = head||7;
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw; ctx.lineCap="round";
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  var a = Math.atan2(y2-y1, x2-x1);
+  ctx.beginPath(); ctx.moveTo(x2,y2);
+  ctx.lineTo(x2-head*Math.cos(a-0.42), y2-head*Math.sin(a-0.42));
+  ctx.lineTo(x2-head*Math.cos(a+0.42), y2-head*Math.sin(a+0.42));
+  ctx.closePath(); ctx.fill();
+}
+var lastT = performance.now();
+function frame(now){
+  var dt = Math.min(0.05,(now-lastT)/1000); lastT = now;
+  blkTick(dt); boatTick(dt); trigTick(dt);
+  requestAnimationFrame(frame);
+}
+
+/* ============ ① 板块模型 ============ */
+var G = 9.8;
+var blk = {F:8,m1:1,m2:2,mu:0.3,mu2:0,L:4,vA0:0,vB0:0,
+  t:0,xA:0,xB:0,vA:0,vB:0,aA:0,aB:0,f:0,stick:false,fell:false,
+  run:true,status:"运行中",hist:[],tick:0,dataT:0};
+var B1 = setup($("cvBlock")), B2 = setup($("cvBlockVT"));
+
+function blkApply(){
+  blk.F=+$("blkF").value; blk.m1=+$("blkM1").value; blk.m2=+$("blkM2").value;
+  blk.mu=+$("blkMu").value; blk.mu2=+$("blkMu2").value; blk.L=+$("blkL").value;
+  blk.vA0=+$("blkVA0").value; blk.vB0=+$("blkVB0").value;
+  blk.speed=+$("blkSpeed").value;
+}
+function blkReset(){
+  blkApply();
+  blk.t=0; blk.xA=0; blk.xB=0; blk.vA=blk.vA0; blk.vB=blk.vB0;
+  blk.aA=0; blk.aB=0; blk.f=0; blk.stick=false; blk.fell=false;
+  blk.hist=[{t:0,vA:blk.vA,vB:blk.vB}];
+  blk.status="运行中"; blk.tick=0;
+}
+function blkStep(dt){
+  var F=blk.F, m1=blk.m1, m2=blk.m2, mu=blk.mu, mu2=blk.mu2;
+  var vrel = blk.vA - blk.vB;
+  var fmax = mu*m1*G;
+  var fg = Math.abs(blk.vB)>1e-4 ? mu2*(m1+m2)*G*sgn(blk.vB) : 0;
+  var f, aA, aB;
+  if (Math.abs(vrel) < 1e-6){
+    var a = (F - fg)/(m1+m2);
+    var freq = F - m1*a;
+    if (Math.abs(freq) <= fmax + 1e-9){ f=freq; aA=a; aB=a; blk.stick=true; }
+    else { f = fmax*sgn(freq); aA=(F-f)/m1; aB=(f-fg)/m2; blk.stick=false; }
+  } else {
+    f = fmax*sgn(vrel);
+    aA = (F - f)/m1;
+    aB = (f - fg)/m2;
+    blk.stick=false;
+  }
+  blk.aA=aA; blk.aB=aB; blk.f=f;
+  blk.vA += aA*dt; blk.vB += aB*dt;
+  blk.xA += blk.vA*dt; blk.xB += blk.vB*dt;
+  blk.t += dt;
+  if (Math.abs(blk.xA-blk.xB) >= blk.L/2){
+    blk.fell=true; blk.run=false;
+    blk.status="物块已滑落木板!用时 "+fmt(blk.t,2)+"s(相对位移达 L/2 = "+fmt(blk.L/2)+"m)";
+  } else if (blk.t>0.15 && blk.stick && Math.abs(blk.aA)<1e-3){
+    blk.run=false;
+    blk.status = (Math.abs(blk.vA)<1e-3 && Math.abs(blk.vB)<1e-3)
+      ? "静止/受力平衡状态"
+      : "已共速,一起匀速运动 v = "+fmt(blk.vA,2)+" m/s";
+  }
+  if (blk.t>=60 && blk.run){ blk.run=false; blk.status="演示超时(60s),按重置再来"; }
+}
+function blkTick(dt){
+  if (blk.run){
+    var n = clamp(Math.round(dt*blk.speed/0.002),1,120);
+    for(var i=0;i<n;i++){ if(!blk.run) break; blkStep(0.002); }
+    blk.tick++;
+    if (blk.tick%3===0){
+      blk.hist.push({t:blk.t,vA:blk.vA,vB:blk.vB});
+      if (blk.hist.length>3000) blk.hist.shift();
+    }
+  }
+  blkRender();
+  blk.dataT -= dt;
+  if (blk.dataT<=0){ blkData(); blk.dataT=0.1; }
+}
+function blkRender(){
+  var ctx=B1.ctx, W=B1.w, H=B1.h;
+  ctx.clearRect(0,0,W,H);
+  var pxm = Math.min(110,(W-190)/blk.L);
+  var mid = (blk.xA+blk.xB)/2;
+  var viewHalf = (W/2-80)/pxm;
+  var cx = clamp(mid, -viewHalf+2, viewHalf-2);
+  var X = function(x){ return W/2 + (x-cx)*pxm; };
+  var groundY = H-52, blockH=30, boardH=16, boardTop = groundY-50;
+  /* 地面与标尺 */
+  ctx.fillStyle="#dfe6ee"; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.fillStyle="#aab4c2"; ctx.fillRect(0,groundY,W,3);
+  ctx.font="10px sans-serif"; ctx.textAlign="center";
+  for (var m=Math.ceil(cx-viewHalf); m<=Math.floor(cx+viewHalf); m++){
+    var sx=X(m);
+    ctx.strokeStyle="#c3ccd8"; ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+8); ctx.stroke();
+    ctx.fillStyle="#7b8794"; ctx.fillText(m+"m", sx, groundY+20);
+  }
+  /* 木板 B */
+  var bx=X(blk.xB)-blk.L*pxm/2, bw=blk.L*pxm;
+  ctx.fillStyle="#5b6770"; ctx.fillRect(bx, boardTop+blockH+2, bw, boardH);
+  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 11px sans-serif";
+  ctx.fillText("B", X(blk.xB), boardTop+blockH+14);
+  ctx.fillStyle="#8a94a6"; ctx.font="10px sans-serif";
+  ctx.fillText("L="+blk.L+"m", X(blk.xB), groundY+38);
+  /* 物块 A */
+  var aw = Math.max(46, 0.75*pxm);
+  var ax = X(blk.xA)-aw/2;
+  ctx.fillStyle="#0a84ff"; ctx.fillRect(ax, boardTop, aw, blockH);
+  ctx.fillStyle="#fff"; ctx.font="bold 11px sans-serif";
+  ctx.fillText("A", X(blk.xA), boardTop+19);
+  /* 速度箭头(绿) */
+  if (Math.abs(blk.vA)>0.01){
+    var lvA = clamp(Math.abs(blk.vA)/10*90, 8, 120);
+    arrow(ctx, X(blk.xA), boardTop-10, X(blk.xA)+sgn(blk.vA)*lvA, boardTop-10, "#16a085",2.2,7);
+    ctx.fillStyle="#16a085"; ctx.font="10px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), boardTop-18);
+  }
+  if (Math.abs(blk.vB)>0.01){
+    var lvB = clamp(Math.abs(blk.vB)/10*90, 8, 120);
+    arrow(ctx, X(blk.xB), groundY-10, X(blk.xB)+sgn(blk.vB)*lvB, groundY-10, "#27ae60",2.2,7);
+    ctx.fillStyle="#27ae60"; ctx.font="10px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), groundY-18);
+  }
+  /* 受力箭头(可开关) */
+  if ($("blkForces").checked){
+    if (Math.abs(blk.F)>0.05){
+      var lF = clamp(Math.abs(blk.F)/25*90, 12, 110);
+      arrow(ctx, X(blk.xA)-sgn(blk.F)*aw*0.35, boardTop+12, X(blk.xA)-sgn(blk.F)*aw*0.35+sgn(blk.F)*lF, boardTop+12, "#c0392b",2.4,8);
+      ctx.fillStyle="#c0392b"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
+      ctx.fillText("F="+fmt(blk.F,1)+"N", X(blk.xA), boardTop-30);
+    }
+    if (Math.abs(blk.f)>1e-9){
+      var lf = clamp(Math.abs(blk.f)/15*40, 10, 60);
+      var fA = -blk.f; /* A 受的摩擦力方向 */
+      arrow(ctx, X(blk.xA)-sgn(fA)*aw*0.3, boardTop+26, X(blk.xA)-sgn(fA)*aw*0.3+sgn(fA)*lf, boardTop+26, "#e67e22",2,6);
+      arrow(ctx, X(blk.xB)+sgn(blk.f)*30, boardTop+blockH+1, X(blk.xB)+sgn(blk.f)*30-sgn(blk.f)*lf, boardTop+blockH+1, "#e67e22",2,6);
+    }
+  }
+  /* v-t 图 */
+  var c2=B2.ctx, W2=B2.w, H2=B2.h;
+  c2.clearRect(0,0,W2,H2);
+  var h=blk.hist;
+  var tmax = Math.max(6, Math.ceil(blk.t*1.05));
+  var vmin=0, vmax=0;
+  for(var i=0;i<h.length;i++){ if(h[i].vA<vmin)vmin=h[i].vA; if(h[i].vA>vmax)vmax=h[i].vA;
+    if(h[i].vB<vmin)vmin=h[i].vB; if(h[i].vB>vmax)vmax=h[i].vB; }
+  if(blk.vA<vmin)vmin=blk.vA; if(blk.vA>vmax)vmax=blk.vA;
+  if(blk.vB<vmin)vmin=blk.vB; if(blk.vB>vmax)vmax=blk.vB;
+  vmin-=0.5; vmax+=0.5; if(vmax-vmin<2){ var midv=(vmin+vmax)/2; vmin=midv-1; vmax=midv+1; }
+  var Lm=48, Rm=14, Tm=14, Bm=26;
+  var X2=function(t){ return Lm + t/tmax*(W2-Lm-Rm); };
+  var Y2=function(v){ return Tm + (vmax-v)/(vmax-vmin)*(H2-Tm-Bm); };
+  c2.strokeStyle="#e3e8ee"; c2.lineWidth=1; c2.fillStyle="#7b8794"; c2.font="10px sans-serif"; c2.textAlign="right";
+  for(var gv=Math.ceil(vmin); gv<=Math.floor(vmax); gv++){
+    c2.beginPath(); c2.moveTo(Lm,Y2(gv)); c2.lineTo(W2-Rm,Y2(gv)); c2.stroke();
+    c2.fillText(gv+" m/s", Lm-5, Y2(gv)+3);
+  }
+  c2.textAlign="center";
+  for(var gt=0; gt<=tmax; gt+=2){
+    c2.beginPath(); c2.moveTo(X2(gt),Tm); c2.lineTo(X2(gt),H2-Bm); c2.stroke();
+    c2.fillText(gt+"s", X2(gt), H2-Bm+12);
+  }
+  c2.strokeStyle="#aab4c2"; c2.lineWidth=1.5;
+  c2.beginPath(); c2.moveTo(Lm,Y2(0)); c2.lineTo(W2-Rm,Y2(0)); c2.stroke();
+  function plot(data,color,key){
+    if(data.length<2) return;
+    c2.strokeStyle=color; c2.lineWidth=2.2; c2.beginPath();
+    for(var i=0;i<data.length;i++){
+      var xx=X2(data[i].t), yy=Y2(data[i][key]);
+      i===0?c2.moveTo(xx,yy):c2.lineTo(xx,yy);
+    }
+    c2.stroke();
+  }
+  plot(h,"#0a84ff","vA"); plot(h,"#27ae60","vB");
+  c2.fillStyle="#0a84ff"; c2.textAlign="left"; c2.font="11px sans-serif";
+  c2.fillText("vA(物块)", Lm+8, Tm+12);
+  c2.fillStyle="#27ae60"; c2.fillText("vB(木板)", Lm+78, Tm+12);
+  c2.textAlign="left"; c2.fillStyle="#7b8794"; c2.fillText("速度-时间图", W2-100, H2-8);
+}
+function blkData(){
+  var d = blk.xA - blk.xB;
+  var fTxt = Math.abs(blk.f)<1e-9 ? "0(无)" :
+    (blk.stick? "静摩擦 ":"动摩擦 ")+fmt(Math.abs(blk.f),2)+"N";
+  var fDir = blk.f>0 ? "A←左 / B→右" : (blk.f<0 ? "A→右 / B←左" : "—");
+  var html =
+    '<div class="lab-kv"><b>时间 t</b><span>'+fmt(blk.t,2)+' s</span></div>'+
+    '<div class="lab-kv"><b>xA</b><span>'+fmt(blk.xA,2)+' m</span></div>'+
+    '<div class="lab-kv"><b>xB</b><span>'+fmt(blk.xB,2)+' m</span></div>'+
+    '<div class="lab-kv"><b>相对位移 Δx</b><span class="'+(Math.abs(d)>=blk.L/2?"warn":"")+'">'+fmt(d,2)+' m</span></div>'+
+    '<div class="lab-kv"><b>vA</b><span>'+fmt(blk.vA,2)+' m/s</span></div>'+
+    '<div class="lab-kv"><b>vB</b><span>'+fmt(blk.vB,2)+' m/s</span></div>'+
+    '<div class="lab-kv"><b>aA</b><span>'+fmt(blk.aA,2)+' m/s²</span></div>'+
+    '<div class="lab-kv"><b>aB</b><span>'+fmt(blk.aB,2)+' m/s²</span></div>'+
+    '<div class="lab-kv"><b>摩擦力 f</b><span>'+fTxt+'</span></div>'+
+    '<div class="lab-kv"><b>f 方向</b><span>'+fDir+'</span></div>'+
+    '<div class="lab-kv"><b>滑落临界 L/2</b><span>'+fmt(blk.L/2,2)+' m</span></div>'+
+    '<div class="lab-kv"><b>状态</b><span class="'+(blk.fell?"warn":"ok")+'">'+(blk.run?(blk.stick?"一起运动":"相对滑动"):"—")+'</span></div>';
+  $("dataBlock").innerHTML = html;
+  var s = $("statusBlock");
+  s.innerHTML = '<span class="'+(blk.fell?"warn":"")+'">'+blk.status+'</span>'+
+    (blk.run? ' &nbsp;·&nbsp; 当前'+ (blk.stick?"一起运动(静摩擦)":"相对滑动中") : '');
+}
+$("blkPlay").addEventListener("click",function(){
+  if(!blk.run && !blk.fell){ blk.run=true; blk.status="运行中"; }
+  this.textContent = blk.run? "⏸ 暂停" : "▶ 播放";
+});
+$("blkReset").addEventListener("click",function(){ blkReset(); blk.run=true; $("blkPlay").textContent="⏸ 暂停"; });
+function bindBlkSlider(id,outId,fmtFn){
+  var el=$(id), out=$(outId);
+  el.addEventListener("input",function(){
+    out.textContent = fmtFn(+el.value);
+    blkReset();
+    if ($("blkAuto").checked) blk.run=true;
+    $("blkPlay").textContent = blk.run? "⏸ 暂停":"▶ 播放";
+  });
+}
+bindBlkSlider("blkF","blkFo",function(v){return v;});
+bindBlkSlider("blkM1","blkM1o",function(v){return v;});
+bindBlkSlider("blkM2","blkM2o",function(v){return v;});
+bindBlkSlider("blkMu","blkMuo",function(v){return v;});
+bindBlkSlider("blkMu2","blkMu2o",function(v){return v;});
+bindBlkSlider("blkL","blkLo",function(v){return v;});
+bindBlkSlider("blkVA0","blkVA0o",function(v){return v;});
+bindBlkSlider("blkVB0","blkVB0o",function(v){return v;});
+$("blkSpeed").addEventListener("change",function(){ blk.speed=+this.value; });
+var blkPresets = {
+  together:{F:3,m1:1,m2:2,mu:0.3,mu2:0,L:4,vA0:0,vB0:0},
+  slide:{F:12,m1:1,m2:2,mu:0.3,mu2:0,L:4,vA0:0,vB0:0},
+  carry:{F:0,m1:1,m2:2,mu:0.3,mu2:0,L:4,vA0:0,vB0:2},
+  ground:{F:8,m1:1,m2:2,mu:0.3,mu2:0.1,L:4,vA0:0,vB0:0}
+};
+var blkMiniBtns = document.querySelectorAll("[data-blkpreset]");
+for(var i=0;i<blkMiniBtns.length;i++){
+  blkMiniBtns[i].addEventListener("click",function(){
+    var p = blkPresets[this.getAttribute("data-blkpreset")];
+    $("blkF").value=p.F; $("blkFo").textContent=p.F;
+    $("blkM1").value=p.m1; $("blkM1o").textContent=p.m1;
+    $("blkM2").value=p.m2; $("blkM2o").textContent=p.m2;
+    $("blkMu").value=p.mu; $("blkMuo").textContent=p.mu;
+    $("blkMu2").value=p.mu2; $("blkMu2o").textContent=p.mu2;
+    $("blkL").value=p.L; $("blkLo").textContent=p.L;
+    $("blkVA0").value=p.vA0; $("blkVA0o").textContent=p.vA0;
+    $("blkVB0").value=p.vB0; $("blkVB0o").textContent=p.vB0;
+    blkReset(); blk.run=true; $("blkPlay").textContent="⏸ 暂停";
+  });
+}
+blkReset(); blk.run=true;
+
+/* ============ ② 小船渡河 ============ */
+var boat = {vB:2,vW:1.2,d:100,th:90,p:0,run:false,flow:0};
+var BO = setup($("cvBoat"));
+function boatApply(){
+  boat.vB=+$("btVB").value; boat.vW=+$("btVW").value;
+  boat.d=+$("btD").value; boat.th=+$("btTH").value;
+}
+function boatDerived(){
+  var th = boat.th*Math.PI/180;
+  var vbx = boat.vB*Math.cos(th), vby = boat.vB*Math.sin(th);
+  var vx = boat.vW + vbx, vy = vby;
+  var tcross = vy>0.01 ? boat.d/vy : Infinity;
+  var drift = isFinite(tcross)? vx*tcross : 0;
+  return {th:th,vbx:vbx,vby:vby,vx:vx,vy:vy,tcross:tcross,drift:drift};
+}
+function boatTick(dt){
+  if (boat.run){
+    boat.p += dt/5;
+    if (boat.p>=1){ boat.p=1; boat.run=false; $("btPlay").textContent="▶ 播放"; }
+  }
+  boat.flow += dt*boat.vW*14;
+  boatRender();
+  boat.dataT = (boat.dataT||0) - dt;
+  if (boat.dataT<=0){ boatData(); boat.dataT=0.1; }
+}
+function boatRender(){
+  var ctx=BO.ctx, W=BO.w, H=BO.h;
+  ctx.clearRect(0,0,W,H);
+  var dd = boatDerived();
+  var tcross=dd.tcross, drift=dd.drift;
+  var dMinT = boat.vW*(boat.d/boat.vB);
+  var minD = boat.vB>=boat.vW ? 0 : boat.d*Math.sqrt(boat.vW*boat.vW-boat.vB*boat.vB)/boat.vB;
+  var xspan = Math.max(boat.d, Math.abs(drift)||0,
+    $("btLineT").checked?dMinT:0, $("btLineD").checked?minD:0, 20)*1.22;
+  var pxm = Math.min((W-180)/xspan, (H-130)/boat.d);
+  var ox=95, oy=62;
+  var riverTop=oy-14, riverBot=oy+boat.d*pxm+8;
+  /* 河岸与水面 */
+  ctx.fillStyle="#d8b98c"; ctx.fillRect(0,0,W,riverTop);
+  ctx.fillStyle="#8a6d3b"; ctx.fillRect(0,riverTop-2,W,2);
+  ctx.fillStyle="#d8b98c"; ctx.fillRect(0,riverBot,W,H-riverBot);
+  ctx.fillStyle="#8a6d3b"; ctx.fillRect(0,riverBot,W,2);
+  ctx.fillStyle="#e8f3fb"; ctx.fillRect(0,riverTop,W,riverBot-riverTop);
+  /* 水流虚线 */
+  ctx.strokeStyle="#b7d4ea"; ctx.lineWidth=1.5; ctx.setLineDash([7,9]);
+  var foff = (boat.flow % 16);
+  for(var y=riverTop+14; y<riverBot-8; y+=22){
+    ctx.beginPath(); ctx.moveTo(ox-40+foff, y); ctx.lineTo(W-20, y); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  /* 航线 */
+  function trace(ex,ey,color,dash){
+    ctx.strokeStyle=color; ctx.lineWidth=2; ctx.setLineDash(dash||[6,6]);
+    ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if ($("btLineT").checked && isFinite(tcross))
+    trace(ox + boat.vW*(boat.d/boat.vB)*pxm, oy+boat.d*pxm, "#27ae60");
+  if ($("btLineD").checked)
+    trace(ox + minD*pxm, oy+boat.d*pxm, "#8e44ad");
+  if (isFinite(tcross)){
+    var ex = ox + drift*pxm, ey = oy + boat.d*pxm;
+    trace(ex,ey,"#e74c3c");
+    /* 船实时位置 */
+    var t = boat.p*tcross;
+    var bx = ox + dd.vx*t*pxm, by = oy + dd.vy*t*pxm;
+    if (boat.p<1){
+      ctx.strokeStyle="#e74c3c"; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(bx,by); ctx.stroke();
+    }
+    /* 速度矢量 */
+    var as = Math.min(pxm*1.5, 34);
+    var lvW = clamp(boat.vW*as, 4, 90);
+    var lvB = clamp(boat.vB*as, 4, 90);
+    var lvR = clamp(Math.sqrt(dd.vx*dd.vx+dd.vy*dd.vy)*as, 4, 110);
+    arrow(ctx,bx,by,bx+lvW,by,"#b07d2b",2.4,8);
+    arrow(ctx,bx,by,bx+dd.vbx*as,by+dd.vby*as,"#0a84ff",2.4,8);
+    arrow(ctx,bx,by,bx+dd.vx*as,by+dd.vy*as,"#c0392b",2.6,9);
+    /* 平行四边形虚线 */
+    ctx.strokeStyle="#aab4c2"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    var px=bx+dd.vbx*as, py=by+dd.vby*as;
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+lvW,py); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx+lvW,by); ctx.lineTo(px+lvW,py); ctx.stroke();
+    ctx.setLineDash([]);
+    /* 船体(朝船头方向) */
+    var ang = Math.atan2(dd.vby, dd.vbx);
+    ctx.save(); ctx.translate(bx,by); ctx.rotate(ang);
+    ctx.fillStyle="#3b4252";
+    ctx.beginPath(); ctx.moveTo(16,0); ctx.lineTo(-12,-7); ctx.lineTo(-12,7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle="#0a84ff"; ctx.beginPath(); ctx.arc(-2,0,3,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    /* 标注 */
+    ctx.fillStyle="#b07d2b"; ctx.font="11px sans-serif"; ctx.textAlign="left";
+    ctx.fillText("v水", bx+lvW+4, by+4);
+    ctx.fillStyle="#0a84ff"; ctx.fillText("v船", px+4, py+4);
+    ctx.fillStyle="#c0392b"; ctx.fillText("V合", bx+dd.vx*as+5, by+dd.vy*as-4);
+  }
+  /* 岸边文字 */
+  ctx.fillStyle="#5b4a2d"; ctx.font="bold 12px sans-serif"; ctx.textAlign="left";
+  ctx.fillText("起点岸(上游)", ox-40, riverTop-8);
+  ctx.fillText("对岸", ox-40, riverBot+20);
+  ctx.fillStyle="#7b8794"; ctx.font="11px sans-serif";
+  ctx.fillText("河宽 d="+boat.d+"m", 14, oy+boat.d*pxm/2);
+  if ($("btLineT").checked){ ctx.fillStyle="#27ae60"; ctx.fillText("─ 最短时间航线", 14, riverTop+20); }
+  if ($("btLineD").checked){ ctx.fillStyle="#8e44ad"; ctx.fillText("─ 最短位移航线", 14, riverTop+36); }
+  ctx.fillStyle="#e74c3c"; ctx.fillText("─ 当前航线", 14, riverTop+52);
+}
+function boatData(){
+  var dd = boatDerived();
+  var V = Math.sqrt(dd.vx*dd.vx+dd.vy*dd.vy);
+  var angDeg = Math.atan2(dd.vy, dd.vx)*180/Math.PI;
+  var tcross = dd.tcross;
+  var drift = dd.drift;
+  var s = isFinite(tcross)? Math.sqrt(boat.d*boat.d+drift*drift) : Infinity;
+  var tmin = boat.d/boat.vB;
+  var driftMinT = boat.vW*tmin;
+  var feasible = boat.vB>=boat.vW;
+  var thStar = feasible? Math.acos(-boat.vW/boat.vB) : Math.acos(-boat.vB/boat.vW);
+  var thStarDeg = thStar*180/Math.PI;
+  var tminD = feasible? boat.d/Math.sqrt(boat.vB*boat.vB-boat.vW*boat.vW) : Infinity;
+  var driftMinD = feasible? 0 : boat.d*Math.sqrt(boat.vW*boat.vW-boat.vB*boat.vB)/boat.vB;
+  var html =
+    '<div class="lab-kv"><b>θ</b><span>'+boat.th+'° '+(boat.th>90?"偏向上游":(boat.th<90?"偏向下游":"垂直河岸"))+'</span></div>'+
+    '<div class="lab-kv"><b>vx(沿河)</b><span>'+fmt(dd.vx,2)+' m/s</span></div>'+
+    '<div class="lab-kv"><b>vy(垂直)</b><span>'+fmt(dd.vy,2)+' m/s</span></div>'+
+    '<div class="lab-kv"><b>|V合|</b><span>'+fmt(V,2)+' m/s</span></div>'+
+    '<div class="lab-kv"><b>V合方向(与下游)</b><span>'+fmt(angDeg,1)+'°</span></div>'+
+    '<div class="lab-kv"><b>渡河时间</b><span>'+fmt(tcross,1)+' s</span></div>'+
+    '<div class="lab-kv"><b>漂移 x</b><span>'+fmt(drift,1)+' m</span></div>'+
+    '<div class="lab-kv"><b>合位移</b><span>'+fmt(s,1)+' m</span></div>'+
+    '<div class="lab-kv"><b>当前渡河时间</b><span>'+fmt(boat.p*(isFinite(tcross)?tcross:0),1)+' s</span></div>'+
+    '<div class="lab-kv"><b>最短时间航线</b><span>θ=90°, t='+fmt(tmin,1)+'s, 漂移='+fmt(driftMinT,1)+'m</span></div>'+
+    '<div class="lab-kv"><b>最短位移航线</b><span class="'+(feasible?"ok":"warn")+'">'+
+      (feasible? "θ*="+fmt(thStarDeg,1)+"°, t="+fmt(tminD,1)+"s, 漂移=0"
+               : "v船<v水,无法垂直;最小漂移 θ*="+fmt(thStarDeg,1)+"°, 漂移="+fmt(driftMinD,1)+"m")+'</span></div>';
+  $("dataBoat").innerHTML = html;
+  var st = $("statusBoat");
+  if (!isFinite(tcross)) st.innerHTML = '<span class="warn">船速没有垂直分量(θ≈0°或180°),无法渡河,请增大 θ。</span>';
+  else if (boat.p>=1) st.innerHTML = '<span class="ok">已到达对岸!用时 '+fmt(tcross,1)+'s,漂移 '+fmt(drift,1)+'m。</span>';
+  else st.innerHTML = '航行中… '+Math.round(boat.p*100)+'% · 目标:对岸';
+}
+$("btPlay").addEventListener("click",function(){
+  if (boat.p>=1){ boat.p=0; }
+  boat.run=!boat.run;
+  this.textContent = boat.run? "⏸ 暂停":"▶ 播放";
+});
+$("btReset").addEventListener("click",function(){ boat.p=0; boat.run=false; $("btPlay").textContent="▶ 播放"; });
+function bindBoatSlider(id,outId,fmtFn){
+  var el=$(id), out=$(outId);
+  el.addEventListener("input",function(){
+    out.textContent = fmtFn(+el.value);
+    boatApply(); boat.p=0; boat.run=false; $("btPlay").textContent="▶ 播放";
+  });
+}
+bindBoatSlider("btVB","btVBo",function(v){return v;});
+bindBoatSlider("btVW","btVWo",function(v){return v;});
+bindBoatSlider("btD","btDo",function(v){return v;});
+bindBoatSlider("btTH","btTHo",function(v){return v+"°";});
+$("btPresetT").addEventListener("click",function(){
+  $("btTH").value=90; $("btTHo").textContent="90°"; boatApply(); boat.p=0; boat.run=true; $("btPlay").textContent="⏸ 暂停";
+});
+$("btPresetD").addEventListener("click",function(){
+  var vB=boat.vB, vW=boat.vW;
+  var th = vB>=vW? Math.acos(-vW/vB) : Math.acos(-vB/vW);
+  var deg = Math.round(th*180/Math.PI);
+  $("btTH").value=deg; $("btTHo").textContent=deg+"°";
+  boatApply(); boat.p=0; boat.run=true; $("btPlay").textContent="⏸ 暂停";
+});
+$("btPresetFast").addEventListener("click",function(){
+  $("btVB").value=2; $("btVBo").textContent="2";
+  $("btVW").value=2.5; $("btVWo").textContent="2.5";
+  $("btD").value=100; $("btDo").textContent="100";
+  boatApply(); boat.p=0; boat.run=true; $("btPlay").textContent="⏸ 暂停";
+});
+$("btLineT").addEventListener("change",boatRender);
+$("btLineD").addEventListener("change",boatRender);
+boatApply();
+
+/* ============ ③ 三角函数 ============ */
+var trig = {A:1,k:1,b:0,c:0,xmin:-2*Math.PI,xmax:2*Math.PI,tx:Math.PI/3,playing:false,yr:[0,1],drag:false};
+var TG = setup($("cvTrig"));
+function trigApply(){
+  trig.A=+$("tgA").value; trig.k=+$("tgK").value;
+  trig.b=+$("tgB").value; trig.c=+$("tgC").value;
+}
+function tgF(x){ return trig.A*Math.sin(trig.k*x+trig.b)+trig.c; }
+function trigShow(n){ return $("tgS"+n).checked; }
+function trigRender(){
+  var ctx=TG.ctx, W=TG.w, H=TG.h;
+  ctx.clearRect(0,0,W,H);
+  var stages = [
+    {on:trigShow(1), f:function(x){return Math.sin(x);}, color:"#9aa5b1", dash:[5,5], lw:1.6, label:"① sinx"},
+    {on:trigShow(2), f:function(x){return Math.sin(trig.k*x);}, color:"#8e44ad", dash:null, lw:1.6, label:"② sin(kx)"},
+    {on:trigShow(3), f:function(x){return Math.sin(trig.k*x+trig.b);}, color:"#16a085", dash:null, lw:1.6, label:"③ sin(kx+b)"},
+    {on:trigShow(4), f:function(x){return trig.A*Math.sin(trig.k*x+trig.b);}, color:"#e67e22", dash:null, lw:1.6, label:"④ A·sin(kx+b)"},
+    {on:trigShow(5), f:tgF, color:"#0a84ff", dash:null, lw:2.6, label:"⑤ 最终"}
+  ];
+  /* y 范围 */
+  var ymin=0, ymax=0;
+  for(var s=0;s<stages.length;s++){
+    if(!stages[s].on) continue;
+    for(var i=0;i<=160;i++){
+      var x = trig.xmin + (trig.xmax-trig.xmin)*i/160;
+      var y = stages[s].f(x);
+      if(y<ymin)ymin=y; if(y>ymax)ymax=y;
+    }
+  }
+  ymin-=0.35; ymax+=0.35;
+  if (ymax-ymin<1.2){ var my=(ymin+ymax)/2; ymin=my-0.6; ymax=my+0.6; }
+  trig.yr=[ymin,ymax];
+  var Lm=52, Rm=16, Tm=14, Bm=30;
+  var X=function(x){ return Lm + (x-trig.xmin)/(trig.xmax-trig.xmin)*(W-Lm-Rm); };
+  var Y=function(y){ return Tm + (ymax-y)/(ymax-ymin)*(H-Tm-Bm); };
+  /* 网格与坐标轴 */
+  ctx.strokeStyle="#e3e8ee"; ctx.lineWidth=1;
+  ctx.fillStyle="#7b8794"; ctx.font="11px sans-serif"; ctx.textAlign="center";
+  for(var k2=-4;k2<=4;k2++){
+    var x = k2*Math.PI/2;
+    if (x<trig.xmin-0.01||x>trig.xmax+0.01) continue;
+    var gx=X(x);
+    ctx.beginPath(); ctx.moveTo(gx,Tm); ctx.lineTo(gx,H-Bm); ctx.stroke();
+    var labels = ["-2π","-3π/2","-π","-π/2","0","π/2","π","3π/2","2π"];
+    ctx.fillText(labels[k2+4], gx, H-Bm+14);
+  }
+  var ystep = (ymax-ymin)>6?2:((ymax-ymin)>2.6?1:0.5);
+  ctx.textAlign="right";
+  for(var gy=Math.ceil(ymin/ystep)*ystep; gy<=ymax+1e-9; gy+=ystep){
+    var gyy=Y(gy);
+    ctx.beginPath(); ctx.moveTo(Lm,gyy); ctx.lineTo(W-Rm,gyy); ctx.stroke();
+    ctx.fillText(fmt(gy,1), Lm-6, gyy+4);
+  }
+  ctx.strokeStyle="#5b6770"; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(X(0),Tm); ctx.lineTo(X(0),H-Bm); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(Lm,Y(0)); ctx.lineTo(W-Rm,Y(0)); ctx.stroke();
+  ctx.textAlign="left"; ctx.fillStyle="#5b6770";
+  ctx.fillText("y", Lm+4, Tm+12); ctx.fillText("x", W-Rm+4, Y(0)+12);
+  /* 曲线 */
+  function curve(stage){
+    ctx.strokeStyle=stage.color; ctx.lineWidth=stage.lw;
+    ctx.setLineDash(stage.dash||[]);
+    ctx.beginPath();
+    for(var i=0;i<=300;i++){
+      var x = trig.xmin + (trig.xmax-trig.xmin)*i/300;
+      var y = stage.f(x);
+      if (y<ymin-3||y>ymax+3){ ctx.moveTo(X(x),Y(clamp(y,ymin,ymax))); continue; }
+      i===0?ctx.moveTo(X(x),Y(y)):ctx.lineTo(X(x),Y(y));
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  for(var s2=0;s2<stages.length;s2++){ if(stages[s2].on) curve(stages[s2]); }
+  /* 图例 */
+  var ly=16;
+  for(var s3=0;s3<stages.length;s3++){
+    if(!stages[s3].on) continue;
+    ctx.strokeStyle=stages[s3].color; ctx.lineWidth=stages[s3].lw; ctx.setLineDash(stages[s3].dash||[]);
+    ctx.beginPath(); ctx.moveTo(W-170,ly); ctx.lineTo(W-140,ly); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=stages[s3].color; ctx.textAlign="left"; ctx.fillText(stages[s3].label, W-134, ly+4);
+    ly+=17;
+  }
+  /* 跟踪竖线与点 */
+  var tx = clamp(trig.tx, trig.xmin, trig.xmax);
+  var gxx=X(tx);
+  ctx.strokeStyle="#c0392b"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+  ctx.beginPath(); ctx.moveTo(gxx,Tm); ctx.lineTo(gxx,H-Bm); ctx.stroke(); ctx.setLineDash([]);
+  for(var s4=0;s4<stages.length;s4++){
+    if(!stages[s4].on) continue;
+    var yv=stages[s4].f(tx);
+    if (yv<ymin||yv>ymax) continue;
+    ctx.fillStyle=stages[s4].color;
+    ctx.beginPath(); ctx.arc(gxx,Y(yv),4,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#fff"; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(gxx,Y(yv),4,0,Math.PI*2); ctx.stroke();
+  }
+  var rd=$("trigReadout");
+  rd.innerHTML = "x = "+piFmt(tx)+" &nbsp;→&nbsp; sin(x) = "+fmt(Math.sin(tx),3)+
+    " &nbsp;·&nbsp; 变换后 y = "+fmt(tgF(tx),3)+" &nbsp;(拖动图形可连续读数)";
+}
+function trigData(){
+  var A=trig.A, k=trig.k, b=trig.b, c=trig.c;
+  var T = 2*Math.PI/Math.abs(k);
+  var shift = b/k;
+  var shiftTxt = shift>=0? "向左平移 "+piFmt(shift) : "向右平移 "+piFmt(-shift);
+  var ymax=c+Math.abs(A), ymin=c-Math.abs(A);
+  var maxPts=[], minPts=[];
+  for(var n=-4;n<=4;n++){
+    var xm = ((A>=0?Math.PI/2:-Math.PI/2)+2*Math.PI*n-b)/k;
+    if (xm>=trig.xmin&&xm<=trig.xmax) maxPts.push("("+piFmt(xm)+", "+fmt(ymax,2)+")");
+    var xn = ((A>=0?-Math.PI/2:Math.PI/2)+2*Math.PI*n-b)/k;
+    if (xn>=trig.xmin&&xn<=trig.xmax) minPts.push("("+piFmt(xn)+", "+fmt(ymin,2)+")");
+  }
+  var expr = "y = "+(Math.abs(A-1)<1e-9?"":fmt(A,2))+"sin("+(Math.abs(k-1)<1e-9?"":fmt(k,2))+"x"+
+    (Math.abs(b)<1e-9?"":(b>0?" + "+piFmt(b):" − "+piFmt(-b)))+")"+
+    (Math.abs(c)<1e-9?"":(c>0?" + "+fmt(c,2):" − "+fmt(-c,2)));
+  var html =
+    '<div class="lab-kv"><b>解析式</b><span>'+expr+'</span></div>'+
+    '<div class="lab-kv"><b>振幅 |A|</b><span>'+fmt(Math.abs(A),2)+'</span></div>'+
+    '<div class="lab-kv"><b>周期 T=2π/|k|</b><span>'+fmt(T,3)+'</span></div>'+
+    '<div class="lab-kv"><b>频率 f=k/2π</b><span>'+fmt(Math.abs(k)/(2*Math.PI),3)+'</span></div>'+
+    '<div class="lab-kv"><b>相位平移</b><span>'+shiftTxt+'</span></div>'+
+    '<div class="lab-kv"><b>纵向平移</b><span>'+(c>=0?"上移 "+fmt(c,2):"下移 "+fmt(-c,2))+'</span></div>'+
+    '<div class="lab-kv"><b>值域</b><span>['+fmt(ymin,2)+", "+fmt(ymax,2)+']</span></div>'+
+    '<div class="lab-kv"><b>最大值点(窗口内)</b><span>'+maxPts.join(" ; ")+'</span></div>'+
+    '<div class="lab-kv"><b>最小值点(窗口内)</b><span>'+minPts.join(" ; ")+'</span></div>';
+  $("dataTrig").innerHTML = html;
+  /* 五点法表 */
+  var rows="";
+  for(var i=0;i<5;i++){
+    var x=(-b + i*Math.PI/2)/k;
+    var y=c + A*Math.sin(i*Math.PI/2);
+    rows += "<tr><td>点"+(i+1)+"</td><td>"+piFmt(x)+"</td><td>"+fmt(y,2)+"</td></tr>";
+  }
+  $("tableTrig").innerHTML =
+    '<table class="lab-table"><tr><th colspan="3">五点法作图(主周期内五个关键点)</th></tr>'+
+    '<tr><th>关键点</th><th>x = (−b + nπ/2)/k</th><th>y</th></tr>'+rows+'</table>';
+}
+function bindTrigSlider(id,outId,fmtFn){
+  var el=$(id), out=$(outId);
+  el.addEventListener("input",function(){
+    out.textContent = fmtFn(+el.value);
+    trigApply(); trigRender(); trigData();
+  });
+}
+bindTrigSlider("tgA","tgAo",function(v){return fmt(v,2);});
+bindTrigSlider("tgK","tgKo",function(v){return fmt(v,2);});
+bindTrigSlider("tgB","tgBo",function(v){return piFmt(v);});
+bindTrigSlider("tgC","tgCo",function(v){return fmt(v,2);});
+$("tgS1").addEventListener("change",trigRender);
+$("tgS2").addEventListener("change",trigRender);
+$("tgS3").addEventListener("change",trigRender);
+$("tgS4").addEventListener("change",trigRender);
+$("tgS5").addEventListener("change",trigRender);
+$("tgPlay").addEventListener("click",function(){
+  trig.playing=!trig.playing;
+  this.textContent = trig.playing? "⏸ 停止动画":"▶ 相位动画";
+  this.classList.toggle("on", trig.playing);
+});
+$("tgReset").addEventListener("click",function(){
+  $("tgA").value=1; $("tgAo").textContent="1";
+  $("tgK").value=1; $("tgKo").textContent="1";
+  $("tgB").value=0; $("tgBo").textContent="0";
+  $("tgC").value=0; $("tgCo").textContent="0";
+  trigApply(); trigRender(); trigData();
+});
+var tgPresets = {
+  compress:{A:1,k:2,b:0,c:0},
+  full:{A:2,k:1,b:Math.PI/3,c:1},
+  hard:{A:0.5,k:3,b:-Math.PI,c:0.8},
+  flip:{A:1.8,k:1,b:0,c:-1.2}
+};
+var tgMiniBtns = document.querySelectorAll("[data-tgpreset]");
+for(var i=0;i<tgMiniBtns.length;i++){
+  tgMiniBtns[i].addEventListener("click",function(){
+    var p=tgPresets[this.getAttribute("data-tgpreset")];
+    $("tgA").value=p.A; $("tgAo").textContent=fmt(p.A,2);
+    $("tgK").value=p.k; $("tgKo").textContent=fmt(p.k,2);
+    $("tgB").value=p.b; $("tgBo").textContent=piFmt(p.b);
+    $("tgC").value=p.c; $("tgCo").textContent=fmt(p.c,2);
+    trigApply(); trigRender(); trigData();
+  });
+}
+function trigTick(dt){
+  if (trig.playing){
+    trig.b += dt*1.6;
+    if (trig.b>2*Math.PI) trig.b -= 4*Math.PI;
+    $("tgB").value = trig.b;
+    $("tgBo").textContent = piFmt(trig.b);
+    trigRender();
+  }
+}
+/* 跟踪点拖动 */
+(function(){
+  var cv=$("cvTrig");
+  function setFromEvent(e){
+    var r=cv.getBoundingClientRect();
+    var px=(e.clientX-r.left)/r.width*TG.w;
+    trig.tx = trig.xmin + px/TG.w*(trig.xmax-trig.xmin);
+    trig.tx = clamp(trig.tx, trig.xmin, trig.xmax);
+    trigRender();
+  }
+  cv.addEventListener("pointerdown",function(e){
+    trig.drag=true; cv.setPointerCapture(e.pointerId); setFromEvent(e);
+  });
+  cv.addEventListener("pointermove",function(e){ if(trig.drag) setFromEvent(e); });
+  cv.addEventListener("pointerup",function(){ trig.drag=false; });
+  cv.addEventListener("pointercancel",function(){ trig.drag=false; });
+})();
+
+/* 初始渲染 */
+trigApply(); trigRender(); trigData();
+boatRender(); boatData();
+blkRender(); blkData();
+requestAnimationFrame(frame);
+})();
+</script>
+
+<p class="lab-note" style="margin-top:8px;">页面使用原生 Canvas 绘制,无外部依赖;模型持续更新中,想加什么模型(平抛运动、弹簧振子、圆锥曲线…?)欢迎提。</p>
+</div>
+</div>
