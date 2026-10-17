@@ -49,6 +49,8 @@
   function saveSessionKey(keyB64) {
     try {
       sessionStorage.setItem(KEY_STORAGE, keyB64);
+      // 持久化:密钥同时写入 localStorage,关闭页面后仍保留,下次访问无需重新登录
+      localStorage.setItem(KEY_STORAGE, keyB64);
       localStorage.setItem(FLAG, "1");
     } catch (e) {}
   }
@@ -56,13 +58,16 @@
   function clearSession() {
     try {
       sessionStorage.removeItem(KEY_STORAGE);
+      localStorage.removeItem(KEY_STORAGE);
       localStorage.removeItem(FLAG);
     } catch (e) {}
   }
 
   function loadSessionKey() {
     try {
-      return sessionStorage.getItem(KEY_STORAGE);
+      var k = sessionStorage.getItem(KEY_STORAGE);
+      if (!k) k = localStorage.getItem(KEY_STORAGE);
+      return k;
     } catch (e) {
       return null;
     }
