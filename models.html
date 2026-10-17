@@ -6,67 +6,117 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
 
 <div markdown="0">
 <style>
-.lab-root{font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#2b3138;line-height:1.6;}
-.lab-intro{background:#f7f9fb;border:1px solid #e3e8ee;border-left:4px solid #0a84ff;border-radius:8px;padding:14px 18px;margin:0 0 24px;font-size:14px;color:#47505c;}
-.lab-intro p{margin:4px 0;}
-.lab-intro ul{margin:6px 0 2px;padding-left:20px;}
-.lab-card{background:#fff;border:1px solid #e3e8ee;border-radius:10px;box-shadow:0 2px 10px rgba(30,40,60,.06);padding:20px;margin:0 0 28px;}
-.lab-head h2{margin:0 0 2px;font-size:21px;color:#1c232b;}
-.lab-head h2 .lab-tag{display:inline-block;vertical-align:3px;font-size:11px;font-weight:600;color:#fff;background:#0a84ff;border-radius:4px;padding:1px 7px;margin-left:8px;}
-.lab-head h2 .lab-tag.math{background:#16a085;}
-.lab-sub{margin:2px 0 0;font-size:13px;color:#8a94a6;}
+.lab-root{position:relative;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#dbe4f3;line-height:1.65;
+  background:radial-gradient(1100px 560px at 12% -12%, rgba(79,140,255,.16), transparent 60%),
+             radial-gradient(950px 480px at 92% -4%, rgba(155,107,255,.14), transparent 55%),
+             linear-gradient(180deg,#0a101f 0%,#0c1326 100%);
+  border:1px solid rgba(148,163,184,.16);border-radius:22px;padding:26px 24px 12px;
+  box-shadow:0 26px 70px rgba(2,6,18,.55), inset 0 1px 0 rgba(255,255,255,.05);}
+.lab-intro{margin:0 0 28px;}
+.lab-hero-title{font-size:31px;font-weight:800;letter-spacing:.05em;line-height:1.2;
+  background:linear-gradient(90deg,#7cc0ff,#a78bfa 55%,#f0abfc);
+  -webkit-background-clip:text;background-clip:text;color:transparent;}
+.lab-hero-title .fa{margin-left:12px;font-size:24px;-webkit-text-fill-color:#a78bfa;background:none;}
+.lab-hero-sub{margin:6px 0 0;font-size:13.5px;color:#8fa0bd;letter-spacing:.04em;}
+.lab-chips{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 2px;}
+.lab-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 15px;border-radius:999px;
+  border:1px solid rgba(148,163,184,.22);background:rgba(255,255,255,.05);color:#dbe4f3;
+  text-decoration:none;font-size:13px;transition:all .2s;}
+.lab-chip .fa{color:#7cc0ff;}
+.lab-chip:hover{background:rgba(79,140,255,.16);border-color:rgba(79,140,255,.55);color:#fff;transform:translateY(-2px);}
+.lab-tip{margin:12px 0 0;font-size:12.5px;color:#7c8aa5;}
+.lab-card{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+  border:1px solid rgba(148,163,184,.15);border-radius:18px;padding:20px;margin:0 0 24px;
+  box-shadow:0 18px 45px rgba(2,6,18,.4);animation:labUp .55s ease both;}
+@keyframes labUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+.lab-card:nth-of-type(2){animation-delay:.08s;}
+.lab-card:nth-of-type(3){animation-delay:.16s;}
+.lab-card:nth-of-type(4){animation-delay:.24s;}
+.lab-head{display:flex;align-items:flex-start;gap:14px;}
+.lab-num{flex:none;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:800;letter-spacing:.02em;color:#fff;
+  background:linear-gradient(135deg,#4f8cff,#9b6bff);box-shadow:0 10px 24px rgba(79,140,255,.35);}
+.lab-num.n2{background:linear-gradient(135deg,#22d3ee,#3b82f6);box-shadow:0 10px 24px rgba(34,211,238,.3);}
+.lab-num.n3{background:linear-gradient(135deg,#a78bfa,#ec4899);box-shadow:0 10px 24px rgba(167,139,250,.3);}
+.lab-head h2{margin:0 0 4px;font-size:20px;color:#eef3fc;}
+.lab-head h2 .fa{color:#7cc0ff;margin-right:8px;}
+.lab-tag{display:inline-block;vertical-align:2px;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:#67e8f9;
+  background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.35);border-radius:999px;padding:2px 9px;margin-left:8px;}
+.lab-tag.math{color:#f0abfc;background:rgba(236,72,153,.12);border-color:rgba(236,72,153,.35);}
+.lab-sub{margin:0;font-size:13px;color:#8fa0bd;}
 .lab-grid{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0 0;}
 .lab-stage{flex:1 1 560px;min-width:0;}
-.lab-stage canvas{display:block;width:100%;height:auto;background:#fbfcfe;border:1px solid #e3e8ee;}
-.lab-stage canvas.cv-top{border-radius:8px 8px 0 0;}
-.lab-stage canvas.cv-bot{border-radius:0 0 8px 8px;border-top:none;}
-.lab-stage canvas.cv-single{border-radius:8px;}
-.lab-ctrl{flex:0 1 250px;min-width:230px;background:#f7f9fb;border:1px solid #e3e8ee;border-radius:8px;padding:12px 14px;}
-.lab-ctrl h4{margin:2px 0 8px;font-size:13px;color:#1c232b;}
-.lab-row{display:block;margin:7px 0;font-size:12.5px;color:#47505c;}
-.lab-row input[type=range]{display:block;width:100%;margin:3px 0 0;accent-color:#0a84ff;}
-.lab-row output{float:right;font-weight:600;color:#0a84ff;font-variant-numeric:tabular-nums;}
-.lab-btns{margin-top:10px;}
-.lab-btns button{margin:3px 4px 3px 0;padding:5px 11px;font-size:12.5px;border-radius:6px;border:none;cursor:pointer;background:#3b4252;color:#fff;transition:background .15s;}
-.lab-btns button:hover{background:#0a84ff;}
-.lab-btns button.on{background:#0a84ff;}
-.lab-check{display:block;margin:6px 0;font-size:12.5px;color:#47505c;cursor:pointer;user-select:none;}
-.lab-check input{margin-right:5px;}
-.lab-data{margin-top:14px;background:#f7f9fb;border:1px solid #e3e8ee;border-radius:8px;padding:10px 12px;}
-.lab-kvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;}
-.lab-kv{background:#fff;border:1px solid #e8edf3;border-radius:6px;padding:5px 8px;}
-.lab-kv b{display:block;font-size:11px;color:#8a94a6;font-weight:500;}
-.lab-kv span{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;}
-.lab-kv span.warn{color:#c0392b;}
-.lab-kv span.ok{color:#16a085;}
-.lab-status{margin:8px 0 0;font-size:13px;font-weight:600;color:#1c232b;}
-.lab-status .warn{color:#c0392b;}
-.lab-note{margin:10px 0 0;font-size:12.5px;color:#8a94a6;}
-.lab-readout{margin:8px 0 0;font-size:12.5px;color:#47505c;background:#fff;border:1px dashed #cfd8e3;border-radius:6px;padding:6px 10px;font-variant-numeric:tabular-nums;}
-.lab-table{border-collapse:collapse;margin:8px 0 0;width:100%;max-width:520px;font-size:12.5px;}
-.lab-table th,.lab-table td{border:1px solid #e3e8ee;padding:4px 8px;text-align:center;}
-.lab-table th{background:#eef2f7;font-weight:600;}
+.lab-stage canvas{display:block;width:100%;height:auto;background:#0a101f;border:1px solid rgba(148,163,184,.16);}
+.lab-stage canvas.cv-top{border-radius:12px 12px 0 0;}
+.lab-stage canvas.cv-bot{border-radius:0 0 12px 12px;border-top:none;}
+.lab-stage canvas.cv-single{border-radius:12px;}
+.lab-ctrl{flex:0 1 255px;min-width:230px;background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.14);border-radius:14px;padding:14px 16px;}
+.lab-ctrl h4{margin:4px 0 10px;font-size:11.5px;font-weight:700;letter-spacing:.1em;color:#7cc0ff;}
+.lab-row{display:block;margin:9px 0;font-size:12.5px;color:#c3cfe2;}
+.lab-row input[type=range]{display:block;width:100%;margin:5px 0 2px;height:6px;border-radius:3px;
+  -webkit-appearance:none;appearance:none;outline:none;cursor:pointer;
+  background:linear-gradient(90deg,#4f8cff,#9b6bff) no-repeat, rgba(148,163,184,.18);
+  background-size:var(--fill,50%) 100%;}
+.lab-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:#fff;border:3px solid #4f8cff;box-shadow:0 0 12px rgba(79,140,255,.9);transition:transform .15s;}
+.lab-row input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.25);}
+.lab-row input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:3px solid #4f8cff;box-shadow:0 0 12px rgba(79,140,255,.9);}
+.lab-row input[type=range]::-moz-range-track{background:rgba(148,163,184,.18);}
+.lab-row output{float:right;font-weight:700;color:#7cc0ff;font-variant-numeric:tabular-nums;
+  background:rgba(79,140,255,.12);border:1px solid rgba(79,140,255,.28);border-radius:7px;padding:0 8px;line-height:20px;}
+.lab-btns{margin-top:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.lab-btns button{margin:0;padding:7px 13px;font-size:12.5px;border-radius:9px;border:1px solid rgba(148,163,184,.2);
+  cursor:pointer;background:rgba(255,255,255,.06);color:#dbe4f3;transition:all .18s;}
+.lab-btns button:hover{border-color:rgba(79,140,255,.6);background:rgba(79,140,255,.14);transform:translateY(-1px);}
+.lab-btns button.on{background:linear-gradient(135deg,#4f8cff,#9b6bff);border-color:transparent;color:#fff;box-shadow:0 8px 20px rgba(79,140,255,.4);}
+#blkPlay,#btPlay,#tgPlay{background:linear-gradient(135deg,#4f8cff,#9b6bff);border-color:transparent;color:#fff;font-weight:600;box-shadow:0 8px 20px rgba(79,140,255,.35);}
+#blkPlay:hover,#btPlay:hover,#tgPlay:hover{background:linear-gradient(135deg,#5f9dff,#ab7bff);}
+.lab-btns .lab-mini{padding:6px 12px;font-size:12px;border-radius:999px;}
+.lab-btns select{margin:0;padding:6px 8px;border-radius:9px;border:1px solid rgba(148,163,184,.25);background:#101828;color:#dbe4f3;}
+.lab-check{display:block;margin:7px 0;font-size:12.5px;color:#c3cfe2;cursor:pointer;user-select:none;}
+.lab-check input{margin-right:6px;accent-color:#4f8cff;}
+.lab-data{margin-top:16px;background:rgba(255,255,255,.04);border:1px solid rgba(148,163,184,.14);border-radius:14px;padding:12px 14px;}
+.lab-kvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:9px;}
+.lab-kv{background:rgba(9,15,30,.55);border:1px solid rgba(148,163,184,.13);border-radius:10px;padding:7px 10px;}
+.lab-kv b{display:block;font-size:10.5px;color:#7c8aa5;font-weight:600;letter-spacing:.03em;}
+.lab-kv span{font-size:13.5px;font-weight:600;color:#cfe3ff;font-variant-numeric:tabular-nums;}
+.lab-kv span.warn{color:#fb7185;}
+.lab-kv span.ok{color:#34d399;}
+.lab-status{margin:10px 0 0;font-size:13px;font-weight:600;color:#e6ecf6;display:flex;align-items:center;gap:9px;}
+.lab-status::before{content:"";width:8px;height:8px;border-radius:50%;background:#7cc0ff;box-shadow:0 0 10px #7cc0ff;animation:labPulse 1.6s infinite;flex:none;}
+@keyframes labPulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+.lab-status .warn{color:#fb7185;}
+.lab-note{margin:10px 0 0;font-size:12.5px;color:#7c8aa5;}
+.lab-readout{margin:10px 0 0;font-size:12.5px;color:#cfe3ff;background:rgba(9,15,30,.55);
+  border:1px dashed rgba(124,204,255,.35);border-radius:10px;padding:7px 12px;font-variant-numeric:tabular-nums;}
+.lab-table{border-collapse:collapse;margin:10px 0 0;width:100%;max-width:560px;font-size:12.5px;}
+.lab-table th,.lab-table td{border:1px solid rgba(148,163,184,.15);padding:5px 10px;text-align:center;color:#cfe3ff;}
+.lab-table th{background:rgba(79,140,255,.12);color:#7cc0ff;font-weight:600;}
 .lab-table td{font-variant-numeric:tabular-nums;}
-@media (max-width:768px){.lab-ctrl{flex:1 1 100%;}}
+@media (max-width:768px){.lab-ctrl{flex:1 1 100%;}.lab-root{padding:18px 12px 8px;}.lab-hero-title{font-size:23px;}.lab-num{width:40px;height:40px;font-size:13px;}}
 </style>
 
 <div class="lab-root">
 
 <div class="lab-intro">
-<p>三个可交互模型,拖动滑块、按播放、点预设,图像和数据实时联动:</p>
-<ul>
-<li><a href="#sec-block">① 板块模型</a>(物理 · 摩擦力/相对运动/滑落临界)</li>
-<li><a href="#sec-boat">② 小船渡河</a>(物理 · 运动的合成与分解 · 最短时间/最短位移)</li>
-<li><a href="#sec-trig">③ 三角函数图像变换</a>(数学 · y = A·sin(kx+b) + c 与 sinx 的关系)</li>
-</ul>
-<p>提示:在三角函数图上按住拖动,可读任意 x 处的函数值;改任何参数,图像与数据立刻刷新。</p>
+  <div class="lab-hero-title">VISUAL MODEL LAB<i class="fa fa-flask"></i></div>
+  <p class="lab-hero-sub">物理 · 数学 —— 图像与数据同屏,边玩边学</p>
+  <div class="lab-chips">
+    <a href="#sec-block" class="lab-chip"><i class="fa fa-cubes"></i>01 · 板块模型</a>
+    <a href="#sec-boat" class="lab-chip"><i class="fa fa-ship"></i>02 · 小船渡河</a>
+    <a href="#sec-trig" class="lab-chip"><i class="fa fa-area-chart"></i>03 · 三角函数变换</a>
+  </div>
+  <p class="lab-tip">提示:拖动滑块即时更新 · 三角函数图按住可连续读数 · 改任何参数立刻重算</p>
 </div>
 
 <!-- ============ ① 板块模型 ============ -->
 <section class="lab-card" id="sec-block">
 <div class="lab-head">
-<h2>① 板块模型<span class="lab-tag">物理</span></h2>
-<p class="lab-sub">物块 A 放在木板 B 上,给 A 一个水平外力 F。看摩擦力怎么分配、什么时候一起动、什么时候滑落。</p>
+  <div class="lab-num">01</div>
+  <div>
+    <h2><i class="fa fa-cubes"></i>板块模型<span class="lab-tag">物理</span></h2>
+    <p class="lab-sub">物块 A 放在木板 B 上,给 A 一个水平外力 F。看摩擦力怎么分配、什么时候一起动、什么时候滑落。</p>
+  </div>
 </div>
 <div class="lab-grid">
 <div class="lab-stage">
@@ -112,8 +162,11 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
 <!-- ============ ② 小船渡河 ============ -->
 <section class="lab-card" id="sec-boat">
 <div class="lab-head">
-<h2>② 小船渡河<span class="lab-tag">物理</span></h2>
-<p class="lab-sub">船对水速度 v<sub>船</sub>,水流速度 v<sub>水</sub>。合速度 = v<sub>水</sub> + v<sub>船</sub>(矢量)。调整船头方向 θ,看航线、时间、漂移怎么变。</p>
+  <div class="lab-num n2">02</div>
+  <div>
+    <h2><i class="fa fa-ship"></i>小船渡河<span class="lab-tag">物理</span></h2>
+    <p class="lab-sub">船对水速度 v<sub>船</sub>,水流速度 v<sub>水</sub>。合速度 = v<sub>水</sub> + v<sub>船</sub>(矢量)。调整船头方向 θ,看航线、时间、漂移怎么变。</p>
+  </div>
 </div>
 <div class="lab-grid">
 <div class="lab-stage">
@@ -148,8 +201,11 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
 <!-- ============ ③ 三角函数 ============ -->
 <section class="lab-card" id="sec-trig">
 <div class="lab-head">
-<h2>③ 三角函数图像变换<span class="lab-tag math">数学</span></h2>
-<p class="lab-sub">y = A·sin(kx + b) + c 是怎么从 y = sinx 变出来的?一步一步看:伸缩 → 平移 → 振幅 → 上下。</p>
+  <div class="lab-num n3">03</div>
+  <div>
+    <h2><i class="fa fa-area-chart"></i>三角函数图像变换<span class="lab-tag math">数学</span></h2>
+    <p class="lab-sub">y = A·sin(kx + b) + c 是怎么从 y = sinx 变出来的?一步一步看:伸缩 → 平移 → 振幅 → 上下。</p>
+  </div>
 </div>
 <div class="lab-grid">
 <div class="lab-stage">
@@ -217,6 +273,22 @@ function setup(cv){
   var c = cv.getContext("2d");
   c.setTransform(dpr,0,0,dpr,0,0);
   return {ctx:c, w:+w, h:+h};
+}
+function paintBG(ctx,W,H){
+  ctx.fillStyle="#0a101f";
+  ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(148,163,184,0.06)";
+  for(var gx=0; gx<W; gx+=26){
+    for(var gy=0; gy<H; gy+=26){
+      ctx.fillRect(gx,gy,1.5,1.5);
+    }
+  }
+}
+function paintRange(el){
+  if (el.target) el = el.target;
+  var min=+el.min||0, max=+el.max||100, v=+el.value;
+  var pct=(v-min)/(max-min)*100;
+  el.style.setProperty("--fill", pct+"%");
 }
 function arrow(ctx,x1,y1,x2,y2,color,lw,head){
   lw = lw||2; head = head||7;
@@ -303,7 +375,7 @@ function blkTick(dt){
 }
 function blkRender(){
   var ctx=B1.ctx, W=B1.w, H=B1.h;
-  ctx.clearRect(0,0,W,H);
+  paintBG(ctx,W,H);
   var pxm = Math.min(110,(W-190)/blk.L);
   var mid = (blk.xA+blk.xB)/2;
   var viewHalf = (W/2-80)/pxm;
@@ -311,58 +383,60 @@ function blkRender(){
   var X = function(x){ return W/2 + (x-cx)*pxm; };
   var groundY = H-52, blockH=30, boardH=16, boardTop = groundY-50;
   /* 地面与标尺 */
-  ctx.fillStyle="#dfe6ee"; ctx.fillRect(0,groundY,W,H-groundY);
-  ctx.fillStyle="#aab4c2"; ctx.fillRect(0,groundY,W,3);
+  ctx.fillStyle="#131a2e"; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.fillStyle="#2b3a55"; ctx.fillRect(0,groundY,W,3);
   ctx.font="10px sans-serif"; ctx.textAlign="center";
   for (var m=Math.ceil(cx-viewHalf); m<=Math.floor(cx+viewHalf); m++){
     var sx=X(m);
-    ctx.strokeStyle="#c3ccd8"; ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+8); ctx.stroke();
-    ctx.fillStyle="#7b8794"; ctx.fillText(m+"m", sx, groundY+20);
+    ctx.strokeStyle="#3a4a66"; ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+8); ctx.stroke();
+    ctx.fillStyle="#8fa0bd"; ctx.fillText(m+"m", sx, groundY+20);
   }
   /* 木板 B */
   var bx=X(blk.xB)-blk.L*pxm/2, bw=blk.L*pxm;
-  ctx.fillStyle="#5b6770"; ctx.fillRect(bx, boardTop+blockH+2, bw, boardH);
+  ctx.fillStyle="#41506b"; ctx.fillRect(bx, boardTop+blockH+2, bw, boardH);
   ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 11px sans-serif";
   ctx.fillText("B", X(blk.xB), boardTop+blockH+14);
-  ctx.fillStyle="#8a94a6"; ctx.font="10px sans-serif";
+  ctx.fillStyle="#8fa0bd"; ctx.font="10px sans-serif";
   ctx.fillText("L="+blk.L+"m", X(blk.xB), groundY+38);
   /* 物块 A */
   var aw = Math.max(46, 0.75*pxm);
   var ax = X(blk.xA)-aw/2;
-  ctx.fillStyle="#0a84ff"; ctx.fillRect(ax, boardTop, aw, blockH);
+  ctx.shadowColor="rgba(79,140,255,.8)"; ctx.shadowBlur=14;
+  ctx.fillStyle="#4f8cff"; ctx.fillRect(ax, boardTop, aw, blockH);
+  ctx.shadowBlur=0;
   ctx.fillStyle="#fff"; ctx.font="bold 11px sans-serif";
   ctx.fillText("A", X(blk.xA), boardTop+19);
   /* 速度箭头(绿) */
   if (Math.abs(blk.vA)>0.01){
     var lvA = clamp(Math.abs(blk.vA)/10*90, 8, 120);
-    arrow(ctx, X(blk.xA), boardTop-10, X(blk.xA)+sgn(blk.vA)*lvA, boardTop-10, "#16a085",2.2,7);
-    ctx.fillStyle="#16a085"; ctx.font="10px sans-serif"; ctx.textAlign="center";
+    arrow(ctx, X(blk.xA), boardTop-10, X(blk.xA)+sgn(blk.vA)*lvA, boardTop-10, "#22d3ee",2.2,7);
+    ctx.fillStyle="#22d3ee"; ctx.font="10px sans-serif"; ctx.textAlign="center";
     ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), boardTop-18);
   }
   if (Math.abs(blk.vB)>0.01){
     var lvB = clamp(Math.abs(blk.vB)/10*90, 8, 120);
-    arrow(ctx, X(blk.xB), groundY-10, X(blk.xB)+sgn(blk.vB)*lvB, groundY-10, "#27ae60",2.2,7);
-    ctx.fillStyle="#27ae60"; ctx.font="10px sans-serif"; ctx.textAlign="center";
+    arrow(ctx, X(blk.xB), groundY-10, X(blk.xB)+sgn(blk.vB)*lvB, groundY-10, "#34d399",2.2,7);
+    ctx.fillStyle="#34d399"; ctx.font="10px sans-serif"; ctx.textAlign="center";
     ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), groundY-18);
   }
   /* 受力箭头(可开关) */
   if ($("blkForces").checked){
     if (Math.abs(blk.F)>0.05){
       var lF = clamp(Math.abs(blk.F)/25*90, 12, 110);
-      arrow(ctx, X(blk.xA)-sgn(blk.F)*aw*0.35, boardTop+12, X(blk.xA)-sgn(blk.F)*aw*0.35+sgn(blk.F)*lF, boardTop+12, "#c0392b",2.4,8);
-      ctx.fillStyle="#c0392b"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
+      arrow(ctx, X(blk.xA)-sgn(blk.F)*aw*0.35, boardTop+12, X(blk.xA)-sgn(blk.F)*aw*0.35+sgn(blk.F)*lF, boardTop+12, "#fb7185",2.4,8);
+      ctx.fillStyle="#fb7185"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
       ctx.fillText("F="+fmt(blk.F,1)+"N", X(blk.xA), boardTop-30);
     }
     if (Math.abs(blk.f)>1e-9){
       var lf = clamp(Math.abs(blk.f)/15*40, 10, 60);
       var fA = -blk.f; /* A 受的摩擦力方向 */
-      arrow(ctx, X(blk.xA)-sgn(fA)*aw*0.3, boardTop+26, X(blk.xA)-sgn(fA)*aw*0.3+sgn(fA)*lf, boardTop+26, "#e67e22",2,6);
-      arrow(ctx, X(blk.xB)+sgn(blk.f)*30, boardTop+blockH+1, X(blk.xB)+sgn(blk.f)*30-sgn(blk.f)*lf, boardTop+blockH+1, "#e67e22",2,6);
+      arrow(ctx, X(blk.xA)-sgn(fA)*aw*0.3, boardTop+26, X(blk.xA)-sgn(fA)*aw*0.3+sgn(fA)*lf, boardTop+26, "#fbbf24",2,6);
+      arrow(ctx, X(blk.xB)+sgn(blk.f)*30, boardTop+blockH+1, X(blk.xB)+sgn(blk.f)*30-sgn(blk.f)*lf, boardTop+blockH+1, "#fbbf24",2,6);
     }
   }
   /* v-t 图 */
   var c2=B2.ctx, W2=B2.w, H2=B2.h;
-  c2.clearRect(0,0,W2,H2);
+  paintBG(c2,W2,H2);
   var h=blk.hist;
   var tmax = Math.max(6, Math.ceil(blk.t*1.05));
   var vmin=0, vmax=0;
@@ -374,7 +448,7 @@ function blkRender(){
   var Lm=48, Rm=14, Tm=14, Bm=26;
   var X2=function(t){ return Lm + t/tmax*(W2-Lm-Rm); };
   var Y2=function(v){ return Tm + (vmax-v)/(vmax-vmin)*(H2-Tm-Bm); };
-  c2.strokeStyle="#e3e8ee"; c2.lineWidth=1; c2.fillStyle="#7b8794"; c2.font="10px sans-serif"; c2.textAlign="right";
+  c2.strokeStyle="rgba(148,163,184,0.14)"; c2.lineWidth=1; c2.fillStyle="#8fa0bd"; c2.font="10px sans-serif"; c2.textAlign="right";
   for(var gv=Math.ceil(vmin); gv<=Math.floor(vmax); gv++){
     c2.beginPath(); c2.moveTo(Lm,Y2(gv)); c2.lineTo(W2-Rm,Y2(gv)); c2.stroke();
     c2.fillText(gv+" m/s", Lm-5, Y2(gv)+3);
@@ -384,7 +458,7 @@ function blkRender(){
     c2.beginPath(); c2.moveTo(X2(gt),Tm); c2.lineTo(X2(gt),H2-Bm); c2.stroke();
     c2.fillText(gt+"s", X2(gt), H2-Bm+12);
   }
-  c2.strokeStyle="#aab4c2"; c2.lineWidth=1.5;
+  c2.strokeStyle="#4a5878"; c2.lineWidth=1.5;
   c2.beginPath(); c2.moveTo(Lm,Y2(0)); c2.lineTo(W2-Rm,Y2(0)); c2.stroke();
   function plot(data,color,key){
     if(data.length<2) return;
@@ -393,13 +467,13 @@ function blkRender(){
       var xx=X2(data[i].t), yy=Y2(data[i][key]);
       i===0?c2.moveTo(xx,yy):c2.lineTo(xx,yy);
     }
-    c2.stroke();
+    c2.shadowColor=color; c2.shadowBlur=6; c2.stroke(); c2.shadowBlur=0;
   }
-  plot(h,"#0a84ff","vA"); plot(h,"#27ae60","vB");
-  c2.fillStyle="#0a84ff"; c2.textAlign="left"; c2.font="11px sans-serif";
+  plot(h,"#22d3ee","vA"); plot(h,"#34d399","vB");
+  c2.fillStyle="#22d3ee"; c2.textAlign="left"; c2.font="11px sans-serif";
   c2.fillText("vA(物块)", Lm+8, Tm+12);
-  c2.fillStyle="#27ae60"; c2.fillText("vB(木板)", Lm+78, Tm+12);
-  c2.textAlign="left"; c2.fillStyle="#7b8794"; c2.fillText("速度-时间图", W2-100, H2-8);
+  c2.fillStyle="#34d399"; c2.fillText("vB(木板)", Lm+78, Tm+12);
+  c2.textAlign="left"; c2.fillStyle="#8fa0bd"; c2.fillText("速度-时间图", W2-100, H2-8);
 }
 function blkData(){
   var d = blk.xA - blk.xB;
@@ -498,7 +572,7 @@ function boatTick(dt){
 }
 function boatRender(){
   var ctx=BO.ctx, W=BO.w, H=BO.h;
-  ctx.clearRect(0,0,W,H);
+  paintBG(ctx,W,H);
   var dd = boatDerived();
   var tcross=dd.tcross, drift=dd.drift;
   var dMinT = boat.vW*(boat.d/boat.vB);
@@ -509,13 +583,15 @@ function boatRender(){
   var ox=95, oy=62;
   var riverTop=oy-14, riverBot=oy+boat.d*pxm+8;
   /* 河岸与水面 */
-  ctx.fillStyle="#d8b98c"; ctx.fillRect(0,0,W,riverTop);
-  ctx.fillStyle="#8a6d3b"; ctx.fillRect(0,riverTop-2,W,2);
-  ctx.fillStyle="#d8b98c"; ctx.fillRect(0,riverBot,W,H-riverBot);
-  ctx.fillStyle="#8a6d3b"; ctx.fillRect(0,riverBot,W,2);
-  ctx.fillStyle="#e8f3fb"; ctx.fillRect(0,riverTop,W,riverBot-riverTop);
+  ctx.fillStyle="#12182b"; ctx.fillRect(0,0,W,riverTop);
+  ctx.fillStyle="#c9a86a"; ctx.fillRect(0,riverTop-2,W,2);
+  ctx.fillStyle="#12182b"; ctx.fillRect(0,riverBot,W,H-riverBot);
+  ctx.fillStyle="#c9a86a"; ctx.fillRect(0,riverBot,W,2);
+  var wg=ctx.createLinearGradient(0,riverTop,0,riverBot);
+  wg.addColorStop(0,"#0d1c33"); wg.addColorStop(1,"#14365f");
+  ctx.fillStyle=wg; ctx.fillRect(0,riverTop,W,riverBot-riverTop);
   /* 水流虚线 */
-  ctx.strokeStyle="#b7d4ea"; ctx.lineWidth=1.5; ctx.setLineDash([7,9]);
+  ctx.strokeStyle="rgba(96,165,250,0.4)"; ctx.lineWidth=1.5; ctx.setLineDash([7,9]);
   var foff = (boat.flow % 16);
   for(var y=riverTop+14; y<riverBot-8; y+=22){
     ctx.beginPath(); ctx.moveTo(ox-40+foff, y); ctx.lineTo(W-20, y); ctx.stroke();
@@ -528,17 +604,17 @@ function boatRender(){
     ctx.setLineDash([]);
   }
   if ($("btLineT").checked && isFinite(tcross))
-    trace(ox + boat.vW*(boat.d/boat.vB)*pxm, oy+boat.d*pxm, "#27ae60");
+    trace(ox + boat.vW*(boat.d/boat.vB)*pxm, oy+boat.d*pxm, "#34d399");
   if ($("btLineD").checked)
-    trace(ox + minD*pxm, oy+boat.d*pxm, "#8e44ad");
+    trace(ox + minD*pxm, oy+boat.d*pxm, "#a78bfa");
   if (isFinite(tcross)){
     var ex = ox + drift*pxm, ey = oy + boat.d*pxm;
-    trace(ex,ey,"#e74c3c");
+    trace(ex,ey,"#fb7185");
     /* 船实时位置 */
     var t = boat.p*tcross;
     var bx = ox + dd.vx*t*pxm, by = oy + dd.vy*t*pxm;
     if (boat.p<1){
-      ctx.strokeStyle="#e74c3c"; ctx.lineWidth=3;
+      ctx.strokeStyle="#fb7185"; ctx.lineWidth=3;
       ctx.beginPath(); ctx.moveTo(ox,oy); ctx.lineTo(bx,by); ctx.stroke();
     }
     /* 速度矢量 */
@@ -546,11 +622,11 @@ function boatRender(){
     var lvW = clamp(boat.vW*as, 4, 90);
     var lvB = clamp(boat.vB*as, 4, 90);
     var lvR = clamp(Math.sqrt(dd.vx*dd.vx+dd.vy*dd.vy)*as, 4, 110);
-    arrow(ctx,bx,by,bx+lvW,by,"#b07d2b",2.4,8);
-    arrow(ctx,bx,by,bx+dd.vbx*as,by+dd.vby*as,"#0a84ff",2.4,8);
-    arrow(ctx,bx,by,bx+dd.vx*as,by+dd.vy*as,"#c0392b",2.6,9);
+    arrow(ctx,bx,by,bx+lvW,by,"#fbbf24",2.4,8);
+    arrow(ctx,bx,by,bx+dd.vbx*as,by+dd.vby*as,"#60a5fa",2.4,8);
+    arrow(ctx,bx,by,bx+dd.vx*as,by+dd.vy*as,"#fb7185",2.6,9);
     /* 平行四边形虚线 */
-    ctx.strokeStyle="#aab4c2"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    ctx.strokeStyle="#4a5878"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
     var px=bx+dd.vbx*as, py=by+dd.vby*as;
     ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+lvW,py); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(bx+lvW,by); ctx.lineTo(px+lvW,py); ctx.stroke();
@@ -558,25 +634,28 @@ function boatRender(){
     /* 船体(朝船头方向) */
     var ang = Math.atan2(dd.vby, dd.vbx);
     ctx.save(); ctx.translate(bx,by); ctx.rotate(ang);
-    ctx.fillStyle="#3b4252";
+    ctx.shadowColor="rgba(96,165,250,.6)"; ctx.shadowBlur=10;
+    ctx.fillStyle="#0f172a";
     ctx.beginPath(); ctx.moveTo(16,0); ctx.lineTo(-12,-7); ctx.lineTo(-12,7); ctx.closePath(); ctx.fill();
-    ctx.fillStyle="#0a84ff"; ctx.beginPath(); ctx.arc(-2,0,3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle="#60a5fa"; ctx.lineWidth=1.3; ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.fillStyle="#22d3ee"; ctx.beginPath(); ctx.arc(-2,0,3,0,Math.PI*2); ctx.fill();
     ctx.restore();
     /* 标注 */
-    ctx.fillStyle="#b07d2b"; ctx.font="11px sans-serif"; ctx.textAlign="left";
+    ctx.fillStyle="#fbbf24"; ctx.font="11px sans-serif"; ctx.textAlign="left";
     ctx.fillText("v水", bx+lvW+4, by+4);
-    ctx.fillStyle="#0a84ff"; ctx.fillText("v船", px+4, py+4);
-    ctx.fillStyle="#c0392b"; ctx.fillText("V合", bx+dd.vx*as+5, by+dd.vy*as-4);
+    ctx.fillStyle="#60a5fa"; ctx.fillText("v船", px+4, py+4);
+    ctx.fillStyle="#fb7185"; ctx.fillText("V合", bx+dd.vx*as+5, by+dd.vy*as-4);
   }
   /* 岸边文字 */
-  ctx.fillStyle="#5b4a2d"; ctx.font="bold 12px sans-serif"; ctx.textAlign="left";
+  ctx.fillStyle="#c9a86a"; ctx.font="bold 12px sans-serif"; ctx.textAlign="left";
   ctx.fillText("起点岸(上游)", ox-40, riverTop-8);
   ctx.fillText("对岸", ox-40, riverBot+20);
-  ctx.fillStyle="#7b8794"; ctx.font="11px sans-serif";
+  ctx.fillStyle="#8fa0bd"; ctx.font="11px sans-serif";
   ctx.fillText("河宽 d="+boat.d+"m", 14, oy+boat.d*pxm/2);
-  if ($("btLineT").checked){ ctx.fillStyle="#27ae60"; ctx.fillText("─ 最短时间航线", 14, riverTop+20); }
-  if ($("btLineD").checked){ ctx.fillStyle="#8e44ad"; ctx.fillText("─ 最短位移航线", 14, riverTop+36); }
-  ctx.fillStyle="#e74c3c"; ctx.fillText("─ 当前航线", 14, riverTop+52);
+  if ($("btLineT").checked){ ctx.fillStyle="#34d399"; ctx.fillText("─ 最短时间航线", 14, riverTop+20); }
+  if ($("btLineD").checked){ ctx.fillStyle="#a78bfa"; ctx.fillText("─ 最短位移航线", 14, riverTop+36); }
+  ctx.fillStyle="#fb7185"; ctx.fillText("─ 当前航线", 14, riverTop+52);
 }
 function boatData(){
   var dd = boatDerived();
@@ -662,13 +741,13 @@ function tgF(x){ return trig.A*Math.sin(trig.k*x+trig.b)+trig.c; }
 function trigShow(n){ return $("tgS"+n).checked; }
 function trigRender(){
   var ctx=TG.ctx, W=TG.w, H=TG.h;
-  ctx.clearRect(0,0,W,H);
+  paintBG(ctx,W,H);
   var stages = [
-    {on:trigShow(1), f:function(x){return Math.sin(x);}, color:"#9aa5b1", dash:[5,5], lw:1.6, label:"① sinx"},
-    {on:trigShow(2), f:function(x){return Math.sin(trig.k*x);}, color:"#8e44ad", dash:null, lw:1.6, label:"② sin(kx)"},
-    {on:trigShow(3), f:function(x){return Math.sin(trig.k*x+trig.b);}, color:"#16a085", dash:null, lw:1.6, label:"③ sin(kx+b)"},
-    {on:trigShow(4), f:function(x){return trig.A*Math.sin(trig.k*x+trig.b);}, color:"#e67e22", dash:null, lw:1.6, label:"④ A·sin(kx+b)"},
-    {on:trigShow(5), f:tgF, color:"#0a84ff", dash:null, lw:2.6, label:"⑤ 最终"}
+    {on:trigShow(1), f:function(x){return Math.sin(x);}, color:"#64748b", dash:[5,5], lw:1.6, label:"① sinx"},
+    {on:trigShow(2), f:function(x){return Math.sin(trig.k*x);}, color:"#a78bfa", dash:null, lw:1.6, label:"② sin(kx)"},
+    {on:trigShow(3), f:function(x){return Math.sin(trig.k*x+trig.b);}, color:"#2dd4bf", dash:null, lw:1.6, label:"③ sin(kx+b)"},
+    {on:trigShow(4), f:function(x){return trig.A*Math.sin(trig.k*x+trig.b);}, color:"#fbbf24", dash:null, lw:1.6, label:"④ A·sin(kx+b)"},
+    {on:trigShow(5), f:tgF, color:"#60a5fa", dash:null, lw:2.6, label:"⑤ 最终", glow:true}
   ];
   /* y 范围 */
   var ymin=0, ymax=0;
@@ -687,8 +766,8 @@ function trigRender(){
   var X=function(x){ return Lm + (x-trig.xmin)/(trig.xmax-trig.xmin)*(W-Lm-Rm); };
   var Y=function(y){ return Tm + (ymax-y)/(ymax-ymin)*(H-Tm-Bm); };
   /* 网格与坐标轴 */
-  ctx.strokeStyle="#e3e8ee"; ctx.lineWidth=1;
-  ctx.fillStyle="#7b8794"; ctx.font="11px sans-serif"; ctx.textAlign="center";
+  ctx.strokeStyle="rgba(148,163,184,0.13)"; ctx.lineWidth=1;
+  ctx.fillStyle="#8fa0bd"; ctx.font="11px sans-serif"; ctx.textAlign="center";
   for(var k2=-4;k2<=4;k2++){
     var x = k2*Math.PI/2;
     if (x<trig.xmin-0.01||x>trig.xmax+0.01) continue;
@@ -704,14 +783,15 @@ function trigRender(){
     ctx.beginPath(); ctx.moveTo(Lm,gyy); ctx.lineTo(W-Rm,gyy); ctx.stroke();
     ctx.fillText(fmt(gy,1), Lm-6, gyy+4);
   }
-  ctx.strokeStyle="#5b6770"; ctx.lineWidth=1.5;
+  ctx.strokeStyle="#93a4c3"; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(X(0),Tm); ctx.lineTo(X(0),H-Bm); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(Lm,Y(0)); ctx.lineTo(W-Rm,Y(0)); ctx.stroke();
-  ctx.textAlign="left"; ctx.fillStyle="#5b6770";
+  ctx.textAlign="left"; ctx.fillStyle="#93a4c3";
   ctx.fillText("y", Lm+4, Tm+12); ctx.fillText("x", W-Rm+4, Y(0)+12);
   /* 曲线 */
   function curve(stage){
     ctx.strokeStyle=stage.color; ctx.lineWidth=stage.lw;
+    if (stage.glow){ ctx.shadowColor=stage.color; ctx.shadowBlur=8; }
     ctx.setLineDash(stage.dash||[]);
     ctx.beginPath();
     for(var i=0;i<=300;i++){
@@ -720,7 +800,7 @@ function trigRender(){
       if (y<ymin-3||y>ymax+3){ ctx.moveTo(X(x),Y(clamp(y,ymin,ymax))); continue; }
       i===0?ctx.moveTo(X(x),Y(y)):ctx.lineTo(X(x),Y(y));
     }
-    ctx.stroke(); ctx.setLineDash([]);
+    ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
   }
   for(var s2=0;s2<stages.length;s2++){ if(stages[s2].on) curve(stages[s2]); }
   /* 图例 */
@@ -735,7 +815,7 @@ function trigRender(){
   /* 跟踪竖线与点 */
   var tx = clamp(trig.tx, trig.xmin, trig.xmax);
   var gxx=X(tx);
-  ctx.strokeStyle="#c0392b"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+  ctx.strokeStyle="#fb7185"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
   ctx.beginPath(); ctx.moveTo(gxx,Tm); ctx.lineTo(gxx,H-Bm); ctx.stroke(); ctx.setLineDash([]);
   for(var s4=0;s4<stages.length;s4++){
     if(!stages[s4].on) continue;
@@ -860,6 +940,9 @@ function trigTick(dt){
   cv.addEventListener("pointercancel",function(){ trig.drag=false; });
 })();
 
+/* 滑块轨道填充 */
+var _rngs = document.querySelectorAll("input[type=range]");
+for(var _ri=0; _ri<_rngs.length; _ri++){ paintRange(_rngs[_ri]); _rngs[_ri].addEventListener("input", paintRange); }
 /* 初始渲染 */
 trigApply(); trigRender(); trigData();
 boatRender(); boatData();
