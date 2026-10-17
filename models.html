@@ -125,7 +125,7 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
 </div>
 <div class="lab-ctrl">
 <h4>参数(拖动即时生效)</h4>
-<label class="lab-row">外力 F(N)<input type="range" id="blkF" min="-20" max="20" step="0.5" value="8"><output id="blkFo">8</output></label>
+<label class="lab-row">外力 F(N)<input type="range" id="blkF" min="-20" max="20" step="0.5" value="3"><output id="blkFo">3</output></label>
 <label class="lab-row">A 质量 m₁(kg)<input type="range" id="blkM1" min="0.5" max="5" step="0.1" value="1"><output id="blkM1o">1</output></label>
 <label class="lab-row">B 质量 m₂(kg)<input type="range" id="blkM2" min="0.5" max="5" step="0.1" value="2"><output id="blkM2o">2</output></label>
 <label class="lab-row">A-B 摩擦因数 μ<input type="range" id="blkMu" min="0" max="0.8" step="0.01" value="0.3"><output id="blkMuo">0.3</output></label>
@@ -309,7 +309,7 @@ function frame(now){
 
 /* ============ ① 板块模型 ============ */
 var G = 9.8;
-var blk = {F:8,m1:1,m2:2,mu:0.3,mu2:0,L:4,vA0:0,vB0:0,
+var blk = {F:3,m1:1,m2:2,mu:0.3,mu2:0,L:4,vA0:0,vB0:0,
   t:0,xA:0,xB:0,vA:0,vB:0,aA:0,aB:0,f:0,stick:false,fell:false,
   run:true,status:"运行中",hist:[],tick:0,dataT:0};
 var B1 = setup($("cvBlock")), B2 = setup($("cvBlockVT"));
@@ -379,21 +379,22 @@ function blkRender(){
   var pxm = Math.min(110,(W-190)/blk.L);
   var mid = (blk.xA+blk.xB)/2;
   var viewHalf = (W/2-80)/pxm;
-  var cx = clamp(mid, -viewHalf+2, viewHalf-2);
+  var cx = mid;
   var X = function(x){ return W/2 + (x-cx)*pxm; };
   var groundY = H-52, blockH=30, boardH=16, boardTop = groundY-50;
   /* 地面与标尺 */
-  ctx.fillStyle="#131a2e"; ctx.fillRect(0,groundY,W,H-groundY);
-  ctx.fillStyle="#2b3a55"; ctx.fillRect(0,groundY,W,3);
+  ctx.fillStyle="#182238"; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.fillStyle="#3d5178"; ctx.fillRect(0,groundY,W,3);
   ctx.font="10px sans-serif"; ctx.textAlign="center";
   for (var m=Math.ceil(cx-viewHalf); m<=Math.floor(cx+viewHalf); m++){
     var sx=X(m);
-    ctx.strokeStyle="#3a4a66"; ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+8); ctx.stroke();
-    ctx.fillStyle="#8fa0bd"; ctx.fillText(m+"m", sx, groundY+20);
+    ctx.strokeStyle="#5a6f96"; ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+8); ctx.stroke();
+    ctx.fillStyle="#a9b8d4"; ctx.fillText(m+"m", sx, groundY+20);
   }
   /* 木板 B */
   var bx=X(blk.xB)-blk.L*pxm/2, bw=blk.L*pxm;
-  ctx.fillStyle="#41506b"; ctx.fillRect(bx, boardTop+blockH+2, bw, boardH);
+  ctx.fillStyle="#5b7298"; ctx.fillRect(bx, boardTop+blockH+2, bw, boardH);
+  ctx.fillStyle="#86a5d4"; ctx.fillRect(bx, boardTop+blockH+2, bw, 2);
   ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 11px sans-serif";
   ctx.fillText("B", X(blk.xB), boardTop+blockH+14);
   ctx.fillStyle="#8fa0bd"; ctx.font="10px sans-serif";
@@ -404,20 +405,21 @@ function blkRender(){
   ctx.shadowColor="rgba(79,140,255,.8)"; ctx.shadowBlur=14;
   ctx.fillStyle="#4f8cff"; ctx.fillRect(ax, boardTop, aw, blockH);
   ctx.shadowBlur=0;
+  ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1.2; ctx.strokeRect(ax, boardTop, aw, blockH);
   ctx.fillStyle="#fff"; ctx.font="bold 11px sans-serif";
   ctx.fillText("A", X(blk.xA), boardTop+19);
-  /* 速度箭头(绿) */
+  /* 速度箭头 */
   if (Math.abs(blk.vA)>0.01){
     var lvA = clamp(Math.abs(blk.vA)/10*90, 8, 120);
-    arrow(ctx, X(blk.xA), boardTop-10, X(blk.xA)+sgn(blk.vA)*lvA, boardTop-10, "#22d3ee",2.2,7);
-    ctx.fillStyle="#22d3ee"; ctx.font="10px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), boardTop-18);
+    arrow(ctx, X(blk.xA), boardTop-8, X(blk.xA)+sgn(blk.vA)*lvA, boardTop-8, "#22d3ee",2.4,7);
+    ctx.fillStyle="#22d3ee"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), boardTop-16);
   }
   if (Math.abs(blk.vB)>0.01){
     var lvB = clamp(Math.abs(blk.vB)/10*90, 8, 120);
-    arrow(ctx, X(blk.xB), groundY-10, X(blk.xB)+sgn(blk.vB)*lvB, groundY-10, "#34d399",2.2,7);
-    ctx.fillStyle="#34d399"; ctx.font="10px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), groundY-18);
+    arrow(ctx, X(blk.xB), boardTop-34, X(blk.xB)+sgn(blk.vB)*lvB, boardTop-34, "#34d399",2.4,7);
+    ctx.fillStyle="#34d399"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), boardTop-42);
   }
   /* 受力箭头(可开关) */
   if ($("blkForces").checked){
@@ -425,7 +427,7 @@ function blkRender(){
       var lF = clamp(Math.abs(blk.F)/25*90, 12, 110);
       arrow(ctx, X(blk.xA)-sgn(blk.F)*aw*0.35, boardTop+12, X(blk.xA)-sgn(blk.F)*aw*0.35+sgn(blk.F)*lF, boardTop+12, "#fb7185",2.4,8);
       ctx.fillStyle="#fb7185"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
-      ctx.fillText("F="+fmt(blk.F,1)+"N", X(blk.xA), boardTop-30);
+      ctx.fillText("F="+fmt(blk.F,1)+"N", X(blk.xA), boardTop-56);
     }
     if (Math.abs(blk.f)>1e-9){
       var lf = clamp(Math.abs(blk.f)/15*40, 10, 60);
@@ -448,7 +450,7 @@ function blkRender(){
   var Lm=48, Rm=14, Tm=14, Bm=26;
   var X2=function(t){ return Lm + t/tmax*(W2-Lm-Rm); };
   var Y2=function(v){ return Tm + (vmax-v)/(vmax-vmin)*(H2-Tm-Bm); };
-  c2.strokeStyle="rgba(148,163,184,0.14)"; c2.lineWidth=1; c2.fillStyle="#8fa0bd"; c2.font="10px sans-serif"; c2.textAlign="right";
+  c2.strokeStyle="rgba(148,163,184,0.2)"; c2.lineWidth=1; c2.fillStyle="#8fa0bd"; c2.font="10px sans-serif"; c2.textAlign="right";
   for(var gv=Math.ceil(vmin); gv<=Math.floor(vmax); gv++){
     c2.beginPath(); c2.moveTo(Lm,Y2(gv)); c2.lineTo(W2-Rm,Y2(gv)); c2.stroke();
     c2.fillText(gv+" m/s", Lm-5, Y2(gv)+3);
@@ -458,7 +460,7 @@ function blkRender(){
     c2.beginPath(); c2.moveTo(X2(gt),Tm); c2.lineTo(X2(gt),H2-Bm); c2.stroke();
     c2.fillText(gt+"s", X2(gt), H2-Bm+12);
   }
-  c2.strokeStyle="#4a5878"; c2.lineWidth=1.5;
+  c2.strokeStyle="#6b7fa3"; c2.lineWidth=1.5;
   c2.beginPath(); c2.moveTo(Lm,Y2(0)); c2.lineTo(W2-Rm,Y2(0)); c2.stroke();
   function plot(data,color,key){
     if(data.length<2) return;
@@ -470,7 +472,7 @@ function blkRender(){
     c2.shadowColor=color; c2.shadowBlur=6; c2.stroke(); c2.shadowBlur=0;
   }
   plot(h,"#22d3ee","vA"); plot(h,"#34d399","vB");
-  c2.fillStyle="#22d3ee"; c2.textAlign="left"; c2.font="11px sans-serif";
+  c2.fillStyle="#22d3ee"; c2.textAlign="left"; c2.font="bold 11px sans-serif";
   c2.fillText("vA(物块)", Lm+8, Tm+12);
   c2.fillStyle="#34d399"; c2.fillText("vB(木板)", Lm+78, Tm+12);
   c2.textAlign="left"; c2.fillStyle="#8fa0bd"; c2.fillText("速度-时间图", W2-100, H2-8);
@@ -543,7 +545,7 @@ for(var i=0;i<blkMiniBtns.length;i++){
     blkReset(); blk.run=true; $("blkPlay").textContent="⏸ 暂停";
   });
 }
-blkReset(); blk.run=true;
+blkReset(); blk.run=true; $("blkPlay").textContent="⏸ 暂停";
 
 /* ============ ② 小船渡河 ============ */
 var boat = {vB:2,vW:1.2,d:100,th:90,p:0,run:false,flow:0};
