@@ -55,7 +55,7 @@ tags:
 
 **② 升级 Android System WebView**
 
-去 apklinker 下载最新的 Android System WebView 并安装（注意：下载源在境外，**需要魔法**）：
+去 apklinker 下载最新的 Android System WebView 并安装（注意：下载源在境外，**需要魔法**，不会科学上网的可以看我这篇[《FreeSocks + FlClash：免费代理搭配教程》](https://panghehe666.github.io/2026/10/10/freesocks-flclash-privacy/)）：
 
 - Android System WebView 149.0.7827.164：<https://www.apklinker.com/apk/google-llc/android-system-webview/android-system-webview-149-0-7827-164-release/android-system-webview-149-0-7827-164-android-apk-download/start/>
 
