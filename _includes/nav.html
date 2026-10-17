@@ -41,11 +41,25 @@
     </div>
 </nav>
 {% unless page.url == '/models/' %}
-<a class="lab-fab" href="{{ site.baseurl }}/models/" title="可视化模型实验室"><i class="fa fa-flask"></i>LAB</a>
+<a class="lab-fab" href="{{ site.baseurl }}/models/" title="可视化模型实验室">
+  <i class="fa fa-flask"></i>
+  <span class="lab-fab-word">LAB</span>
+  <span class="lab-fab-label">模型实验室</span>
+</a>
 <style>
-.lab-fab{position:fixed;top:64px;right:16px;z-index:1031;display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:999px;background:linear-gradient(135deg,#4f8cff,#9b6bff);color:#fff;font-weight:700;font-size:12px;letter-spacing:.1em;text-decoration:none;box-shadow:0 10px 26px rgba(79,140,255,.5);transition:transform .2s,box-shadow .2s;}
-.lab-fab:hover{transform:translateY(-2px) scale(1.05);color:#fff;text-decoration:none;box-shadow:0 14px 34px rgba(79,140,255,.65);}
-@media (max-width:768px){.lab-fab{top:56px;right:12px;padding:7px 12px;font-size:11px;}}
+.lab-fab{position:fixed;top:12px;right:20px;z-index:1031;height:36px;min-width:76px;padding:0 14px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;
+  background:linear-gradient(135deg,rgba(79,140,255,.88),rgba(155,107,255,.88));
+  -webkit-backdrop-filter:blur(10px) saturate(120%);backdrop-filter:blur(10px) saturate(120%);
+  box-shadow:0 6px 18px rgba(79,140,255,.35);transition:box-shadow .25s;}
+.lab-fab .fa{margin-right:7px;font-size:13px;}
+.lab-fab-word{font-family:ui-monospace,"JetBrains Mono",SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;font-weight:700;letter-spacing:.08em;transition:opacity .18s,transform .25s;}
+.lab-fab-label{position:absolute;left:0;right:0;text-align:center;font-size:11px;letter-spacing:.04em;opacity:0;transform:translateY(4px);transition:opacity .18s,transform .25s;}
+.lab-fab:hover{color:#fff;text-decoration:none;box-shadow:0 10px 26px rgba(79,140,255,.55);}
+.lab-fab:hover .lab-fab-word{opacity:0;transform:translateY(-4px);}
+.lab-fab:hover .lab-fab-label{opacity:1;transform:translateY(0);}
+@media (min-width:768px){.navbar-custom > .container-fluid{padding-right:118px;}}
+@media (max-width:767px){.lab-fab{top:10px;right:64px;}}
 </style>
 {% endunless %}
 
