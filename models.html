@@ -160,7 +160,7 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
 <h4>参数</h4>
 <label class="lab-row">振幅 A<input type="range" id="tgA" min="0.2" max="3" step="0.05" value="1"><output id="tgAo">1</output></label>
 <label class="lab-row">频率 k<input type="range" id="tgK" min="0.25" max="4" step="0.05" value="1"><output id="tgKo">1</output></label>
-<label class="lab-row">相位 b<input type="range" id="tgB" min="-6.28" max="6.28" step="0.05" value="0"><output id="tgBo">0</output></label>
+<label class="lab-row">相位 b<input type="range" id="tgB" min="-6.3" max="6.3" step="0.05" value="0"><output id="tgBo">0</output></label>
 <label class="lab-row">纵向平移 c<input type="range" id="tgC" min="-3" max="3" step="0.1" value="0"><output id="tgCo">0</output></label>
 <h4>变换步骤(可勾选对比)</h4>
 <label class="lab-check"><input type="checkbox" id="tgS1" checked> ① y = sinx(参考)</label>
@@ -437,6 +437,7 @@ function bindBlkSlider(id,outId,fmtFn){
     if ($("blkAuto").checked) blk.run=true;
     $("blkPlay").textContent = blk.run? "⏸ 暂停":"▶ 播放";
   });
+  out.textContent = fmtFn(+el.value);
 }
 bindBlkSlider("blkF","blkFo",function(v){return v;});
 bindBlkSlider("blkM1","blkM1o",function(v){return v;});
@@ -609,7 +610,8 @@ function boatData(){
   var st = $("statusBoat");
   if (!isFinite(tcross)) st.innerHTML = '<span class="warn">船速没有垂直分量(θ≈0°或180°),无法渡河,请增大 θ。</span>';
   else if (boat.p>=1) st.innerHTML = '<span class="ok">已到达对岸!用时 '+fmt(tcross,1)+'s,漂移 '+fmt(drift,1)+'m。</span>';
-  else st.innerHTML = '航行中… '+Math.round(boat.p*100)+'% · 目标:对岸';
+  else if (boat.run || boat.p>0) st.innerHTML = '航行中… '+Math.round(boat.p*100)+'% · 目标:对岸';
+  else st.innerHTML = '就绪:按 ▶ 播放开始航行(也可点下方预设按钮)';
 }
 $("btPlay").addEventListener("click",function(){
   if (boat.p>=1){ boat.p=0; }
@@ -623,6 +625,7 @@ function bindBoatSlider(id,outId,fmtFn){
     out.textContent = fmtFn(+el.value);
     boatApply(); boat.p=0; boat.run=false; $("btPlay").textContent="▶ 播放";
   });
+  out.textContent = fmtFn(+el.value);
 }
 bindBoatSlider("btVB","btVBo",function(v){return v;});
 bindBoatSlider("btVW","btVWo",function(v){return v;});
@@ -634,7 +637,7 @@ $("btPresetT").addEventListener("click",function(){
 $("btPresetD").addEventListener("click",function(){
   var vB=boat.vB, vW=boat.vW;
   var th = vB>=vW? Math.acos(-vW/vB) : Math.acos(-vB/vW);
-  var deg = Math.round(th*180/Math.PI);
+  var deg = Math.min(Math.round(th*180/Math.PI), 179);
   $("btTH").value=deg; $("btTHo").textContent=deg+"°";
   boatApply(); boat.p=0; boat.run=true; $("btPlay").textContent="⏸ 暂停";
 });
@@ -790,6 +793,7 @@ function bindTrigSlider(id,outId,fmtFn){
     out.textContent = fmtFn(+el.value);
     trigApply(); trigRender(); trigData();
   });
+  out.textContent = fmtFn(+el.value);
 }
 bindTrigSlider("tgA","tgAo",function(v){return fmt(v,2);});
 bindTrigSlider("tgK","tgKo",function(v){return fmt(v,2);});
