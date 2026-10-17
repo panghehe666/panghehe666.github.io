@@ -7,6 +7,7 @@ catalog:      true
 tags:
     - 开源分享
     - 前沿科技
+    - AI
 ---
 
 <div class="post-toc" style="background:#f7f9fb;border:1px solid #e3e8ee;border-left:4px solid #0a84ff;border-radius:8px;padding:14px 18px 10px;margin:8px 0 28px;">
