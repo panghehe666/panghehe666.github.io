@@ -9,6 +9,28 @@ tags:
     - 前沿科技
 ---
 
+<div class="post-toc" style="background:#f7f9fb;border:1px solid #e3e8ee;border-left:4px solid #0a84ff;border-radius:8px;padding:14px 18px 10px;margin:8px 0 28px;">
+<strong style="font-size:16px;">📑 目录</strong>
+<ul style="margin:10px 0 0;padding-left:22px;line-height:1.9;">
+<li><a href="#一简介deepseek-harness-是什么">一、简介：DeepSeek Harness 是什么</a></li>
+<li><a href="#二配置教程小米">二、配置教程（小米）</a>
+  <ul style="margin:2px 0 2px;padding-left:20px;">
+  <li><a href="#21-下载安装">2.1 下载安装</a></li>
+  <li><a href="#22-打不开多半是-webview-版本太低">2.2 打不开？多半是 WebView 版本太低</a></li>
+  </ul>
+</li>
+<li><a href="#三使用方法">三、使用方法</a>
+  <ul style="margin:2px 0 2px;padding-left:20px;">
+  <li><a href="#31-配置-deepseek-api-key必须">3.1 配置 DeepSeek API Key（必须）</a></li>
+  <li><a href="#32-配置插件可选">3.2 配置插件（可选）</a></li>
+  <li><a href="#33-在-githubio-上写文章生成-token-教程">3.3 在 github.io 上写文章：生成 Token 教程</a></li>
+  <li><a href="#34-使用体验和-grok-比一比">3.4 使用体验：和 Grok 比一比</a></li>
+  </ul>
+</li>
+<li><a href="#结语">结语</a></li>
+</ul>
+</div>
+
 ## 一、简介：DeepSeek Harness 是什么
 
 **DeepSeek Harness**，简称 **DSH**，是 DeepSeek 推出的开源项目，核心理念一句话概括：**"Everything is a Plugin."**——万物皆插件。
