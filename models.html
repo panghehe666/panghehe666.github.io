@@ -381,61 +381,90 @@ function blkRender(){
   var viewHalf = (W/2-80)/pxm;
   var cx = mid;
   var X = function(x){ return W/2 + (x-cx)*pxm; };
-  var groundY = H-52, blockH=30, boardH=16, boardTop = groundY-50;
+  var groundY = H-54, blockH=40, boardH=20, boardTop = groundY-62;
   /* 地面与标尺 */
-  ctx.fillStyle="#182238"; ctx.fillRect(0,groundY,W,H-groundY);
-  ctx.fillStyle="#3d5178"; ctx.fillRect(0,groundY,W,3);
-  ctx.font="10px sans-serif"; ctx.textAlign="center";
+  ctx.fillStyle="#24334f"; ctx.fillRect(0,groundY,W,H-groundY);
+  ctx.fillStyle="#5a7ab0"; ctx.fillRect(0,groundY,W,3);
+  ctx.strokeStyle="rgba(148,163,184,0.16)"; ctx.lineWidth=1;
+  for(var hx=0; hx<W; hx+=26){
+    ctx.beginPath(); ctx.moveTo(hx, groundY+7); ctx.lineTo(hx-16, H); ctx.stroke();
+  }
+  ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
   for (var m=Math.ceil(cx-viewHalf); m<=Math.floor(cx+viewHalf); m++){
     var sx=X(m);
-    ctx.strokeStyle="#5a6f96"; ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+8); ctx.stroke();
-    ctx.fillStyle="#a9b8d4"; ctx.fillText(m+"m", sx, groundY+20);
+    ctx.strokeStyle="#93a9d1"; ctx.beginPath(); ctx.moveTo(sx,groundY); ctx.lineTo(sx,groundY+9); ctx.stroke();
+    ctx.fillStyle="#cdd9ee"; ctx.fillText(m+"m", sx, groundY+22);
   }
   /* 木板 B */
   var bx=X(blk.xB)-blk.L*pxm/2, bw=blk.L*pxm;
-  ctx.fillStyle="#5b7298"; ctx.fillRect(bx, boardTop+blockH+2, bw, boardH);
-  ctx.fillStyle="#86a5d4"; ctx.fillRect(bx, boardTop+blockH+2, bw, 2);
-  ctx.fillStyle="#fff"; ctx.textAlign="center"; ctx.font="bold 11px sans-serif";
-  ctx.fillText("B", X(blk.xB), boardTop+blockH+14);
-  ctx.fillStyle="#8fa0bd"; ctx.font="10px sans-serif";
-  ctx.fillText("L="+blk.L+"m", X(blk.xB), groundY+38);
-  /* 物块 A */
-  var aw = Math.max(46, 0.75*pxm);
+  ctx.fillStyle="#d9a05b"; ctx.fillRect(bx, boardTop+blockH+2, bw, boardH);
+  ctx.fillStyle="#f2c98a"; ctx.fillRect(bx, boardTop+blockH+2, bw, 2);
+  ctx.fillStyle="#a06e33"; ctx.fillRect(bx, boardTop+blockH+2+boardH-2, bw, 2);
+  ctx.fillStyle="#3d2c12"; ctx.textAlign="center"; ctx.font="bold 12px sans-serif";
+  ctx.fillText("B", X(blk.xB), boardTop+blockH+15);
+  ctx.fillStyle="#cdd9ee"; ctx.font="bold 11px sans-serif";
+  ctx.fillText("L="+blk.L+"m", X(blk.xB), groundY+40);
+  /* 物块 A(画成有顶面的立体小方块,避免"只有箭头") */
+  var aw = Math.max(66, 0.95*pxm);
   var ax = X(blk.xA)-aw/2;
-  ctx.shadowColor="rgba(79,140,255,.8)"; ctx.shadowBlur=14;
-  ctx.fillStyle="#4f8cff"; ctx.fillRect(ax, boardTop, aw, blockH);
+  var aTOP = Math.max(8, boardTop-8);           /* 顶面上沿 */
+  ctx.shadowColor="rgba(79,140,255,.75)"; ctx.shadowBlur=16;
+  ctx.fillStyle="#3f7ef0"; ctx.fillRect(ax, boardTop, aw, blockH);        /* 正面 */
+  ctx.fillStyle="#8ab7ff"; ctx.fillRect(ax, aTOP, aw, boardTop-aTOP);     /* 顶面 */
   ctx.shadowBlur=0;
-  ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1.2; ctx.strokeRect(ax, boardTop, aw, blockH);
-  ctx.fillStyle="#fff"; ctx.font="bold 11px sans-serif";
-  ctx.fillText("A", X(blk.xA), boardTop+19);
-  /* 速度箭头 */
+  ctx.fillStyle="rgba(255,255,255,.16)"; ctx.fillRect(ax, boardTop, 3, blockH); /* 左侧高光 */
+  ctx.strokeStyle="rgba(255,255,255,.75)"; ctx.lineWidth=1.5;
+  ctx.strokeRect(ax, aTOP, aw, blockH+(boardTop-aTOP));
+  ctx.fillStyle="#fff"; ctx.font="bold 14px sans-serif"; ctx.textAlign="center";
+  ctx.fillText("A", X(blk.xA), boardTop+blockH/2+5);
+  /* 速度箭头(在物块/木板上方,不压住物块) */
   if (Math.abs(blk.vA)>0.01){
     var lvA = clamp(Math.abs(blk.vA)/10*90, 8, 120);
-    arrow(ctx, X(blk.xA), boardTop-8, X(blk.xA)+sgn(blk.vA)*lvA, boardTop-8, "#22d3ee",2.4,7);
-    ctx.fillStyle="#22d3ee"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), boardTop-16);
+    arrow(ctx, X(blk.xA), aTOP-12, X(blk.xA)+sgn(blk.vA)*lvA, aTOP-12, "#4de3f7",3,8);
+    ctx.fillStyle="#4de3f7"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), aTOP-22);
   }
   if (Math.abs(blk.vB)>0.01){
     var lvB = clamp(Math.abs(blk.vB)/10*90, 8, 120);
-    arrow(ctx, X(blk.xB), boardTop-34, X(blk.xB)+sgn(blk.vB)*lvB, boardTop-34, "#34d399",2.4,7);
-    ctx.fillStyle="#34d399"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), boardTop-42);
+    arrow(ctx, X(blk.xB), aTOP-40, X(blk.xB)+sgn(blk.vB)*lvB, aTOP-40, "#5ee6b0",3,8);
+    ctx.fillStyle="#5ee6b0"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), aTOP-50);
   }
   /* 受力箭头(可开关) */
   if ($("blkForces").checked){
     if (Math.abs(blk.F)>0.05){
-      var lF = clamp(Math.abs(blk.F)/25*90, 12, 110);
-      arrow(ctx, X(blk.xA)-sgn(blk.F)*aw*0.35, boardTop+12, X(blk.xA)-sgn(blk.F)*aw*0.35+sgn(blk.F)*lF, boardTop+12, "#fb7185",2.4,8);
-      ctx.fillStyle="#fb7185"; ctx.font="bold 10px sans-serif"; ctx.textAlign="center";
-      ctx.fillText("F="+fmt(blk.F,1)+"N", X(blk.xA), boardTop-56);
+      var lF = clamp(Math.abs(blk.F)/25*90, 14, 110);
+      var fMidY = boardTop+blockH/2;
+      if (blk.F>0){
+        var fx1 = Math.max(8, ax-12-lF), fx2 = ax-12;
+        arrow(ctx, fx1, fMidY, fx2, fMidY, "#ff8fa3",3,9);
+        ctx.fillStyle="#ff8fa3"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
+        ctx.fillText("F="+fmt(blk.F,1)+"N", (fx1+fx2)/2, fMidY-10);
+      } else {
+        var fx3 = Math.min(W-8, ax+aw+12+lF), fx4 = ax+aw+12;
+        arrow(ctx, fx3, fMidY, fx4, fMidY, "#ff8fa3",3,9);
+        ctx.fillStyle="#ff8fa3"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
+        ctx.fillText("F="+fmt(blk.F,1)+"N", (fx3+fx4)/2, fMidY-10);
+      }
     }
     if (Math.abs(blk.f)>1e-9){
       var lf = clamp(Math.abs(blk.f)/15*40, 10, 60);
       var fA = -blk.f; /* A 受的摩擦力方向 */
-      arrow(ctx, X(blk.xA)-sgn(fA)*aw*0.3, boardTop+26, X(blk.xA)-sgn(fA)*aw*0.3+sgn(fA)*lf, boardTop+26, "#fbbf24",2,6);
-      arrow(ctx, X(blk.xB)+sgn(blk.f)*30, boardTop+blockH+1, X(blk.xB)+sgn(blk.f)*30-sgn(blk.f)*lf, boardTop+blockH+1, "#fbbf24",2,6);
+      arrow(ctx, X(blk.xA)-sgn(fA)*aw*0.3, boardTop+blockH-9, X(blk.xA)-sgn(fA)*aw*0.3+sgn(fA)*lf, boardTop+blockH-9, "#ffd166",2.6,7);
+      arrow(ctx, X(blk.xB)+sgn(blk.f)*30, boardTop+blockH+8, X(blk.xB)+sgn(blk.f)*30-sgn(blk.f)*lf, boardTop+blockH+8, "#ffd166",2.6,7);
     }
   }
+  /* 图例 */
+  ctx.font="bold 11px sans-serif"; ctx.textAlign="left";
+  function leg(color, label, yy){
+    ctx.fillStyle=color; ctx.fillRect(12, yy-8, 12, 12);
+    ctx.fillStyle="#cdd9ee"; ctx.fillText(label, 30, yy);
+  }
+  leg("#4f8cff","物块 A",18);
+  leg("#d9a05b","木板 B",36);
+  leg("#ff8fa3","外力 F",54);
+  leg("#ffd166","摩擦力 f",72);
+  leg("#4de3f7","速度 vA / vB",90);
   /* v-t 图 */
   var c2=B2.ctx, W2=B2.w, H2=B2.h;
   paintBG(c2,W2,H2);
@@ -450,7 +479,7 @@ function blkRender(){
   var Lm=48, Rm=14, Tm=14, Bm=26;
   var X2=function(t){ return Lm + t/tmax*(W2-Lm-Rm); };
   var Y2=function(v){ return Tm + (vmax-v)/(vmax-vmin)*(H2-Tm-Bm); };
-  c2.strokeStyle="rgba(148,163,184,0.2)"; c2.lineWidth=1; c2.fillStyle="#8fa0bd"; c2.font="10px sans-serif"; c2.textAlign="right";
+  c2.strokeStyle="rgba(148,163,184,0.24)"; c2.lineWidth=1; c2.fillStyle="#a9b8d4"; c2.font="bold 11px sans-serif"; c2.textAlign="right";
   for(var gv=Math.ceil(vmin); gv<=Math.floor(vmax); gv++){
     c2.beginPath(); c2.moveTo(Lm,Y2(gv)); c2.lineTo(W2-Rm,Y2(gv)); c2.stroke();
     c2.fillText(gv+" m/s", Lm-5, Y2(gv)+3);
@@ -460,22 +489,22 @@ function blkRender(){
     c2.beginPath(); c2.moveTo(X2(gt),Tm); c2.lineTo(X2(gt),H2-Bm); c2.stroke();
     c2.fillText(gt+"s", X2(gt), H2-Bm+12);
   }
-  c2.strokeStyle="#6b7fa3"; c2.lineWidth=1.5;
+  c2.strokeStyle="#9fb2d4"; c2.lineWidth=2;
   c2.beginPath(); c2.moveTo(Lm,Y2(0)); c2.lineTo(W2-Rm,Y2(0)); c2.stroke();
   function plot(data,color,key){
     if(data.length<2) return;
-    c2.strokeStyle=color; c2.lineWidth=2.2; c2.beginPath();
+    c2.strokeStyle=color; c2.lineWidth=3; c2.beginPath();
     for(var i=0;i<data.length;i++){
       var xx=X2(data[i].t), yy=Y2(data[i][key]);
       i===0?c2.moveTo(xx,yy):c2.lineTo(xx,yy);
     }
     c2.shadowColor=color; c2.shadowBlur=6; c2.stroke(); c2.shadowBlur=0;
   }
-  plot(h,"#22d3ee","vA"); plot(h,"#34d399","vB");
-  c2.fillStyle="#22d3ee"; c2.textAlign="left"; c2.font="bold 11px sans-serif";
-  c2.fillText("vA(物块)", Lm+8, Tm+12);
-  c2.fillStyle="#34d399"; c2.fillText("vB(木板)", Lm+78, Tm+12);
-  c2.textAlign="left"; c2.fillStyle="#8fa0bd"; c2.fillText("速度-时间图", W2-100, H2-8);
+  plot(h,"#4de3f7","vA"); plot(h,"#5ee6b0","vB");
+  c2.fillStyle="#4de3f7"; c2.textAlign="left"; c2.font="bold 12px sans-serif";
+  c2.fillText("vA(物块)", Lm+8, Tm+14);
+  c2.fillStyle="#5ee6b0"; c2.fillText("vB(木板)", Lm+78, Tm+14);
+  c2.textAlign="left"; c2.fillStyle="#a9b8d4"; c2.fillText("速度-时间图", W2-100, H2-8);
 }
 function blkData(){
   var d = blk.xA - blk.xB;
