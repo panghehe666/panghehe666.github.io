@@ -94,6 +94,21 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
 .lab-table th{background:rgba(79,140,255,.12);color:#7cc0ff;font-weight:600;}
 .lab-table td{font-variant-numeric:tabular-nums;}
 @media (max-width:768px){.lab-ctrl{flex:1 1 100%;}.lab-root{padding:18px 12px 8px;}.lab-hero-title{font-size:23px;}.lab-num{width:40px;height:40px;font-size:13px;}}
+/* ---- 实验左右滑动轮播 ---- */
+.lab-pager{position:relative;}
+.lab-viewport{overflow:hidden;border-radius:18px;}
+.lab-track{display:flex;align-items:stretch;transition:transform .4s cubic-bezier(.22,.8,.24,1);will-change:transform;}
+.lab-track > .lab-card{flex:0 0 100%;min-width:100%;margin:0;animation:none;box-sizing:border-box;}
+.lab-pagerbar{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0 4px;}
+.lab-arrow{width:36px;height:36px;border-radius:50%;border:1px solid rgba(148,163,184,.25);background:rgba(255,255,255,.06);color:#dbe4f3;font-size:17px;line-height:1;cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;}
+.lab-arrow:hover{background:rgba(79,140,255,.18);border-color:rgba(79,140,255,.6);}
+.lab-arrow:disabled{opacity:.3;cursor:default;}
+.lab-dots{display:flex;align-items:center;gap:9px;}
+.lab-dot{width:9px;height:9px;border-radius:50%;border:none;padding:0;background:rgba(148,163,184,.35);cursor:pointer;transition:all .2s;}
+.lab-dot.on{background:#7cc0ff;box-shadow:0 0 10px rgba(124,204,255,.9);transform:scale(1.3);}
+.lab-swipe-hint{display:none;text-align:center;font-size:12px;color:#7c8aa5;margin:2px 0 10px;}
+@media (max-width:768px){.lab-swipe-hint{display:block;}}
+.lab-chip.on{background:rgba(79,140,255,.2);border-color:rgba(79,140,255,.65);color:#fff;}
 </style>
 
 <div class="lab-root">
@@ -102,12 +117,16 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
   <div class="lab-hero-title">VISUAL MODEL LAB<i class="fa fa-flask"></i></div>
   <p class="lab-hero-sub">物理 · 数学 —— 图像与数据同屏,边玩边学</p>
   <div class="lab-chips">
-    <a href="#sec-block" class="lab-chip"><i class="fa fa-cubes"></i>01 · 板块模型</a>
-    <a href="#sec-boat" class="lab-chip"><i class="fa fa-ship"></i>02 · 小船渡河</a>
-    <a href="#sec-trig" class="lab-chip"><i class="fa fa-area-chart"></i>03 · 三角函数变换</a>
+    <a href="#sec-block" class="lab-chip on" data-slide="0"><i class="fa fa-cubes"></i>01 · 板块模型</a>
+    <a href="#sec-boat" class="lab-chip" data-slide="1"><i class="fa fa-ship"></i>02 · 小船渡河</a>
+    <a href="#sec-trig" class="lab-chip" data-slide="2"><i class="fa fa-area-chart"></i>03 · 三角函数变换</a>
   </div>
   <p class="lab-tip">提示:拖动滑块即时更新 · 三角函数图按住可连续读数 · 改任何参数立刻重算</p>
 </div>
+
+<div class="lab-pager" id="labPager">
+<div class="lab-viewport" id="labViewport">
+<div class="lab-track" id="labTrack">
 
 <!-- ============ ① 板块模型 ============ -->
 <section class="lab-card" id="sec-block">
@@ -242,6 +261,20 @@ subtitle: 物理 · 数学 —— 图像与数据同屏,边玩边学
 </div>
 <p class="lab-note">要点:y = sin(kx+b) = sin(k(x + b/k)),即先横坐标缩为 1/k,再向左平移 b/k;周期 T = 2π/|k|;五点法作图取 x = (−b + nπ/2)/k。</p>
 </section>
+
+</div><!-- /lab-track -->
+</div><!-- /lab-viewport -->
+<div class="lab-pagerbar">
+  <button class="lab-arrow" id="labPrev" type="button" aria-label="上一个实验">‹</button>
+  <div class="lab-dots" id="labDots">
+    <button class="lab-dot on" data-i="0" type="button" aria-label="板块模型"></button>
+    <button class="lab-dot" data-i="1" type="button" aria-label="小船渡河"></button>
+    <button class="lab-dot" data-i="2" type="button" aria-label="三角函数"></button>
+  </div>
+  <button class="lab-arrow" id="labNext" type="button" aria-label="下一个实验">›</button>
+</div>
+<p class="lab-swipe-hint">左右滑动切换实验 · 也可点圆点或箭头</p>
+</div><!-- /lab-pager -->
 
 <script>
 (function(){
@@ -381,7 +414,7 @@ function blkRender(){
   var viewHalf = (W/2-80)/pxm;
   var cx = mid;
   var X = function(x){ return W/2 + (x-cx)*pxm; };
-  var groundY = H-54, blockH=40, boardH=20, boardTop = groundY-62;
+  var groundY = H-54, blockH=36, boardH=20, boardTop = groundY-58;
   /* 地面与标尺 */
   ctx.fillStyle="#24334f"; ctx.fillRect(0,groundY,W,H-groundY);
   ctx.fillStyle="#5a7ab0"; ctx.fillRect(0,groundY,W,3);
@@ -404,54 +437,41 @@ function blkRender(){
   ctx.fillText("B", X(blk.xB), boardTop+blockH+15);
   ctx.fillStyle="#cdd9ee"; ctx.font="bold 11px sans-serif";
   ctx.fillText("L="+blk.L+"m", X(blk.xB), groundY+40);
-  /* 物块 A(画成有顶面的立体小方块,避免"只有箭头") */
-  var aw = Math.max(66, 0.95*pxm);
+  /* 物块 A */
+  var aw = Math.max(58, 0.8*pxm);
   var ax = X(blk.xA)-aw/2;
-  var aTOP = Math.max(8, boardTop-8);           /* 顶面上沿 */
-  ctx.shadowColor="rgba(79,140,255,.75)"; ctx.shadowBlur=16;
-  ctx.fillStyle="#3f7ef0"; ctx.fillRect(ax, boardTop, aw, blockH);        /* 正面 */
-  ctx.fillStyle="#8ab7ff"; ctx.fillRect(ax, aTOP, aw, boardTop-aTOP);     /* 顶面 */
+  ctx.shadowColor="rgba(79,140,255,.8)"; ctx.shadowBlur=14;
+  ctx.fillStyle="#4f8cff"; ctx.fillRect(ax, boardTop, aw, blockH);
   ctx.shadowBlur=0;
-  ctx.fillStyle="rgba(255,255,255,.16)"; ctx.fillRect(ax, boardTop, 3, blockH); /* 左侧高光 */
-  ctx.strokeStyle="rgba(255,255,255,.75)"; ctx.lineWidth=1.5;
-  ctx.strokeRect(ax, aTOP, aw, blockH+(boardTop-aTOP));
-  ctx.fillStyle="#fff"; ctx.font="bold 14px sans-serif"; ctx.textAlign="center";
-  ctx.fillText("A", X(blk.xA), boardTop+blockH/2+5);
-  /* 速度箭头(在物块/木板上方,不压住物块) */
+  ctx.strokeStyle="rgba(255,255,255,.55)"; ctx.lineWidth=1.2; ctx.strokeRect(ax, boardTop, aw, blockH);
+  ctx.fillStyle="#fff"; ctx.font="bold 12px sans-serif";
+  ctx.fillText("A", X(blk.xA), boardTop+21);
+  /* 速度箭头 */
   if (Math.abs(blk.vA)>0.01){
     var lvA = clamp(Math.abs(blk.vA)/10*90, 8, 120);
-    arrow(ctx, X(blk.xA), aTOP-12, X(blk.xA)+sgn(blk.vA)*lvA, aTOP-12, "#4de3f7",3,8);
+    arrow(ctx, X(blk.xA), boardTop-8, X(blk.xA)+sgn(blk.vA)*lvA, boardTop-8, "#4de3f7",3,8);
     ctx.fillStyle="#4de3f7"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), aTOP-22);
+    ctx.fillText("vA="+fmt(blk.vA,2), X(blk.xA), boardTop-16);
   }
   if (Math.abs(blk.vB)>0.01){
     var lvB = clamp(Math.abs(blk.vB)/10*90, 8, 120);
-    arrow(ctx, X(blk.xB), aTOP-40, X(blk.xB)+sgn(blk.vB)*lvB, aTOP-40, "#5ee6b0",3,8);
+    arrow(ctx, X(blk.xB), boardTop-34, X(blk.xB)+sgn(blk.vB)*lvB, boardTop-34, "#5ee6b0",3,8);
     ctx.fillStyle="#5ee6b0"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
-    ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), aTOP-50);
+    ctx.fillText("vB="+fmt(blk.vB,2), X(blk.xB), boardTop-42);
   }
   /* 受力箭头(可开关) */
   if ($("blkForces").checked){
     if (Math.abs(blk.F)>0.05){
-      var lF = clamp(Math.abs(blk.F)/25*90, 14, 110);
-      var fMidY = boardTop+blockH/2;
-      if (blk.F>0){
-        var fx1 = Math.max(8, ax-12-lF), fx2 = ax-12;
-        arrow(ctx, fx1, fMidY, fx2, fMidY, "#ff8fa3",3,9);
-        ctx.fillStyle="#ff8fa3"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
-        ctx.fillText("F="+fmt(blk.F,1)+"N", (fx1+fx2)/2, fMidY-10);
-      } else {
-        var fx3 = Math.min(W-8, ax+aw+12+lF), fx4 = ax+aw+12;
-        arrow(ctx, fx3, fMidY, fx4, fMidY, "#ff8fa3",3,9);
-        ctx.fillStyle="#ff8fa3"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
-        ctx.fillText("F="+fmt(blk.F,1)+"N", (fx3+fx4)/2, fMidY-10);
-      }
+      var lF = clamp(Math.abs(blk.F)/25*90, 12, 110);
+      arrow(ctx, X(blk.xA)-sgn(blk.F)*aw*0.35, boardTop+12, X(blk.xA)-sgn(blk.F)*aw*0.35+sgn(blk.F)*lF, boardTop+12, "#ff8fa3",3,9);
+      ctx.fillStyle="#ff8fa3"; ctx.font="bold 11px sans-serif"; ctx.textAlign="center";
+      ctx.fillText("F="+fmt(blk.F,1)+"N", X(blk.xA), boardTop-56);
     }
     if (Math.abs(blk.f)>1e-9){
       var lf = clamp(Math.abs(blk.f)/15*40, 10, 60);
       var fA = -blk.f; /* A 受的摩擦力方向 */
-      arrow(ctx, X(blk.xA)-sgn(fA)*aw*0.3, boardTop+blockH-9, X(blk.xA)-sgn(fA)*aw*0.3+sgn(fA)*lf, boardTop+blockH-9, "#ffd166",2.6,7);
-      arrow(ctx, X(blk.xB)+sgn(blk.f)*30, boardTop+blockH+8, X(blk.xB)+sgn(blk.f)*30-sgn(blk.f)*lf, boardTop+blockH+8, "#ffd166",2.6,7);
+      arrow(ctx, X(blk.xA)-sgn(fA)*aw*0.3, boardTop+26, X(blk.xA)-sgn(fA)*aw*0.3+sgn(fA)*lf, boardTop+26, "#ffd166",2.6,7);
+      arrow(ctx, X(blk.xB)+sgn(blk.f)*30, boardTop+blockH+1, X(blk.xB)+sgn(blk.f)*30-sgn(blk.f)*lf, boardTop+blockH+1, "#ffd166",2.6,7);
     }
   }
   /* 图例 */
@@ -969,6 +989,63 @@ function trigTick(dt){
   cv.addEventListener("pointermove",function(e){ if(trig.drag) setFromEvent(e); });
   cv.addEventListener("pointerup",function(){ trig.drag=false; });
   cv.addEventListener("pointercancel",function(){ trig.drag=false; });
+})();
+
+/* ---------- 实验左右滑动轮播 ---------- */
+(function(){
+  var track=$("labTrack"), vp=$("labViewport");
+  var dots=document.querySelectorAll(".lab-dot");
+  var chips=document.querySelectorAll(".lab-chip[data-slide]");
+  var N=3, idx=0, IDS=["block","boat","trig"];
+  function goTo(i, instant){
+    idx = clamp(i, 0, N-1);
+    track.style.transition = instant ? "none" : "";
+    track.style.transform = "translateX("+(-idx*100)+"%)";
+    for(var d=0; d<dots.length; d++) dots[d].classList.toggle("on", d===idx);
+    for(var c=0; c<chips.length; c++) chips[c].classList.toggle("on", +chips[c].getAttribute("data-slide")===idx);
+    if($("labPrev")) $("labPrev").disabled = (idx===0);
+    if($("labNext")) $("labNext").disabled = (idx===N-1);
+    try{ if(history.replaceState) history.replaceState(null,"","#sec-"+IDS[idx]); }catch(e){}
+  }
+  for(var d=0; d<dots.length; d++){
+    dots[d].addEventListener("click", (function(i){ return function(){ goTo(i); }; })(d));
+  }
+  for(var c=0; c<chips.length; c++){
+    chips[c].addEventListener("click", (function(i){ return function(e){
+      e.preventDefault(); goTo(i);
+    }; })(+chips[c].getAttribute("data-slide")));
+  }
+  if($("labPrev")) $("labPrev").addEventListener("click", function(){ goTo(idx-1); });
+  if($("labNext")) $("labNext").addEventListener("click", function(){ goTo(idx+1); });
+  /* 手势:pointerdown/up 同时覆盖触屏与鼠标;滑块、按钮、链接、三角画布上的拖动不翻页 */
+  var sx=0, sy=0, pid=null, armed=false;
+  function skip(t){
+    return !!(t && t.closest && (t.closest("input,button,select,a,textarea,label,output") || t.closest("#cvTrig")));
+  }
+  vp.addEventListener("pointerdown", function(e){
+    if (skip(e.target)) { armed=false; return; }
+    sx=e.clientX; sy=e.clientY; pid=e.pointerId; armed=true;
+  });
+  window.addEventListener("pointerup", function(e){
+    if (!armed || e.pointerId!==pid) return;
+    armed=false;
+    var dx=e.clientX-sx, dy=e.clientY-sy;
+    if (Math.abs(dx)>48 && Math.abs(dx)>Math.abs(dy)*1.2) goTo(idx + (dx<0?1:-1));
+  });
+  window.addEventListener("pointercancel", function(){ armed=false; });
+  /* 键盘左右键翻页(焦点在滑块里时不拦截) */
+  document.addEventListener("keydown", function(e){
+    if (e.key!=="ArrowLeft" && e.key!=="ArrowRight") return;
+    var t=e.target;
+    if (t && (t.tagName==="INPUT" || t.tagName==="SELECT" || t.tagName==="TEXTAREA")) return;
+    e.preventDefault();
+    goTo(idx + (e.key==="ArrowLeft"?-1:1));
+  });
+  /* 初始页:按 URL hash 定位 */
+  var h=(typeof location!=="undefined" && location.hash || "").replace("#sec-","");
+  var start=0;
+  for(var k=0;k<N;k++){ if(IDS[k]===h) start=k; }
+  goTo(start, true);
 })();
 
 /* 滑块轨道填充 */
