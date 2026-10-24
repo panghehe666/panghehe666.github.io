@@ -1,0 +1,309 @@
+---
+layout: page
+title: "日历"
+description: "博客日历 · 贡献率统计"
+permalink: /calendar/
+header-img: "img/home-bg.jpg"
+---
+
+<div markdown="0">
+<style>
+.cal-root{
+  position:relative;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  color:#dbe4f3;line-height:1.65;
+  background:
+    radial-gradient(1200px 620px at 10% -14%, rgba(79,140,255,.20), transparent 62%),
+    radial-gradient(1000px 520px at 94% -6%, rgba(155,107,255,.18), transparent 58%),
+    linear-gradient(180deg,#0a101f 0%,#0c1326 100%);
+  border:1px solid rgba(148,163,184,.16);border-radius:26px;padding:28px 24px 24px;
+  box-shadow:0 30px 80px rgba(2,6,18,.6), inset 0 1px 0 rgba(255,255,255,.06);
+  margin-bottom:40px;
+}
+.cal-tabs{display:flex;gap:8px;margin-bottom:22px;flex-wrap:wrap;}
+.cal-tab{
+  appearance:none;border:1px solid rgba(148,163,184,.22);background:rgba(255,255,255,.04);
+  color:#c7d2e5;padding:8px 18px;border-radius:999px;font-size:14px;cursor:pointer;
+  transition:all .2s;letter-spacing:.04em;
+}
+.cal-tab:hover{background:rgba(255,255,255,.08);color:#fff;}
+.cal-tab.active{
+  background:linear-gradient(135deg,rgba(79,140,255,.85),rgba(155,107,255,.85));
+  border-color:transparent;color:#fff;box-shadow:0 6px 18px rgba(79,140,255,.35);
+}
+.cal-panel{display:none;}
+.cal-panel.active{display:block;}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap;}
+.cal-title{font-size:22px;font-weight:700;letter-spacing:.04em;margin:0;
+  background:linear-gradient(92deg,#7cc0ff,#a78bfa 52%,#f0abfc);
+  -webkit-background-clip:text;background-clip:text;color:transparent;}
+.cal-nav-btns{display:flex;gap:8px;}
+.cal-nav-btns button{
+  width:36px;height:36px;border-radius:10px;border:1px solid rgba(148,163,184,.22);
+  background:rgba(255,255,255,.05);color:#dbe4f3;cursor:pointer;font-size:16px;
+}
+.cal-nav-btns button:hover{background:rgba(255,255,255,.12);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cal-dow{text-align:center;font-size:12px;color:#8fa0bd;padding:6px 0;letter-spacing:.06em;}
+.cal-day{
+  min-height:72px;border-radius:12px;border:1px solid rgba(148,163,184,.12);
+  background:rgba(255,255,255,.03);padding:8px;position:relative;cursor:default;
+  transition:background .15s;
+}
+.cal-day.empty{background:transparent;border-color:transparent;}
+.cal-day.today{border-color:rgba(124,192,255,.55);box-shadow:0 0 0 1px rgba(124,192,255,.25) inset;}
+.cal-day.has-post{background:rgba(79,140,255,.12);cursor:pointer;}
+.cal-day.has-post:hover{background:rgba(79,140,255,.22);}
+.cal-day-num{font-size:13px;font-weight:600;color:#c7d2e5;}
+.cal-day.today .cal-day-num{color:#7cc0ff;}
+.cal-day-posts{margin-top:4px;display:flex;flex-direction:column;gap:2px;}
+.cal-day-posts a{
+  display:block;font-size:11px;color:#a5b4fc;text-decoration:none;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;line-height:1.3;
+}
+.cal-day-posts a:hover{color:#fff;text-decoration:underline;}
+.cal-legend{margin-top:14px;font-size:12px;color:#8fa0bd;display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.cal-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle;}
+.cal-list{margin-top:20px;}
+.cal-list h3{font-size:15px;color:#a5b4fc;margin:0 0 10px;}
+.cal-list-item{
+  display:flex;gap:12px;padding:10px 12px;border-radius:10px;
+  border:1px solid rgba(148,163,184,.12);background:rgba(255,255,255,.03);margin-bottom:8px;
+  text-decoration:none;color:inherit;transition:background .15s;
+}
+.cal-list-item:hover{background:rgba(255,255,255,.08);text-decoration:none;color:inherit;}
+.cal-list-date{font-size:12px;color:#8fa0bd;min-width:90px;font-variant-numeric:tabular-nums;}
+.cal-list-title{font-size:14px;color:#e2e8f0;}
+.contrib-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px;}
+.contrib-stat{
+  border-radius:14px;border:1px solid rgba(148,163,184,.14);background:rgba(255,255,255,.04);
+  padding:16px 14px;text-align:center;
+}
+.contrib-stat .n{font-size:28px;font-weight:800;letter-spacing:.02em;
+  background:linear-gradient(92deg,#7cc0ff,#a78bfa);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.contrib-stat .l{font-size:12px;color:#8fa0bd;margin-top:4px;letter-spacing:.04em;}
+.contrib-heat-wrap{overflow-x:auto;padding-bottom:8px;}
+.contrib-heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;width:max-content;}
+.contrib-cell{width:12px;height:12px;border-radius:2px;background:#161b22;}
+.contrib-cell.l1{background:#0e4429;}
+.contrib-cell.l2{background:#006d32;}
+.contrib-cell.l3{background:#26a641;}
+.contrib-cell.l4{background:#39d353;}
+.contrib-months{display:flex;gap:0;font-size:11px;color:#8fa0bd;margin-bottom:6px;min-width:max-content;}
+.contrib-hint{font-size:12px;color:#8fa0bd;margin-top:12px;}
+.contrib-gh{
+  margin-top:18px;padding:14px 16px;border-radius:12px;border:1px solid rgba(148,163,184,.14);
+  background:rgba(255,255,255,.03);font-size:13px;color:#c7d2e5;
+}
+.contrib-gh a{color:#7cc0ff;}
+@media (max-width:640px){
+  .cal-day{min-height:56px;padding:6px;}
+  .cal-day-posts{display:none;}
+  .cal-root{padding:18px 12px 16px;border-radius:18px;}
+}
+</style>
+
+<div class="cal-root">
+  <div class="cal-tabs" role="tablist">
+    <button type="button" class="cal-tab active" data-tab="calendar" role="tab" aria-selected="true">日历</button>
+    <button type="button" class="cal-tab" data-tab="contrib" role="tab" aria-selected="false">贡献率统计</button>
+  </div>
+
+  <div id="panel-calendar" class="cal-panel active" role="tabpanel">
+    <div class="cal-head">
+      <h2 class="cal-title" id="cal-month-label">—</h2>
+      <div class="cal-nav-btns">
+        <button type="button" id="cal-prev" aria-label="上一月">‹</button>
+        <button type="button" id="cal-today" aria-label="今天" title="今天" style="width:auto;padding:0 12px;font-size:13px;">今天</button>
+        <button type="button" id="cal-next" aria-label="下一月">›</button>
+      </div>
+    </div>
+    <div class="cal-grid" id="cal-dows">
+      <div class="cal-dow">一</div><div class="cal-dow">二</div><div class="cal-dow">三</div>
+      <div class="cal-dow">四</div><div class="cal-dow">五</div><div class="cal-dow">六</div><div class="cal-dow">日</div>
+    </div>
+    <div class="cal-grid" id="cal-days"></div>
+    <div class="cal-legend">
+      <span><span class="cal-dot" style="background:rgba(79,140,255,.35)"></span>有文章</span>
+      <span><span class="cal-dot" style="background:transparent;border:1px solid rgba(124,192,255,.55)"></span>今天</span>
+    </div>
+    <div class="cal-list" id="cal-month-list"></div>
+  </div>
+
+  <div id="panel-contrib" class="cal-panel" role="tabpanel">
+    <div class="cal-head">
+      <h2 class="cal-title">博客贡献率</h2>
+    </div>
+    <div class="contrib-stats" id="contrib-stats"></div>
+    <div class="contrib-heat-wrap">
+      <div class="contrib-months" id="contrib-months"></div>
+      <div class="contrib-heat" id="contrib-heat"></div>
+    </div>
+    <p class="contrib-hint">格子颜色表示该日发文数量（近一年）。数据来自本站文章发布日期。</p>
+    <div class="contrib-gh">
+      GitHub 贡献图请直接查看：
+      <a href="https://github.com/panghehe666" target="_blank" rel="noopener">github.com/panghehe666</a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var posts = [
+{% for post in site.posts %}
+    { date: "{{ post.date | date: '%Y-%m-%d' }}", title: {{ post.title | jsonify }}, url: "{{ post.url | prepend: site.baseurl }}" }{% unless forloop.last %},{% endunless %}
+{% endfor %}
+  ];
+
+  var byDate = {};
+  posts.forEach(function (p) {
+    if (!byDate[p.date]) byDate[p.date] = [];
+    byDate[p.date].push(p);
+  });
+
+  var view = new Date();
+  view.setDate(1);
+
+  function ymd(d) {
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+  }
+  function sameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function renderCalendar() {
+    var y = view.getFullYear(), m = view.getMonth();
+    document.getElementById('cal-month-label').textContent = y + ' 年 ' + (m + 1) + ' 月';
+    var first = new Date(y, m, 1);
+    var startPad = (first.getDay() + 6) % 7;
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var today = new Date();
+    var html = '';
+    var monthPosts = [];
+    for (var i = 0; i < startPad; i++) html += '<div class="cal-day empty"></div>';
+    for (var d = 1; d <= daysInMonth; d++) {
+      var dt = new Date(y, m, d);
+      var key = ymd(dt);
+      var list = byDate[key] || [];
+      var cls = 'cal-day';
+      if (sameDay(dt, today)) cls += ' today';
+      if (list.length) cls += ' has-post';
+      html += '<div class="' + cls + '" data-date="' + key + '">';
+      html += '<div class="cal-day-num">' + d + '</div>';
+      if (list.length) {
+        html += '<div class="cal-day-posts">';
+        list.slice(0, 2).forEach(function (p) {
+          html += '<a href="' + p.url + '" title="' + p.title.replace(/"/g, '"') + '">' + p.title + '</a>';
+        });
+        if (list.length > 2) html += '<span style="font-size:10px;color:#8fa0bd">+' + (list.length - 2) + '</span>';
+        html += '</div>';
+        list.forEach(function (p) { monthPosts.push(p); });
+      }
+      html += '</div>';
+    }
+    document.getElementById('cal-days').innerHTML = html;
+
+    var listEl = document.getElementById('cal-month-list');
+    if (!monthPosts.length) {
+      listEl.innerHTML = '<h3>本月文章</h3><p style="color:#8fa0bd;font-size:13px;">本月暂无文章</p>';
+    } else {
+      monthPosts.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+      var lh = '<h3>本月文章（' + monthPosts.length + '）</h3>';
+      monthPosts.forEach(function (p) {
+        lh += '<a class="cal-list-item" href="' + p.url + '"><span class="cal-list-date">' + p.date + '</span><span class="cal-list-title">' + p.title + '</span></a>';
+      });
+      listEl.innerHTML = lh;
+    }
+  }
+
+  function renderContrib() {
+    var end = new Date();
+    end.setHours(0, 0, 0, 0);
+    var start = new Date(end);
+    start.setDate(start.getDate() - 364);
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+
+    var counts = {};
+    var total = 0, activeDays = 0, maxStreak = 0, curStreak = 0, lastActive = null;
+    var yearCount = 0;
+    var thisYear = end.getFullYear();
+    posts.forEach(function (p) {
+      counts[p.date] = (counts[p.date] || 0) + 1;
+      total++;
+      if (p.date.slice(0, 4) == String(thisYear)) yearCount++;
+    });
+
+    var heat = document.getElementById('contrib-heat');
+    heat.innerHTML = '';
+    var monthsEl = document.getElementById('contrib-months');
+    var cursor = new Date(start);
+    var names = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    var seen = {};
+    var ml = '';
+    while (cursor <= end) {
+      var key = ymd(cursor);
+      var c = counts[key] || 0;
+      var level = c === 0 ? 0 : c === 1 ? 1 : c === 2 ? 2 : c === 3 ? 3 : 4;
+      var cell = document.createElement('div');
+      cell.className = 'contrib-cell' + (level ? ' l' + level : '');
+      cell.title = key + (c ? ' · ' + c + ' 篇' : '');
+      heat.appendChild(cell);
+      if (c > 0) {
+        activeDays++;
+        if (lastActive && (cursor - lastActive) / 86400000 === 1) curStreak++;
+        else curStreak = 1;
+        if (curStreak > maxStreak) maxStreak = curStreak;
+        lastActive = new Date(cursor);
+      }
+      if (cursor.getDay() === 1) {
+        var mon = cursor.getMonth();
+        var sk = mon + '-' + cursor.getFullYear();
+        if (!seen[sk] && cursor.getDate() <= 7) {
+          seen[sk] = true;
+          ml += '<span style="min-width:52px">' + names[mon] + '</span>';
+        } else {
+          ml += '<span style="min-width:15px"></span>';
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    monthsEl.innerHTML = ml;
+    document.getElementById('contrib-stats').innerHTML =
+      '<div class="contrib-stat"><div class="n">' + total + '</div><div class="l">累计文章</div></div>' +
+      '<div class="contrib-stat"><div class="n">' + yearCount + '</div><div class="l">' + thisYear + ' 年发文</div></div>' +
+      '<div class="contrib-stat"><div class="n">' + activeDays + '</div><div class="l">近一年有文天数</div></div>' +
+      '<div class="contrib-stat"><div class="n">' + maxStreak + '</div><div class="l">最长连续天数</div></div>';
+  }
+
+  document.getElementById('cal-prev').onclick = function () {
+    view.setMonth(view.getMonth() - 1);
+    renderCalendar();
+  };
+  document.getElementById('cal-next').onclick = function () {
+    view.setMonth(view.getMonth() + 1);
+    renderCalendar();
+  };
+  document.getElementById('cal-today').onclick = function () {
+    view = new Date();
+    view.setDate(1);
+    renderCalendar();
+  };
+
+  document.querySelectorAll('.cal-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.cal-tab').forEach(function (t) {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.cal-panel').forEach(function (p) { p.classList.remove('active'); });
+      tab.classList.add('active');
+      tab.setAttribute('aria-selected', 'true');
+      document.getElementById('panel-' + tab.getAttribute('data-tab')).classList.add('active');
+      if (tab.getAttribute('data-tab') === 'contrib') renderContrib();
+    });
+  });
+
+  renderCalendar();
+})();
+</script>
+</div>
