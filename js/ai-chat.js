@@ -143,6 +143,19 @@
     return t.replace(/\n{3,}/g, '\n\n').trim();
   }
 
+  /* 登出后立刻把已解密的私密文章从索引里摘掉 */
+  function syncAdminState(d) {
+    if (!d) return d;
+    if (privState === 'done' && !isAdmin()) {
+      d.posts = d.posts.filter(function (p) { return !p.priv; });
+      CHUNKS = null; INV = null;
+      privState = 'off';
+      var tg = $('ai-admin-tag');
+      if (tg) tg.classList.remove('on');
+    }
+    return d;
+  }
+
   function ensurePrivate(d) {
     if (!d || privState) return Promise.resolve(d);
     var PC = window.PrivateCrypto;
@@ -678,7 +691,7 @@
 
     loadIndex().then(function (d) { return d; }, function () { return null; })
       .then(function (d) {
-        return ensurePrivate(d).then(function () { return d; }, function () { return d; });
+        return ensurePrivate(syncAdminState(d)).then(function () { return d; }, function () { return d; });
       })
       .then(function (d) {
         var hits = [];
