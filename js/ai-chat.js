@@ -91,8 +91,8 @@
   }
   function toBottom() { bodyEl.scrollTop = bodyEl.scrollHeight + 999; }
 
-  /* ---------------- 索引 + 检索 ---------------- */
-  var IDX = null, CHUNKS = null, INV = null;
+  /* ---------------- 索引 + 检索（BM25 + 标题加权） ---------------- */
+  var IDX = null, CHUNKS = null, INV = null, AVGDL = 1, PTITLE = null, SEEN = {};
 
   function tokenize(str) {
     var out = [], seen = {};
@@ -114,6 +114,7 @@
       .then(function (txt) {
         var d = JSON.parse(txt);
         if (!d || !d.posts) throw new Error('bad index');
+        if (d.about) d.posts.unshift({ t: '关于这个博客', u: '/about/', d: '', g: '', x: d.about });
         IDX = d;
         return d;
       });
@@ -121,57 +122,107 @@
 
   function buildIndex(d) {
     if (CHUNKS) return;
-    CHUNKS = []; INV = {};
+    CHUNKS = []; INV = {}; PTITLE = []; SEEN = {};
+    var totalLen = 0;
+
     (d.posts || []).forEach(function (p, pi) {
-      var raw = String(p.x || '').replace(/\s+/g, ' ');
-      var buf = '';
-      function flush() {
-        var t = buf.trim();
-        buf = '';
-        if (t.length < 16) return;
-        if ((t.match(/[{};<>]/g) || []).length > t.length * 0.14) return; // 代码噪声
-        var id = CHUNKS.length;
-        CHUNKS.push({ p: pi, t: t });
-        tokenize(t + ' ' + (p.t || '')).forEach(function (tk) {
-          (INV[tk] || (INV[tk] = [])).push(id);
-        });
-      }
-      for (var i = 0; i < raw.length; i++) {
-        var ch = raw[i];
-        buf += ch;
-        if (ch === '。' || ch === '!' || ch === '！' || ch === '?' || ch === '？' || ch === ';' || ch === '；' || buf.length >= 300) flush();
-      }
-      flush();
+      PTITLE[pi] = {};
+      tokenize(p.t || '').forEach(function (t) { PTITLE[pi][t] = 1; });
+
+      String(p.x || '').split('\n').forEach(function (line) {
+        var raw = line.replace(/\s+/g, ' ').trim();
+        if (!raw) return;
+        var buf = '';
+        function flush() {
+          var t = buf.trim(); buf = '';
+          if (t.length < 14) return;
+          if ((t.match(/[{};<>]/g) || []).length > t.length * 0.14) return; // 代码噪声
+          /* 标题行（很短又没有标点）不参与检索，否则会把 TOC 当正文命中 */
+          if (t.length < 30 && !/[，。；：！？,;:]/.test(t)) return;
+          if (SEEN[t]) return;
+          var toks = tokenize(t);
+          if (!toks.length) return;
+          var tf = {}, len = 0, i;
+          for (i = 0; i < toks.length; i++) { tf[toks[i]] = (tf[toks[i]] || 0) + 1; len++; }
+          SEEN[t] = 1;
+          var id = CHUNKS.length;
+          CHUNKS.push({ p: pi, t: t, len: len });
+          totalLen += len;
+          for (var k in tf) (INV[k] || (INV[k] = [])).push([id, tf[k]]);
+        }
+        for (var i = 0; i < raw.length; i++) {
+          var ch = raw[i];
+          buf += ch;
+          if (ch === '。' || ch === '！' || ch === '？' || ch === '；' || ch === '!' || ch === '?' || ch === ';' || buf.length >= 240) flush();
+        }
+        flush();
+      });
     });
+
+    AVGDL = CHUNKS.length ? totalLen / CHUNKS.length : 1;
   }
 
   function retrieve(d, q) {
-    buildIndex(d);
-    var posts = d.posts || [];
-    var terms = tokenize(q);
-    if (!terms.length || !CHUNKS.length) return [];
-    var score = {}, hitTerms = {};
-    terms.forEach(function (t) {
-      var ids = INV[t];
-      if (!ids) return;
-      var w = (t.length >= 2 ? 1 : 0.35) / Math.log(2 + ids.length);
-      for (var i = 0; i < ids.length; i++) score[ids[i]] = (score[ids[i]] || 0) + w;
+    if (!CHUNKS) buildIndex(d);
+    var qs = tokenize(q);
+    if (!qs.length || !CHUNKS.length) return [];
+
+    var N = CHUNKS.length, k1 = 1.2, b = 0.75;
+    var scores = {}, bonus = {}, i, k;
+
+    qs.forEach(function (t) {
+      var plist = INV[t];
+      if (!plist) return;
+      var df = plist.length;
+      if (df > N * 0.5) return;                       // 太常见（我/的/是…）直接丢
+      var idf = Math.log(1 + (N - df + 0.5) / (df + 0.5));
+      for (var j = 0; j < plist.length; j++) {
+        var id = plist[j][0], tf = plist[j][1], dl = CHUNKS[id].len;
+        var denom = tf + k1 * (1 - b + b * dl / AVGDL);
+        scores[id] = (scores[id] || 0) + idf * (tf * (k1 + 1)) / denom;
+      }
     });
-    var ranked = Object.keys(score).map(Number).sort(function (a, b) { return score[b] - score[a]; });
-    if (!ranked.length) return [];
-    var top = score[ranked[0]];
-    var perPost = {}, out = [];
-    for (var k = 0; k < ranked.length && out.length < 6; k++) {
-      var id = ranked[k];
-      if (score[id] < top * 0.34) break;
-      var c = CHUNKS[id];
-      perPost[c.p] = (perPost[c.p] || 0);
-      if (perPost[c.p] >= 2) continue;
-      perPost[c.p]++;
-      var p = posts[c.p] || {};
-      out.push({ title: p.t || '', url: p.u || '', date: p.d || '', text: c.t });
+
+    /* 标题命中：按词的稀有度加权，命中标题的整篇一起抬 */
+    var posts = d.posts || [];
+    var idfCache = {};
+    function termIdf(t) {
+      if (idfCache[t] !== undefined) return idfCache[t];
+      var pl = INV[t], r = 3.0;
+      if (pl) { var df = pl.length; r = Math.log(1 + (N - df + 0.5) / (df + 0.5)); }
+      idfCache[t] = r; return r;
     }
-    void hitTerms;
+    for (var pi = 0; pi < posts.length; pi++) {
+      var set = PTITLE[pi] || {};
+      for (k = 0; k < qs.length; k++) {
+        if (set[qs[k]]) bonus[pi] = (bonus[pi] || 0) + termIdf(qs[k]) * 1.6;
+      }
+    }
+
+    var ranked = Object.keys(scores).map(Number);
+    if (!ranked.length) {
+      /* 兜底：问「你 / 博客 / 作者」这类问题时，把简介喂给它 */
+      if (/你|本人|作者|自我介绍|这个网站|这个博客|关于/.test(q) && posts[0] && posts[0].t === '关于这个博客') {
+        return [{ title: posts[0].t, url: posts[0].u, date: '', text: String(posts[0].x).slice(0, 300) }];
+      }
+      return [];
+    }
+    ranked.forEach(function (id) {
+      var bn = bonus[CHUNKS[id].p];
+      if (bn) scores[id] += bn;
+    });
+    ranked.sort(function (x, y) { return scores[y] - scores[x]; });
+
+    var top = scores[ranked[0]], perPost = {}, out = [];
+    for (var j = 0; j < ranked.length && out.length < 6; j++) {
+      var id2 = ranked[j];
+      if (scores[id2] < top * 0.3) break;
+      var c = CHUNKS[id2];
+      if ((perPost[c.p] || 0) >= 2) continue;
+      perPost[c.p] = (perPost[c.p] || 0) + 1;
+      var pp = posts[c.p] || {};
+      out.push({ title: pp.t || '', url: pp.u || '', date: pp.d || '', text: c.t });
+    }
     return out;
   }
 

@@ -2,8 +2,11 @@
 layout: null
 sitemap: false
 ---
+{%- capture abouttxt -%}
+庞和合，网名 PHH，高三学生，喜欢折腾、热爱数码。{% include about/zh.md %}这个博客叫 PHH Blog，用 Jekyll + GitHub Pages 搭的，主要写科技数码、开源软件、AI 工具、Termux 折腾和建站记录。
+{%- endcapture -%}
 {%- assign n = 0 -%}
-{"generated":{{ site.time | date_to_xmlschema | jsonify }},"posts":[
+{"generated":{{ site.time | date_to_xmlschema | jsonify }},"about":{{ abouttxt | strip_html | normalize_whitespace | jsonify }},"posts":[
 {%- for post in site.posts -%}
 {%- unless post.private_cipher -%}
 {%- if n > 0 -%},{%- endif -%}
