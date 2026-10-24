@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "markdowm语法技巧"
+title:      "markdown语法技巧"
 subtitle:   "信息、载体、抽象、UI 设计乱谈"
 date:       2026-9-27
 author:     "PHH"
