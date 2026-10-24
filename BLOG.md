@@ -49,8 +49,9 @@ tags:
 ## AI 问答模块（站内聊天）
 - 前端：`_includes/ai-chat.html` + `css/ai-chat.css` + `js/ai-chat.js`，由 `_layouts/default.html` 全局引入
 - 知识库：`chat-index.json`（Liquid 模板，每次构建自动汇总全部文章正文）
-  - 私密文章不进 `posts`，而是单独放在 `private` 数组里，**只存密文**（`private_cipher`）
-  - 管理员登录后前端用 `PrivateCrypto.decryptWithSession` 解密、并入索引；非管理员拿到的只是密文
+  - `chat-index.json` 只放公开文章；私密文章单独一个 `chat-private.json`，**只存密文**（`private_cipher`）
+  - 管理员登录后前端才去拉 `chat-private.json`，用 `PrivateCrypto.decryptWithSession` 解密并入索引；
+    非管理员既不下载、也解不开（密文本身是 AES-GCM，密钥来自管理员口令）
 - 检索：前端 BM25 + 中文 bigram + 标题加权；默认只给命中那一**小节**的正文 + 开头引子（约 800~1400 字）
 - 省 token：system 逐字固定（吃 DeepSeek 前缀缓存）；正文不够时模型输出 `[[MORE]]`，前端自动换整篇重发一次
 - 两个模式（面板左下的胶囊，localStorage `phh_ai_mode`）：

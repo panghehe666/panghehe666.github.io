@@ -145,33 +145,39 @@
 
   function ensurePrivate(d) {
     if (!d || privState) return Promise.resolve(d);
-    var arr = d.private || [];
     var PC = window.PrivateCrypto;
-    if (!arr.length || !PC || !PC.decryptWithSession || !isAdmin()) {
+    if (!PC || !PC.decryptWithSession || !isAdmin()) {
       privState = 'off';
       return Promise.resolve(d);
     }
     privState = 'done';
-    return Promise.all(arr.map(function (p) {
-      return PC.decryptWithSession(p.c).then(function (txt) {
-        var body = plainify(txt);
-        if (!body) return null;
-        return { t: p.t, u: p.u, d: p.d, g: '私密', x: body, priv: 1 };
-      }, function () { return null; });
-    })).then(function (list) {
-      var added = 0;
-      list.forEach(function (p) {
-        if (!p) return;
-        d.posts.push(p);
-        added++;
-      });
-      if (added) {
-        if (CHUNKS) { CHUNKS = null; INV = null; }
-        var tg = $('ai-admin-tag');
-        if (tg) { tg.classList.add('on'); tg.textContent = '管理员 · 含私密 ' + added; }
-      }
-      return d;
-    });
+    /* 私密索引单独一个文件：非管理员根本不会去下载它 */
+    return fetch((BASE || '') + '/chat-private.json', { cache: 'force-cache' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) { return (j && j.private) || []; }, function () { return []; })
+      .then(function (arr) {
+        if (!arr.length) return d;
+        return Promise.all(arr.map(function (p) {
+          return PC.decryptWithSession(p.c).then(function (txt) {
+            var body = plainify(txt);
+            if (!body) return null;
+            return { t: p.t, u: p.u, d: p.d, g: '私密', x: body, priv: 1 };
+          }, function () { return null; });
+        })).then(function (list) {
+          var added = 0;
+          list.forEach(function (p) {
+            if (!p) return;
+            d.posts.push(p);
+            added++;
+          });
+          if (added) {
+            if (CHUNKS) { CHUNKS = null; INV = null; }
+            var tg = $('ai-admin-tag');
+            if (tg) { tg.classList.add('on'); tg.textContent = '管理员 · 含私密 ' + added; }
+          }
+          return d;
+        });
+      }, function () { return d; });
   }
 
   function loadIndex() {

@@ -1,0 +1,14 @@
+---
+layout: null
+sitemap: false
+---
+{%- assign pn = 0 -%}
+{"generated":{{ site.time | date_to_xmlschema | jsonify }},"private":[
+{%- for post in site.posts -%}
+{%- if post.private_cipher -%}
+{%- if pn > 0 -%},{%- endif -%}
+{"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: "%Y-%m-%d" | jsonify }},"c":{{ post.private_cipher | jsonify }}}
+{%- assign pn = pn | plus: 1 -%}
+{%- endif -%}
+{%- endfor -%}
+]}
