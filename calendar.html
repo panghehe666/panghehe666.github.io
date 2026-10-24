@@ -37,16 +37,25 @@ header-img: "img/home-bg.jpg"
   background:#fff;color:#33505c;cursor:pointer;font-size:16px;transition:all .18s;
 }
 .cal-nav-btns button:hover{background:#e8f7fa;border-color:#0085a1;color:#0085a1;}
+.cal-jump{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.cal-jump select{
+  appearance:none;border:1px solid #cfe3e8;background:#fff;color:#33505c;
+  padding:6px 24px 6px 10px;border-radius:9px;font-size:14px;cursor:pointer;
+  background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" fill="none" stroke="%2333505c" stroke-width="1.4"/></svg>');
+  background-repeat:no-repeat;background-position:right 9px center;
+}
+.cal-jump select:hover,.cal-jump select:focus{border-color:#0085a1;color:#0085a1;outline:none;}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
 .cal-dow{text-align:center;font-size:12px;color:#7b93a0;padding:6px 0;letter-spacing:.06em;}
 .cal-day{
   min-height:74px;border-radius:12px;border:1px solid #e6f0f3;background:#fbfdfe;padding:8px;
-  position:relative;transition:background .15s,border-color .15s;
+  position:relative;cursor:pointer;transition:background .15s,border-color .15s;
 }
-.cal-day.empty{background:transparent;border-color:transparent;}
-.cal-day.has-post{background:#eaf7fa;border-color:#bfe3ea;cursor:pointer;}
+.cal-day.empty{background:transparent;border-color:transparent;cursor:default;}
+.cal-day:hover{background:#f0f9fb;border-color:#cfe3e8;}
+.cal-day:focus-visible{outline:2px solid #0085a1;outline-offset:2px;}
+.cal-day.has-post{background:#eaf7fa;border-color:#bfe3ea;}
 .cal-day.has-post:hover{background:#dff1f6;border-color:#8fd8e3;}
-.cal-day.has-post:focus-visible{outline:2px solid #0085a1;outline-offset:2px;}
 .cal-day.today{border-color:#0085a1;box-shadow:0 0 0 2px rgba(0,133,161,.12) inset;}
 .cal-day.sel{border-color:#0085a1;box-shadow:0 0 0 2px #0085a1;}
 .cal-day-num{font-size:13px;font-weight:600;color:#54707d;}
@@ -120,10 +129,14 @@ header-img: "img/home-bg.jpg"
   <div id="panel-calendar" class="cal-panel active" role="tabpanel">
     <div class="cal-head">
       <h2 class="cal-title" id="cal-month-label">—</h2>
-      <div class="cal-nav-btns">
-        <button type="button" id="cal-prev" aria-label="上一月">‹</button>
-        <button type="button" id="cal-today" aria-label="今天" title="今天" style="width:auto;padding:0 12px;font-size:13px;">今天</button>
-        <button type="button" id="cal-next" aria-label="下一月">›</button>
+      <div class="cal-jump">
+        <select id="cal-year" aria-label="选择年份"></select>
+        <select id="cal-month" aria-label="选择月份"></select>
+        <div class="cal-nav-btns">
+          <button type="button" id="cal-prev" aria-label="上一月">‹</button>
+          <button type="button" id="cal-today" aria-label="今天" title="今天" style="width:auto;padding:0 12px;font-size:13px;">今天</button>
+          <button type="button" id="cal-next" aria-label="下一月">›</button>
+        </div>
       </div>
     </div>
     <div class="cal-grid" id="cal-dows">
@@ -132,7 +145,7 @@ header-img: "img/home-bg.jpg"
     </div>
     <div class="cal-grid" id="cal-days"></div>
     <div class="cal-legend">
-      <span><span class="cal-dot" style="background:#bfe3ea"></span>有文章(点日期看当天文章)</span>
+      <span><span class="cal-dot" style="background:#bfe3ea"></span>有文章 · 点任意日期看当天</span>
       <span><span class="cal-dot" style="background:transparent;border:1px solid #0085a1"></span>今天</span>
     </div>
     <div class="cal-day-detail" id="cal-day-detail"></div>
@@ -173,6 +186,40 @@ header-img: "img/home-bg.jpg"
   var view = new Date();
   view.setDate(1);
 
+  var yearSel = document.getElementById('cal-year');
+  var monthSel = document.getElementById('cal-month');
+
+  function initPicker() {
+    var minY = new Date().getFullYear(), maxY = minY;
+    posts.forEach(function (p) {
+      var y = +p.date.slice(0, 4);
+      if (y) { if (y < minY) minY = y; if (y > maxY) maxY = y; }
+    });
+    var yh = '';
+    for (var y = minY; y <= maxY; y++) yh += '<option value="' + y + '">' + y + '</option>';
+    yearSel.innerHTML = yh;
+    var mh = '';
+    for (var m = 1; m <= 12; m++) mh += '<option value="' + m + '">' + m + '月</option>';
+    monthSel.innerHTML = mh;
+    syncPicker();
+  }
+  function syncPicker() {
+    var y = String(view.getFullYear());
+    if (!yearSel.querySelector('option[value="' + y + '"]')) {
+      var o = document.createElement('option');
+      o.value = y; o.textContent = y;
+      yearSel.appendChild(o);
+    }
+    yearSel.value = y;
+    monthSel.value = String(view.getMonth() + 1);
+  }
+  function jumpTo(y, m) {
+    view = new Date(y, m - 1, 1);
+    renderCalendar();
+  }
+  yearSel.addEventListener('change', function () { jumpTo(+yearSel.value, +monthSel.value); });
+  monthSel.addEventListener('change', function () { jumpTo(+yearSel.value, +monthSel.value); });
+
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -207,7 +254,7 @@ header-img: "img/home-bg.jpg"
         return '<a href="' + esc(p.url) + '">' + esc(p.title) + '</a>';
       }).join('');
     } else {
-      h += '<div class="dd-empty">这天没有文章</div>';
+      h += '<div class="dd-empty">这天还没有文章</div>';
     }
     detailEl.innerHTML = h;
     detailEl.classList.add('show');
@@ -238,11 +285,8 @@ header-img: "img/home-bg.jpg"
       var cls = 'cal-day';
       if (sameDay(dt, today)) cls += ' today';
       if (list.length) cls += ' has-post';
-      var extra = '';
-      if (list.length) {
-        extra = ' role="button" tabindex="0" aria-label="' +
-          (m + 1) + '月' + d + '日,' + list.length + '篇文章"';
-      }
+      var extra = ' role="button" tabindex="0" aria-label="' +
+        (m + 1) + '月' + d + '日,' + (list.length ? list.length + '篇文章' : '无文章') + '"';
       html += '<div class="' + cls + '" data-date="' + key + '"' + extra + '>';
       html += '<div class="cal-day-num">' + d + '</div>';
       if (list.length) {
@@ -270,6 +314,7 @@ header-img: "img/home-bg.jpg"
       });
       listEl.innerHTML = lh;
     }
+    syncPicker();
   }
 
   function renderContrib() {
@@ -352,11 +397,10 @@ header-img: "img/home-bg.jpg"
     var cell = e.target.closest ? e.target.closest('.cal-day') : null;
     if (!cell) return;
     if (e.target.closest('a')) return;      /* 点文章链接直接跳转 */
-    if (!cell.classList.contains('has-post')) return;
     showDay(cell.getAttribute('data-date'));
   });
   daysEl.addEventListener('keydown', function (e) {
-    var cell = e.target.closest ? e.target.closest('.cal-day.has-post') : null;
+    var cell = e.target.closest ? e.target.closest('.cal-day[data-date]') : null;
     if (!cell) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -380,6 +424,7 @@ header-img: "img/home-bg.jpg"
     });
   });
 
+  initPicker();
   renderCalendar();
 })();
 </script>
