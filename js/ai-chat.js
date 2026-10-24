@@ -22,6 +22,7 @@
     hist: 'phh_ai_hist'
   };
   var DEF_ENDPOINT = 'https://api.deepseek.com/chat/completions';
+  var MORE_RE = /\[\[MORE\]\]/g;
 
   /* ---------------- localStorage ---------------- */
   function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
@@ -92,7 +93,7 @@
   function toBottom() { bodyEl.scrollTop = bodyEl.scrollHeight + 999; }
 
   /* ---------------- 索引 + 检索（BM25 + 标题加权） ---------------- */
-  var IDX = null, CHUNKS = null, INV = null, AVGDL = 1, PTITLE = null, SEEN = {}, PCHUNKS = [];
+  var IDX = null, CHUNKS = null, INV = null, AVGDL = 1, PTITLE = null, SEEN = {}, PCHUNKS = [], SECT = [];
 
   function tokenize(str) {
     var out = [], seen = {};
@@ -120,13 +121,21 @@
       });
   }
 
+  /* 目录 / 纯编号列表：进索引只会污染检索，命中后也没信息量 */
+  function isToc(t) {
+    if (t.indexOf('📑') >= 0 || t.indexOf('目录') >= 0) return true;
+    var num = (t.match(/(^|\s)\d+(\.\d+)*[、.\s]/g) || []).length;
+    return num >= 3 && !/[。！？]/.test(t) && t.length < 220;
+  }
+
   function buildIndex(d) {
     if (CHUNKS) return;
-    CHUNKS = []; INV = {}; PTITLE = []; SEEN = {}; PCHUNKS = [];
+    CHUNKS = []; INV = {}; PTITLE = []; SEEN = {}; PCHUNKS = []; SECT = [];
     var totalLen = 0;
 
     (d.posts || []).forEach(function (p, pi) {
       PCHUNKS[pi] = [];
+      SECT[pi] = [];
       PTITLE[pi] = {};
       tokenize(p.t || '').forEach(function (t) { PTITLE[pi][t] = 1; });
 
@@ -134,16 +143,24 @@
 
       function flush(txt) {
         var t = String(txt).replace(/\s+/g, ' ').trim();
-        if (t.length < 10) return;
+        if (t.length < 24 && !/[。！？，；]/.test(t)) return;  // 标题/列表碎片，没信息量
+        if (t.length < 8) return;
         if ((t.match(/[{};<>]/g) || []).length > t.length * 0.16) return;
         if (SEEN[t]) return;
+        if (isToc(t)) return;
         SEEN[t] = 1;
         var toks = tokenize((heading ? heading + ' ' : '') + t);
         if (!toks.length) return;
         var tf = {}, len = 0, i;
         for (i = 0; i < toks.length; i++) { tf[toks[i]] = (tf[toks[i]] || 0) + 1; len++; }
         var id = CHUNKS.length;
-        CHUNKS.push({ p: pi, t: t, h: heading, len: len });
+        var last = SECT[pi][SECT[pi].length - 1];
+        if (!last || last.h !== heading) {
+          last = { h: heading, ids: [] };
+          SECT[pi].push(last);
+        }
+        CHUNKS.push({ p: pi, t: t, h: heading, len: len, s: SECT[pi].length - 1 });
+        last.ids.push(id);
         PCHUNKS[pi].push(id);
         totalLen += len;
         for (var k in tf) (INV[k] || (INV[k] = [])).push([id, tf[k]]);
@@ -217,7 +234,7 @@
     var ranked = Object.keys(scores).map(Number);
     if (!ranked.length) {
       if (/你|本人|作者|自我介绍|这个网站|这个博客|关于/.test(q) && posts[0] && posts[0].t === '关于这个博客') {
-        return [{ p: 0, id: -1, title: posts[0].t, url: posts[0].u, date: '', text: String(posts[0].x).slice(0, 300), h: '' }];
+        return [{ p: 0, id: -1, s: 0, title: posts[0].t, url: posts[0].u, date: '', text: String(posts[0].x).slice(0, 300), h: '' }];
       }
       return [];
     }
@@ -237,7 +254,7 @@
       if ((perPost[c.p] || 0) >= cap) continue;
       perPost[c.p] = (perPost[c.p] || 0) + 1;
       var pp = posts[c.p] || {};
-      out.push({ p: c.p, id: id2, title: pp.t || '', url: pp.u || '', date: pp.d || '', text: c.t, h: c.h || '' });
+      out.push({ p: c.p, id: id2, s: c.s, title: pp.t || '', url: pp.u || '', date: pp.d || '', text: c.t, h: c.h || '' });
     }
 
     /* 标题命中更可信：把标题最匹配的那篇提到第一位（后面会拿它整篇正文） */
@@ -257,7 +274,9 @@
     return out;
   }
 
-  /* 把命中的文章整理成给模型的正文上下文 */
+  /* 把命中的文章整理成给模型的正文上下文
+     full=false：只给命中那一小节（+ 开头引言），约 800~1400 字
+     full=true ：整篇正文，用在模型主动要全文时 */
   function cleanBody(s) {
     return String(s || '')
       .replace(/@H@/g, '\n')
@@ -266,39 +285,55 @@
       .trim();
   }
 
-  function buildContext(d, hits) {
+  function secText(pi, si, cap) {
+    var sec = (SECT[pi] || [])[si];
+    if (!sec) return '';
+    var out = [], total = 0;
+    for (var i = 0; i < sec.ids.length && total < (cap || 1600); i++) {
+      var c = CHUNKS[sec.ids[i]];
+      out.push(c.t);
+      total += c.t.length;
+    }
+    return out.join('\n');
+  }
+
+  function buildContext(d, hits, full) {
     if (!hits || !hits.length || !d) return '';
     var posts = d.posts || [];
-    var out = [], budget = 9000, used = {};
-
-    var mp = posts[hits[0].p] || {};
+    var main = hits[0];
+    var mp = posts[main.p] || {};
     var head = '### 《' + (mp.t || '') + '》 ' + (mp.d || '') + ' ' + (mp.u || '');
-    var body = cleanBody(mp.x);
-    if (body.length <= 7000) {
-      out.push(head + '\n' + body);
-      budget -= body.length;
-    } else {
-      var ids = PCHUNKS[hits[0].p] || [];
-      var pos = ids.indexOf(hits[0].id);
-      if (pos < 0) pos = 0;
-      var lo = Math.max(0, pos - 2), hi = Math.min(ids.length - 1, pos + 2);
-      var seg = [];
-      for (var j = lo; j <= hi; j++) {
-        var c = CHUNKS[ids[j]];
-        seg.push((c.h ? '【' + c.h + '】' : '') + c.t);
-      }
-      var block = head + '\n' + seg.join('\n');
-      out.push(block);
-      budget -= block.length;
-    }
-    used[hits[0].p] = 1;
+    var body;
 
-    for (var i = 1; i < hits.length && out.length < 6 && budget > 300; i++) {
+    if (full) {
+      body = cleanBody(mp.x);
+      if (body.length > 9000) body = body.slice(0, 9000) + '…';
+    } else {
+      var pieces = [];
+      var secs = SECT[main.p] || [];
+      var sec = secs[main.s];
+      /* 文章开头的引子，给个背景，避免只有半截 */
+      if (secs[0] && secs[0] !== sec && secs[0].ids.length) {
+        var intro = secText(main.p, 0, 300);
+        if (intro && (!sec || intro !== secText(main.p, main.s, 300))) pieces.push(intro);
+      }
+      var st = secText(main.p, main.s, 1800);
+      pieces.push((sec && sec.h ? '【' + sec.h + '】' : '') + st);
+      body = pieces.join('\n');
+    }
+
+    var out = [head + '\n' + body];
+    var used = {};
+    used[main.p] = 1;
+    var budget = (full ? 9000 : 3200) - body.length;
+
+    for (var i = 1; i < hits.length && out.length < 5 && budget > 240; i++) {
       var h = hits[i];
       if (used[h.p]) continue;
       var pp = posts[h.p] || {};
-      var line = '### 《' + (pp.t || '') + '》 ' + (pp.d || '') + ' ' + (pp.u || '') + '\n' +
-        (h.h ? '【' + h.h + '】' : '') + h.text;
+      var t2 = (h.h ? '【' + h.h + '】' : '') + secText(h.p, h.s, 400);
+      if (!t2) continue;
+      var line = '### 《' + (pp.t || '') + '》 ' + (pp.u || '') + '\n' + t2;
       out.push(line);
       budget -= line.length;
       used[h.p] = 1;
@@ -306,24 +341,24 @@
     return out.join('\n\n');
   }
 
-  /* ---------------- Prompt ---------------- */
-  function sysPrompt(hits) {
+  /* system 内容保持逐字不变，Good for DeepSeek 的前缀缓存 */
+  function sysPrompt() {
     var s = [];
     s.push('你是「庞和合」本人的 AI 分身,是个人博客 panghehe666.github.io 的问答助手。');
     s.push('身份:庞和合,网名 PHH,高三学生,喜欢折腾、热爱数码,在博客里写科技和数码的内容。');
     s.push('说话方式:中文口语,第一人称,简洁直接,像在微信里聊天。');
     s.push('');
-    s.push('你的资料由两部分组成:【博客文章列表】(全部标题)和【博客正文】([]里是真实正文,不是标题摘要)。');
+    s.push('每轮对话里,用户消息会带两部分:【博客正文】(真实正文,可能只是命中的那一小节)和【我的问题】。');
     s.push('');
     s.push('规则:');
-    s.push('1. 【博客正文】里给的是文章真实正文(可能带【小节标题】),可以放心引用里面的结论、数据、原话、章节名。');
-    s.push('2. 正文覆盖到的问题,直接按正文回答,别再说"我只看到标题""内容不在资料里"。');
-    s.push('3. 正文里确实找不到的部分,就说"这篇里那段我没拿到,你可以点进去看原文",并给出文章链接。');
-    s.push('4. 整篇博客都没写过的,先直说"这个我博客里没写过",再用一两句常识补充,并说明那不是博客内容。');
-    s.push('5. 不要编造标题、日期、链接、数据;正文里没有的细节一律不加。');
-    s.push('6. 指向文章时用 markdown 链接:[文章标题](链接),链接只能来自下面出现的 URL。');
-    s.push('7. 一般回答 2~5 句;问细节时可以展开。不要说"作为 AI""根据提供的资料"。');
-    s.push('8. 不知道就说不知道。');
+    s.push('1. 【博客正文】是文章真实正文(可能带【小节标题】),里面的结论、数据、原话、章节名都可以直接引用。');
+    s.push('2. 正文覆盖到的问题,直接按正文回答,不要说"我只看到标题""内容不在资料里"。');
+    s.push('3. 如果正文明显不够答准(比如只剩半句话、或答案明显在别的小节),你就只输出 [[MORE]] 这个标记(不要输出任何别的字),系统会自动把整篇补给你。能答就不要用。');
+    s.push('4. 补了全文还找不到的部分,就说"这篇里那段我没拿到,你点进去看原文",并给出链接。');
+    s.push('5. 整篇博客都没写过的,先直说"这个我博客里没写过",再用一两句常识补充,并说明那不是博客内容。');
+    s.push('6. 不要编造标题、日期、链接、数据。');
+    s.push('7. 指向文章时用 markdown 链接:[文章标题](链接),链接只能来自下面出现的 URL。');
+    s.push('8. 尽量 2~4 句答完;确实需要展开时不超过 8 句。不要说"作为 AI""根据提供的资料"。');
 
     if (IDX && IDX.posts && IDX.posts.length) {
       s.push('');
@@ -332,16 +367,14 @@
         s.push('- 《' + p.t + '》 ' + (p.d || '') + ' ' + (p.u || ''));
       });
     }
-
-    var ctx = buildContext(IDX, hits);
-    s.push('');
-    if (ctx) {
-      s.push('【博客正文】');
-      s.push(ctx);
-    } else {
-      s.push('【博客正文】(这次没有检索到相关正文,只能靠文章列表回答)');
-    }
     return s.join('\n');
+  }
+
+  function userMsg(text, hits, full) {
+    var ctx = buildContext(IDX, hits, full);
+    return '【博客正文' + (full ? '·整篇' : '·节选') + '】\n' +
+      (ctx || '(这次没检索到相关正文,只能靠文章列表回答)') +
+      '\n\n【我的问题】\n' + text;
   }
 
   /* ---------------- 渲染 ---------------- */
@@ -497,30 +530,45 @@
     ctrl = window.AbortController ? new AbortController() : null;
 
     var history = msgs.slice(-6);
+    var escalated = false;
 
     loadIndex().then(function (d) { return d; }, function () { return null; })
       .then(function (d) {
         var hits = [];
         if (d) { try { hits = retrieve(d, text); } catch (e) { hits = []; } }
-        var messages = [{ role: 'system', content: sysPrompt(hits) }]
-          .concat(history)
-          .concat([{ role: 'user', content: text }]);
 
-        var payload = { model: modelId(), messages: messages, stream: true, max_tokens: 1200 };
-        if (!deep()) payload.temperature = 1.0;
+        function pass(full) {
+          var messages = [{ role: 'system', content: sysPrompt() }]
+            .concat(history)
+            .concat([{ role: 'user', content: userMsg(text, hits, full) }]);
 
-        var acc = '', rea = '';
-        return stream(payload,
-          function (delta) { acc += delta; render(node, acc, rea, hits, false); },
-          function (r) { rea += r; render(node, acc, rea, hits, false); },
-          ctrl ? ctrl.signal : undefined
-        ).then(function () {
-          if (!acc && !rea) acc = '(没有返回内容)';
-          render(node, acc, rea, hits, true);
+          var payload = { model: modelId(), messages: messages, stream: true, max_tokens: 900 };
+          if (!deep()) payload.temperature = 1.0;
+
+          var acc = '', rea = '';
+          return stream(payload,
+            function (delta) { acc += delta; render(node, acc.replace(MORE_RE, ''), rea, hits, false); },
+            function (r) { rea += r; render(node, acc.replace(MORE_RE, ''), rea, hits, false); },
+            ctrl ? ctrl.signal : undefined
+          ).then(function () {
+            /* 模型觉得节选不够 → 自动换整篇重问一次 */
+            if (!full && !escalated && acc.indexOf('[[MORE]]') >= 0) {
+              escalated = true;
+              node.innerHTML = '<div class="ai-dim">这一节不够,翻一下全文…</div>';
+              return pass(true);
+            }
+            return { acc: acc, rea: rea };
+          });
+        }
+
+        return pass(false).then(function (res) {
+          var out = String(res.acc || '').replace(MORE_RE, '').trim();
+          if (!out && !res.rea) out = '(没有返回内容)';
+          render(node, out, res.rea, hits, true);
           msgs.push({ role: 'user', content: text });
-          msgs.push({ role: 'assistant', content: acc || '(空)' });
+          msgs.push({ role: 'assistant', content: out || '(空)' });
           if (msgs.length > 10) msgs = msgs.slice(-10);
-          saveHist(text, acc);
+          saveHist(text, out);
         });
       })
       .catch(function (e) {

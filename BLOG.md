@@ -49,7 +49,8 @@ tags:
 ## AI 问答模块（站内聊天）
 - 前端：`_includes/ai-chat.html` + `css/ai-chat.css` + `js/ai-chat.js`，由 `_layouts/default.html` 全局引入
 - 知识库：`chat-index.json`（Liquid 模板，每次构建自动汇总全部文章正文；私密文章会被跳过）
-- 检索：前端 BM25 + 中文 bigram + 标题加权；命中文章的**整篇正文**直接给模型，其余命中段落带【小节标题】一起给
+- 检索：前端 BM25 + 中文 bigram + 标题加权；默认只给命中那一**小节**的正文 + 开头引子（约 800~1400 字）
+- 省 token：system 逐字固定（吃 DeepSeek 前缀缓存）；正文不够时模型输出 `[[MORE]]`，前端自动换整篇重发一次
 - 回答：DeepSeek `deepseek-chat`（「深入」开关切 `deepseek-reasoner`），SSE 流式
 - 两种接入方式：
   1. 访客自己在面板「设置」里填 API Key（存 localStorage，只在本人浏览器）
