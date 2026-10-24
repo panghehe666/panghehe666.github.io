@@ -45,3 +45,14 @@ tags:
 - 文章作者统一 PHH；主题演示文章和根目录 Hux 残留已清理
 - 日历页年份下拉范围：过去 10 年 ~ 未来 5 年
 - 文章底部分页：Next 在右（指向较旧），Previous 在左（指向较新）
+
+## AI 问答模块（站内聊天）
+- 前端：`_includes/ai-chat.html` + `css/ai-chat.css` + `js/ai-chat.js`，由 `_layouts/default.html` 全局引入
+- 知识库：`chat-index.json`（Liquid 模板，每次构建自动汇总全部文章正文；私密文章会被跳过）
+- 检索：前端 BM25 + 中文 bigram + 标题加权，命中 6 个段落塞进 system prompt
+- 回答：DeepSeek `deepseek-chat`（「深入」开关切 `deepseek-reasoner`），SSE 流式
+- 两种接入方式：
+  1. 访客自己在面板「设置」里填 API Key（存 localStorage，只在本人浏览器）
+  2. 部署 `_tools/deepseek-proxy.js` 到 Cloudflare Worker，把地址填进 `_config.yml` 的
+     `ai_chat_proxy`，访客就免填 Key
+- 关闭整个模块：`_config.yml` 里 `ai_chat: false`
