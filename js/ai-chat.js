@@ -19,6 +19,7 @@
     key: 'phh_ai_key',
     proxy: 'phh_ai_proxy',
     deep: 'phh_ai_deep',
+    mode: 'phh_ai_mode',
     hist: 'phh_ai_hist'
   };
   var DEF_ENDPOINT = 'https://api.deepseek.com/chat/completions';
@@ -42,7 +43,8 @@
   var fab = $('ai-fab'), panel = $('ai-panel'), bodyEl = $('ai-body'),
       hello = $('ai-hello'), chipsEl = $('ai-chips'), thread = $('ai-thread'),
       input = $('ai-input'), sendBtn = $('ai-send'), modelBtn = $('ai-model'),
-      modelName = $('ai-model-name'), deepBtn = $('ai-deep'), micBtn = $('ai-mic'),
+      modelName = $('ai-model-name'), modeBtn = $('ai-mode'), modeName = $('ai-mode-name'),
+      tipEl = $('ai-tip'), micBtn = $('ai-mic'),
       warn = $('ai-warn'), warnBtn = $('ai-warn-btn'),
       sheetSet = $('ai-sheet-set'), sheetHist = $('ai-sheet-hist'),
       histList = $('ai-hist-list'), keyIn = $('ai-key'), proxyIn = $('ai-proxy');
@@ -50,12 +52,15 @@
   /* ---------------- 状态 ---------------- */
   var msgs = [];          // {role, content}
   var lastP = -1;         // 上一轮聊的是哪篇文章
+  var fullSent = {};      // 本轮会话里已经整篇发过的文章（{标题:1}）
   var busy = false;
   var ctrl = null;
   var lastAsk = '';
   var started = false;
 
   function deep() { return lsGet(LS.deep) === '1'; }
+  /* 节能 = 只给相关小节；强爽 = 先给整篇，不够再给全站 */
+  function ecoMode() { return lsGet(LS.mode) !== 'max'; }
   function modelId() { return deep() ? 'deepseek-reasoner' : 'deepseek-chat'; }
 
   /* ---------------- 工具 ---------------- */
@@ -314,15 +319,38 @@
     return false;
   }
 
-  function buildContext(d, hits, full, history) {
-    if (!hits || !hits.length || !d) return '';
+  /* level 0：命中那一小节
+     level 1：命中文章整篇
+     level 2：全站所有文章（强爽模式的最后一级） */
+  function corpusContext(d, history) {
+    var posts = d.posts || [], out = [], total = 0;
+    for (var i = 0; i < posts.length && total < 26000; i++) {
+      var p = posts[i];
+      var body = cleanBody(p.x);
+      if (!body) continue;
+      var head = '### 《' + (p.t || '') + '》 ' + (p.d || '') + ' ' + (p.u || '');
+      if (alreadySent(history, p.t)) { out.push(head + '\n(正文见前几轮)'); continue; }
+      if (body.length > 3200) body = body.slice(0, 3200) + '…';
+      out.push(head + '\n' + body);
+      total += body.length;
+    }
+    return out.join('\n\n');
+  }
+
+  function buildContext(d, hits, level, history) {
+    if (!d) return '';
+    level = level || 0;
+    if (level >= 2) return corpusContext(d, history);
+    var full = level >= 1;
+    if (!hits || !hits.length) return '';
     var posts = d.posts || [];
     var main = hits[0];
     var mp = posts[main.p] || {};
     var head = '### 《' + (mp.t || '') + '》 ' + (mp.d || '') + ' ' + (mp.u || '');
 
-    /* 同一篇文章前面已经发过整段/小节：正文不再重发，靠历史里的缓存命中 */
-    if (!full && alreadySent(history, mp.t)) {
+    /* 这篇前面已经发过（小节或整篇）：正文不再重发，靠历史里的缓存命中 */
+    var skipMain = full ? !!fullSent[mp.t] : alreadySent(history, mp.t);
+    if (skipMain) {
       var rest = [];
       var used0 = {}; used0[main.p] = 1;
       for (var q = 1; q < hits.length && rest.length < 2; q++) {
@@ -387,7 +415,12 @@
     s.push('规则:');
     s.push('1. 【博客正文】是文章真实正文(可能带【小节标题】),里面的结论、数据、原话、章节名都可以直接引用。');
     s.push('2. 正文覆盖到的问题,直接按正文回答,不要说"我只看到标题""内容不在资料里"。');
-    s.push('3. 如果正文明显不够答准(比如只剩半句话、或答案明显在别的小节),你就只输出 [[MORE]] 这个标记(不要输出任何别的字),系统会自动把整篇补给你。能答就不要用。');
+    if (ecoMode()) {
+      s.push('3. 如果正文明显不够答准(比如只剩半句话、或答案在别的小节),你就只输出 [[MORE]] 这个标记(不要输出任何别的字),系统会自动把整篇补给你。能答就不要用。');
+    } else {
+      s.push('3. 你现在拿到的是整篇正文。如果需要跨文章对比、或答案明显在别的文章里,你就只输出 [[MORE]] 这个标记(不要输出任何别的字),系统会把全站文章都调给你。能答就不要用。');
+      s.push('3.5 强爽模式下允许你答得更展开,该列点列点、该给结论给结论,上限 12 句。');
+    }
     s.push('4. 补了全文还找不到的部分,就说"这篇里那段我没拿到,你点进去看原文",并给出链接。');
     s.push('5. 整篇博客都没写过的,先直说"这个我博客里没写过",再用一两句常识补充,并说明那不是博客内容。');
     s.push('6. 不要编造标题、日期、链接、数据。');
@@ -404,9 +437,10 @@
     return s.join('\n');
   }
 
-  function userMsg(text, hits, full, history) {
-    var ctx = buildContext(IDX, hits, full, history);
-    return '【博客正文' + (full ? '·整篇' : '·节选') + '】\n' +
+  function userMsg(text, hits, level, history) {
+    var ctx = buildContext(IDX, hits, level, history);
+    var label = level >= 2 ? '·全站' : (level >= 1 ? '·整篇' : '·节选');
+    return '【博客正文' + label + '】\n' +
       (ctx || '(这次没检索到相关正文,只能靠文章列表回答)') +
       '\n\n【我的问题】\n' + text;
   }
@@ -565,6 +599,9 @@
 
     var history = trimMsgs(msgs);
     var escalated = false;
+    var eco = ecoMode();
+    var startLv = eco ? 0 : 1;
+    var maxLv = eco ? 1 : 2;
 
     loadIndex().then(function (d) { return d; }, function () { return null; })
       .then(function (d) {
@@ -582,13 +619,13 @@
         }
         if (hits.length) lastP = hits[0].p;
 
-        function pass(full) {
-          var uc = userMsg(text, hits, full, history);
+        function pass(level) {
+          var uc = userMsg(text, hits, level, history);
           var messages = [{ role: 'system', content: sysPrompt() }]
             .concat(history)
             .concat([{ role: 'user', content: uc }]);
 
-          var payload = { model: modelId(), messages: messages, stream: true, max_tokens: 900 };
+          var payload = { model: modelId(), messages: messages, stream: true, max_tokens: eco ? 800 : 1400 };
           if (!deep()) payload.temperature = 1.0;
 
           var acc = '', rea = '';
@@ -597,17 +634,18 @@
             function (r) { rea += r; render(node, acc.replace(MORE_RE, ''), rea, hits, false); },
             ctrl ? ctrl.signal : undefined
           ).then(function () {
-            /* 模型觉得节选不够 → 自动换整篇重问一次 */
-            if (!full && !escalated && acc.indexOf('[[MORE]]') >= 0) {
+            /* 节选不够 → 整篇；整篇不够 → 全站。每问最多升级一次 */
+            if (level < maxLv && !escalated && acc.indexOf('[[MORE]]') >= 0) {
               escalated = true;
-              node.innerHTML = '<div class="ai-dim">这一节不够,翻一下全文…</div>';
-              return pass(true);
+              node.innerHTML = '<div class="ai-dim">' +
+                (level === 0 ? '这一节不够,翻一下全文…' : '这篇不够,翻整个博客…') + '</div>';
+              return pass(level + 1);
             }
-            return { acc: acc, rea: rea, uc: uc };
+            return { acc: acc, rea: rea, uc: uc, lv: level };
           });
         }
 
-        return pass(false).then(function (res) {
+        return pass(startLv).then(function (res) {
           var out = String(res.acc || '').replace(MORE_RE, '').trim();
           if (!out && !res.rea) out = '(没有返回内容)';
           render(node, out, res.rea, hits, true);
@@ -615,6 +653,10 @@
           msgs.push({ role: 'user', content: res.uc });
           msgs.push({ role: 'assistant', content: out || '(空)' });
           msgs = trimMsgs(msgs);
+          if (res.lv >= 1 && hits.length) {
+            if (res.lv >= 2) (d.posts || []).forEach(function (pp) { fullSent[pp.t] = 1; });
+            else fullSent[hits[0].title] = 1;
+          }
           saveHist(text, out);
         });
       })
@@ -685,6 +727,7 @@
         thread.innerHTML = '';
         msgs = [];
         lastP = -1;
+        fullSent = {};
         addUser(it.q);
         var node = addAssistant();
         node.innerHTML = '<div class="ai-txt">' + md(it.a) + '</div>';
@@ -784,14 +827,20 @@
     lsSet(LS.deep, next ? '1' : '0');
     syncModel();
   });
-  deepBtn.addEventListener('click', function () {
-    lsSet(LS.deep, deep() ? '0' : '1');
+  modeBtn.addEventListener('click', function () {
+    lsSet(LS.mode, ecoMode() ? 'max' : 'eco');
     syncModel();
   });
   function syncModel() {
-    var d = deep();
+    var d = deep(), eco = ecoMode();
     modelName.textContent = d ? 'DeepSeek Reasoner' : 'DeepSeek Chat';
-    deepBtn.classList.toggle('on', d);
+    modeName.textContent = eco ? '节能' : '强爽';
+    modeBtn.classList.toggle('on', !eco);
+    if (tipEl) {
+      tipEl.textContent = eco
+        ? '节能模式：只带相关小节，够不够由它自己开口要'
+        : '强爽模式：先给整篇，不够再调全站，答案最全也最费 token';
+    }
   }
 
   /* 设置 */
