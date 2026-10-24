@@ -2,6 +2,7 @@
 <link rel="stylesheet" href="{{ '/css/ai-chat.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
 
 <div id="ai-chat" data-base="{{ site.baseurl }}"
+     data-build="{{ site.time | date: '%s' }}"
      data-proxy="{{ site.ai_chat_proxy | default: '' }}"
      data-title="{{ site.title }}">
 

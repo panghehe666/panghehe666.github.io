@@ -50,6 +50,8 @@ tags:
 - 前端：`_includes/ai-chat.html` + `css/ai-chat.css` + `js/ai-chat.js`，由 `_layouts/default.html` 全局引入
 - 知识库：`chat-index.json`（Liquid 模板，每次构建自动汇总全部文章正文）
   - `chat-index.json` 只放公开文章；私密文章单独一个 `chat-private.json`，**只存密文**（`private_cipher`）
+  - 两个文件都带 `?v=<构建时间戳>` 访问：绕开 GitHub Pages 的 `max-age=600` 和 `sw.js` 的
+    stale-while-revalidate（否则改了文章要刷两次页面，AI 才看得到新版）
   - 管理员登录后前端才去拉 `chat-private.json`，用 `PrivateCrypto.decryptWithSession` 解密并入索引；
     非管理员既不下载、也解不开（密文本身是 AES-GCM，密钥来自管理员口令）
 - 检索：前端 BM25 + 中文 bigram + 标题加权；默认只给命中那一**小节**的正文 + 开头引子（约 800~1400 字）

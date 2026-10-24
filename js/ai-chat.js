@@ -14,6 +14,12 @@
 
   var BASE = ROOT.getAttribute('data-base') || '';
   var CFG_PROXY = (ROOT.getAttribute('data-proxy') || '').trim();
+  /* 每次构建换一个版本号：既躲开 GitHub Pages 的 10 分钟缓存，
+     也躲开 sw.js 的 stale-while-revalidate（否则文章更新后要刷两次才生效） */
+  var BUILD = ROOT.getAttribute('data-build') || '';
+  function idxUrl(name) {
+    return (BASE || '') + '/' + name + (BUILD ? '?v=' + BUILD : '');
+  }
 
   var LS = {
     key: 'phh_ai_key',
@@ -165,7 +171,7 @@
     }
     privState = 'done';
     /* 私密索引单独一个文件：非管理员根本不会去下载它 */
-    return fetch((BASE || '') + '/chat-private.json', { cache: 'force-cache' })
+    return fetch(idxUrl('chat-private.json'), { cache: 'force-cache' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (j) { return (j && j.private) || []; }, function () { return []; })
       .then(function (arr) {
@@ -195,7 +201,7 @@
 
   function loadIndex() {
     if (IDX) return Promise.resolve(IDX);
-    return fetch((BASE || '') + '/chat-index.json', { cache: 'force-cache' })
+    return fetch(idxUrl('chat-index.json'), { cache: 'force-cache' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
       .then(function (txt) {
         var d = JSON.parse(txt);
