@@ -51,6 +51,8 @@ tags:
 - 知识库：`chat-index.json`（Liquid 模板，每次构建自动汇总全部文章正文；私密文章会被跳过）
 - 检索：前端 BM25 + 中文 bigram + 标题加权；默认只给命中那一**小节**的正文 + 开头引子（约 800~1400 字）
 - 省 token：system 逐字固定（吃 DeepSeek 前缀缓存）；正文不够时模型输出 `[[MORE]]`，前端自动换整篇重发一次
+- 多轮省 token：历史里存的是**带正文的完整消息**，同一篇文章第二轮起不再重发（`alreadySent` 判断），
+  且历史是稳定前缀 → DeepSeek 前缀缓存命中；追问（以「那/再/这…」开头）会优先接着上一篇聊
 - 回答：DeepSeek `deepseek-chat`（「深入」开关切 `deepseek-reasoner`），SSE 流式
 - 两种接入方式：
   1. 访客自己在面板「设置」里填 API Key（存 localStorage，只在本人浏览器）

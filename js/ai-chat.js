@@ -49,6 +49,7 @@
 
   /* ---------------- 状态 ---------------- */
   var msgs = [];          // {role, content}
+  var lastP = -1;         // 上一轮聊的是哪篇文章
   var busy = false;
   var ctrl = null;
   var lastAsk = '';
@@ -297,12 +298,45 @@
     return out.join('\n');
   }
 
-  function buildContext(d, hits, full) {
+  function isFollowUp(q) {
+    if (!q) return false;
+    return /^(它|他|她|这|那|该|其|此|上面|刚才|前面|继续|再|还|那么|所以|然后|另外|而且)/.test(q);
+  }
+
+  /* 这篇文章的正文是不是已经在前面几轮里发过了 */
+  function alreadySent(history, title) {
+    if (!history || !history.length) return false;
+    var tag = '### 《' + title + '》';
+    for (var i = 0; i < history.length; i++) {
+      var c = history[i] && history[i].content;
+      if (c && c.indexOf(tag) >= 0) return true;
+    }
+    return false;
+  }
+
+  function buildContext(d, hits, full, history) {
     if (!hits || !hits.length || !d) return '';
     var posts = d.posts || [];
     var main = hits[0];
     var mp = posts[main.p] || {};
     var head = '### 《' + (mp.t || '') + '》 ' + (mp.d || '') + ' ' + (mp.u || '');
+
+    /* 同一篇文章前面已经发过整段/小节：正文不再重发，靠历史里的缓存命中 */
+    if (!full && alreadySent(history, mp.t)) {
+      var rest = [];
+      var used0 = {}; used0[main.p] = 1;
+      for (var q = 1; q < hits.length && rest.length < 2; q++) {
+        var hq = hits[q];
+        if (used0[hq.p]) continue;
+        var pq = posts[hq.p] || {};
+        var tq = (hq.h ? '【' + hq.h + '】' : '') + secText(hq.p, hq.s, 260);
+        if (!tq) continue;
+        rest.push('### 《' + (pq.t || '') + '》 ' + (pq.u || '') + '\n' + tq);
+        used0[hq.p] = 1;
+      }
+      return head + '\n(这篇的正文在前几轮已经给过了,直接引用前文即可)\n\n' + rest.join('\n\n');
+    }
+
     var body;
 
     if (full) {
@@ -370,8 +404,8 @@
     return s.join('\n');
   }
 
-  function userMsg(text, hits, full) {
-    var ctx = buildContext(IDX, hits, full);
+  function userMsg(text, hits, full, history) {
+    var ctx = buildContext(IDX, hits, full, history);
     return '【博客正文' + (full ? '·整篇' : '·节选') + '】\n' +
       (ctx || '(这次没检索到相关正文,只能靠文章列表回答)') +
       '\n\n【我的问题】\n' + text;
@@ -529,7 +563,7 @@
     updateSend();
     ctrl = window.AbortController ? new AbortController() : null;
 
-    var history = msgs.slice(-6);
+    var history = trimMsgs(msgs);
     var escalated = false;
 
     loadIndex().then(function (d) { return d; }, function () { return null; })
@@ -537,10 +571,22 @@
         var hits = [];
         if (d) { try { hits = retrieve(d, text); } catch (e) { hits = []; } }
 
+        /* 追问（"那它呢""再细说"）时，尽量接着上一篇聊，别中途换车 */
+        if (hits.length && lastP >= 0 && isFollowUp(text)) {
+          for (var hi = 0; hi < hits.length; hi++) {
+            if (hits[hi].p === lastP) {
+              var t0 = hits[0]; hits[0] = hits[hi]; hits[hi] = t0;
+              break;
+            }
+          }
+        }
+        if (hits.length) lastP = hits[0].p;
+
         function pass(full) {
+          var uc = userMsg(text, hits, full, history);
           var messages = [{ role: 'system', content: sysPrompt() }]
             .concat(history)
-            .concat([{ role: 'user', content: userMsg(text, hits, full) }]);
+            .concat([{ role: 'user', content: uc }]);
 
           var payload = { model: modelId(), messages: messages, stream: true, max_tokens: 900 };
           if (!deep()) payload.temperature = 1.0;
@@ -557,7 +603,7 @@
               node.innerHTML = '<div class="ai-dim">这一节不够,翻一下全文…</div>';
               return pass(true);
             }
-            return { acc: acc, rea: rea };
+            return { acc: acc, rea: rea, uc: uc };
           });
         }
 
@@ -565,9 +611,10 @@
           var out = String(res.acc || '').replace(MORE_RE, '').trim();
           if (!out && !res.rea) out = '(没有返回内容)';
           render(node, out, res.rea, hits, true);
-          msgs.push({ role: 'user', content: text });
+          /* 存带上下文的完整消息：下一轮它就成了稳定前缀，命中缓存 */
+          msgs.push({ role: 'user', content: res.uc });
           msgs.push({ role: 'assistant', content: out || '(空)' });
-          if (msgs.length > 10) msgs = msgs.slice(-10);
+          msgs = trimMsgs(msgs);
           saveHist(text, out);
         });
       })
@@ -581,6 +628,19 @@
         ctrl = null;
         updateSend();
       });
+  }
+
+  /* 历史按字数裁剪，保留最近的问答对（前缀越稳定，缓存命中越高） */
+  function trimMsgs(arr, budget) {
+    budget = budget || 8000;
+    var out = [], total = 0;
+    for (var i = arr.length - 1; i >= 0; i--) {
+      var len = (arr[i].content || '').length;
+      if (total + len > budget && out.length >= 2) break;
+      out.unshift(arr[i]);
+      total += len;
+    }
+    return out;
   }
 
   function updateSend() {
@@ -624,6 +684,7 @@
         hideHello();
         thread.innerHTML = '';
         msgs = [];
+        lastP = -1;
         addUser(it.q);
         var node = addAssistant();
         node.innerHTML = '<div class="ai-txt">' + md(it.a) + '</div>';
