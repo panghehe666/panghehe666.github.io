@@ -87,6 +87,15 @@
 #ai-chat .ai-head-t { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: #e7ecf3; letter-spacing: .03em; }
 #ai-chat .ai-head-t svg { width: 16px; height: 16px; color: #6fb9cc; }
 #ai-chat .ai-head-a { display: flex; align-items: center; gap: 1px; }
+#ai-chat .ai-tag {
+  display: none;
+  font-size: 10px; line-height: 1; padding: 4px 6px; border-radius: 6px;
+  background: rgba(0, 133, 161, .16);
+  color: #7fd3e6;
+  border: 1px solid rgba(0, 133, 161, .35);
+  letter-spacing: .04em;
+}
+#ai-chat .ai-tag.on { display: inline-block; }
 #ai-chat .ai-ico-btn {
   width: 34px; height: 34px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;

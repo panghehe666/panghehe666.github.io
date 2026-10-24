@@ -6,6 +6,7 @@ sitemap: false
 {% include about/zh.md %}这个博客叫 PHH Blog，用 Jekyll + GitHub Pages 搭的，主要写科技数码、开源软件、AI 工具、Termux 折腾和建站记录。
 {%- endcapture -%}
 {%- assign n = 0 -%}
+{%- assign pn = 0 -%}
 {"generated":{{ site.time | date_to_xmlschema | jsonify }},"about":{{ abouttxt | strip_html | normalize_whitespace | jsonify }},"posts":[
 {%- for post in site.posts -%}
 {%- unless post.private_cipher -%}
@@ -13,5 +14,14 @@ sitemap: false
 {"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: "%Y-%m-%d" | jsonify }},"g":{{ post.tags | join: " " | jsonify }},"x":{{ post.content | replace: "</h2>", "</h2>@H@" | replace: "</h3>", "</h3>@H@" | replace: "</h4>", "</h4>@H@" | strip_html | jsonify }}}
 {%- assign n = n | plus: 1 -%}
 {%- endunless -%}
+{%- endfor -%}
+],
+"private":[
+{%- for post in site.posts -%}
+{%- if post.private_cipher -%}
+{%- if pn > 0 -%},{%- endif -%}
+{"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: "%Y-%m-%d" | jsonify }},"c":{{ post.private_cipher | jsonify }}}
+{%- assign pn = pn | plus: 1 -%}
+{%- endif -%}
 {%- endfor -%}
 ]}

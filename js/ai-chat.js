@@ -114,6 +114,66 @@
     return out;
   }
 
+  /* ---------- 权限分层：私密文章只对管理员解锁 ---------- */
+  var privState = '';   // '' 未处理 | 'done' 已合并 | 'off' 非管理员
+
+  function isAdmin() {
+    try {
+      if (window.PrivateCrypto && window.PrivateCrypto.loadSessionKey &&
+          window.PrivateCrypto.loadSessionKey()) return true;
+      if (document.documentElement.classList.contains('is-admin')) return true;
+      return localStorage.getItem('blog_admin') === '1';
+    } catch (e) { return false; }
+  }
+
+  /* 解密后的 markdown/HTML 转成检索用的纯文本，标题行补 @H@ 标记 */
+  function plainify(txt) {
+    var t = String(txt || '');
+    if (/<\/?[a-z][^>]*>/i.test(t)) {
+      t = t.replace(/<h[1-6][^>]*>/gi, '\n')
+           .replace(/<\/h[1-6]>/gi, '@H@\n')
+           .replace(/<br\s*\/?>/gi, '\n')
+           .replace(/<\/(p|div|li|tr|blockquote)>/gi, '\n')
+           .replace(/<[^>]+>/g, '');
+      t = t.replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    } else {
+      t = t.replace(/^\s{0,3}#{1,6}\s+(.+)$/gm, '$1@H@');
+      t = t.replace(/```[\s\S]*?```/g, ' ');
+    }
+    return t.replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function ensurePrivate(d) {
+    if (!d || privState) return Promise.resolve(d);
+    var arr = d.private || [];
+    var PC = window.PrivateCrypto;
+    if (!arr.length || !PC || !PC.decryptWithSession || !isAdmin()) {
+      privState = 'off';
+      return Promise.resolve(d);
+    }
+    privState = 'done';
+    return Promise.all(arr.map(function (p) {
+      return PC.decryptWithSession(p.c).then(function (txt) {
+        var body = plainify(txt);
+        if (!body) return null;
+        return { t: p.t, u: p.u, d: p.d, g: '私密', x: body, priv: 1 };
+      }, function () { return null; });
+    })).then(function (list) {
+      var added = 0;
+      list.forEach(function (p) {
+        if (!p) return;
+        d.posts.push(p);
+        added++;
+      });
+      if (added) {
+        if (CHUNKS) { CHUNKS = null; INV = null; }
+        var tg = $('ai-admin-tag');
+        if (tg) { tg.classList.add('on'); tg.textContent = '管理员 · 含私密 ' + added; }
+      }
+      return d;
+    });
+  }
+
   function loadIndex() {
     if (IDX) return Promise.resolve(IDX);
     return fetch((BASE || '') + '/chat-index.json', { cache: 'force-cache' })
@@ -428,11 +488,18 @@
     s.push('8. 尽量 2~4 句答完;确实需要展开时不超过 8 句。不要说"作为 AI""根据提供的资料"。');
 
     if (IDX && IDX.posts && IDX.posts.length) {
+      var hasPriv = false;
       s.push('');
       s.push('【博客文章列表】');
       IDX.posts.forEach(function (p) {
-        s.push('- 《' + p.t + '》 ' + (p.d || '') + ' ' + (p.u || ''));
+        if (p.priv) hasPriv = true;
+        s.push('- 《' + p.t + '》 ' + (p.d || '') + ' ' + (p.u || '') + (p.priv ? ' 【私密】' : ''));
       });
+      if (hasPriv) {
+        s.push('');
+        s.push('标注【私密】的文章是管理员才看得到的加密文章。当前会话已解锁,可以正常引用它的内容;' +
+               '但如果提问的人明显不是本人(比如自称访客),只说"这部分是私密内容,不方便展开"。');
+      }
     }
     return s.join('\n');
   }
@@ -604,6 +671,9 @@
     var maxLv = eco ? 1 : 2;
 
     loadIndex().then(function (d) { return d; }, function () { return null; })
+      .then(function (d) {
+        return ensurePrivate(d).then(function () { return d; }, function () { return d; });
+      })
       .then(function (d) {
         var hits = [];
         if (d) { try { hits = retrieve(d, text); } catch (e) { hits = []; } }
@@ -893,6 +963,7 @@
   if (scrim) scrim.addEventListener('click', close);
 
   /* 初始化 */
+  if (isAdmin()) { var ap = $('ai-admin-tag'); if (ap) ap.classList.add('on'); }
   if (document.querySelector('.cal-fab')) ROOT.classList.add('has-cal');
   syncModel();
   updateSend();
