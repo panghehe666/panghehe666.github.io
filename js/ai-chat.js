@@ -92,7 +92,7 @@
   function toBottom() { bodyEl.scrollTop = bodyEl.scrollHeight + 999; }
 
   /* ---------------- 索引 + 检索（BM25 + 标题加权） ---------------- */
-  var IDX = null, CHUNKS = null, INV = null, AVGDL = 1, PTITLE = null, SEEN = {};
+  var IDX = null, CHUNKS = null, INV = null, AVGDL = 1, PTITLE = null, SEEN = {}, PCHUNKS = [];
 
   function tokenize(str) {
     var out = [], seen = {};
@@ -122,40 +122,56 @@
 
   function buildIndex(d) {
     if (CHUNKS) return;
-    CHUNKS = []; INV = {}; PTITLE = []; SEEN = {};
+    CHUNKS = []; INV = {}; PTITLE = []; SEEN = {}; PCHUNKS = [];
     var totalLen = 0;
 
     (d.posts || []).forEach(function (p, pi) {
+      PCHUNKS[pi] = [];
       PTITLE[pi] = {};
       tokenize(p.t || '').forEach(function (t) { PTITLE[pi][t] = 1; });
 
-      String(p.x || '').split('\n').forEach(function (line) {
-        var raw = line.replace(/\s+/g, ' ').trim();
+      var heading = '';
+
+      function flush(txt) {
+        var t = String(txt).replace(/\s+/g, ' ').trim();
+        if (t.length < 10) return;
+        if ((t.match(/[{};<>]/g) || []).length > t.length * 0.16) return;
+        if (SEEN[t]) return;
+        SEEN[t] = 1;
+        var toks = tokenize((heading ? heading + ' ' : '') + t);
+        if (!toks.length) return;
+        var tf = {}, len = 0, i;
+        for (i = 0; i < toks.length; i++) { tf[toks[i]] = (tf[toks[i]] || 0) + 1; len++; }
+        var id = CHUNKS.length;
+        CHUNKS.push({ p: pi, t: t, h: heading, len: len });
+        PCHUNKS[pi].push(id);
+        totalLen += len;
+        for (var k in tf) (INV[k] || (INV[k] = [])).push([id, tf[k]]);
+      }
+
+      function pushLine(line) {
+        var raw = String(line).replace(/\s+/g, ' ').trim();
         if (!raw) return;
         var buf = '';
-        function flush() {
-          var t = buf.trim(); buf = '';
-          if (t.length < 14) return;
-          if ((t.match(/[{};<>]/g) || []).length > t.length * 0.14) return; // 代码噪声
-          /* 标题行（很短又没有标点）不参与检索，否则会把 TOC 当正文命中 */
-          if (t.length < 30 && !/[，。；：！？,;:]/.test(t)) return;
-          if (SEEN[t]) return;
-          var toks = tokenize(t);
-          if (!toks.length) return;
-          var tf = {}, len = 0, i;
-          for (i = 0; i < toks.length; i++) { tf[toks[i]] = (tf[toks[i]] || 0) + 1; len++; }
-          SEEN[t] = 1;
-          var id = CHUNKS.length;
-          CHUNKS.push({ p: pi, t: t, len: len });
-          totalLen += len;
-          for (var k in tf) (INV[k] || (INV[k] = [])).push([id, tf[k]]);
-        }
         for (var i = 0; i < raw.length; i++) {
           var ch = raw[i];
           buf += ch;
-          if (ch === '。' || ch === '！' || ch === '？' || ch === '；' || ch === '!' || ch === '?' || ch === ';' || buf.length >= 240) flush();
+          if (ch === '。' || ch === '！' || ch === '？' || ch === '；' || ch === '!' || ch === '?' || ch === ';' || buf.length >= 300) {
+            flush(buf); buf = '';
+          }
         }
-        flush();
+        flush(buf);
+      }
+
+      String(p.x || '').split('\n').forEach(function (line) {
+        var idx = line.indexOf('@H@');
+        if (idx >= 0) {
+          heading = line.slice(0, idx).trim().slice(0, 80);
+          var after = line.slice(idx + 3);
+          if (after.trim()) pushLine(after);
+          return;
+        }
+        pushLine(line);
       });
     });
 
@@ -174,7 +190,7 @@
       var plist = INV[t];
       if (!plist) return;
       var df = plist.length;
-      if (df > N * 0.5) return;                       // 太常见（我/的/是…）直接丢
+      if (df > N * 0.5) return;
       var idf = Math.log(1 + (N - df + 0.5) / (df + 0.5));
       for (var j = 0; j < plist.length; j++) {
         var id = plist[j][0], tf = plist[j][1], dl = CHUNKS[id].len;
@@ -183,7 +199,6 @@
       }
     });
 
-    /* 标题命中：按词的稀有度加权，命中标题的整篇一起抬 */
     var posts = d.posts || [];
     var idfCache = {};
     function termIdf(t) {
@@ -201,9 +216,8 @@
 
     var ranked = Object.keys(scores).map(Number);
     if (!ranked.length) {
-      /* 兜底：问「你 / 博客 / 作者」这类问题时，把简介喂给它 */
       if (/你|本人|作者|自我介绍|这个网站|这个博客|关于/.test(q) && posts[0] && posts[0].t === '关于这个博客') {
-        return [{ title: posts[0].t, url: posts[0].u, date: '', text: String(posts[0].x).slice(0, 300) }];
+        return [{ p: 0, id: -1, title: posts[0].t, url: posts[0].u, date: '', text: String(posts[0].x).slice(0, 300), h: '' }];
       }
       return [];
     }
@@ -213,17 +227,68 @@
     });
     ranked.sort(function (x, y) { return scores[y] - scores[x]; });
 
-    var top = scores[ranked[0]], perPost = {}, out = [];
-    for (var j = 0; j < ranked.length && out.length < 6; j++) {
+    var top = scores[ranked[0]], perPost = {}, hitCount = {}, out = [];
+    hitCount[CHUNKS[ranked[0]].p] = 0;
+    for (var j = 0; j < ranked.length && out.length < 7; j++) {
       var id2 = ranked[j];
       if (scores[id2] < top * 0.3) break;
       var c = CHUNKS[id2];
-      if ((perPost[c.p] || 0) >= 2) continue;
+      var cap = (out.length === 0) ? 2 : 1;
+      if ((perPost[c.p] || 0) >= cap) continue;
       perPost[c.p] = (perPost[c.p] || 0) + 1;
       var pp = posts[c.p] || {};
-      out.push({ title: pp.t || '', url: pp.u || '', date: pp.d || '', text: c.t });
+      out.push({ p: c.p, id: id2, title: pp.t || '', url: pp.u || '', date: pp.d || '', text: c.t, h: c.h || '' });
     }
     return out;
+  }
+
+  /* 把命中的文章整理成给模型的正文上下文 */
+  function cleanBody(s) {
+    return String(s || '')
+      .replace(/@H@/g, '\n')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function buildContext(d, hits) {
+    if (!hits || !hits.length || !d) return '';
+    var posts = d.posts || [];
+    var out = [], budget = 9000, used = {};
+
+    var mp = posts[hits[0].p] || {};
+    var head = '### 《' + (mp.t || '') + '》 ' + (mp.d || '') + ' ' + (mp.u || '');
+    var body = cleanBody(mp.x);
+    if (body.length <= 7000) {
+      out.push(head + '\n' + body);
+      budget -= body.length;
+    } else {
+      var ids = PCHUNKS[hits[0].p] || [];
+      var pos = ids.indexOf(hits[0].id);
+      if (pos < 0) pos = 0;
+      var lo = Math.max(0, pos - 2), hi = Math.min(ids.length - 1, pos + 2);
+      var seg = [];
+      for (var j = lo; j <= hi; j++) {
+        var c = CHUNKS[ids[j]];
+        seg.push((c.h ? '【' + c.h + '】' : '') + c.t);
+      }
+      var block = head + '\n' + seg.join('\n');
+      out.push(block);
+      budget -= block.length;
+    }
+    used[hits[0].p] = 1;
+
+    for (var i = 1; i < hits.length && out.length < 6 && budget > 300; i++) {
+      var h = hits[i];
+      if (used[h.p]) continue;
+      var pp = posts[h.p] || {};
+      var line = '### 《' + (pp.t || '') + '》 ' + (pp.d || '') + ' ' + (pp.u || '') + '\n' +
+        (h.h ? '【' + h.h + '】' : '') + h.text;
+      out.push(line);
+      budget -= line.length;
+      used[h.p] = 1;
+    }
+    return out.join('\n\n');
   }
 
   /* ---------------- Prompt ---------------- */
@@ -233,13 +298,17 @@
     s.push('身份:庞和合,网名 PHH,高三学生,喜欢折腾、热爱数码,在博客里写科技和数码的内容。');
     s.push('说话方式:中文口语,第一人称,简洁直接,像在微信里聊天。');
     s.push('');
+    s.push('你的资料由两部分组成:【博客文章列表】(全部标题)和【博客正文】([]里是真实正文,不是标题摘要)。');
+    s.push('');
     s.push('规则:');
-    s.push('1. 优先用【博客摘录】回答;摘录能覆盖的,就按摘录说。');
-    s.push('2. 摘录没覆盖的,先直说"这个我博客里没写过",再用一两句常识补充,并说明那不是博客里的内容。');
-    s.push('3. 不要编造文章标题、日期、链接、数据。');
-    s.push('4. 指向文章时用 markdown 链接,格式 [文章标题](链接),链接必须来自摘录或文章列表。');
-    s.push('5. 一般回答 2~5 句;问细节时可以展开。不要用"作为 AI""根据提供的资料"这类话。');
-    s.push('6. 不知道就说不知道。');
+    s.push('1. 【博客正文】里给的是文章真实正文(可能带【小节标题】),可以放心引用里面的结论、数据、原话、章节名。');
+    s.push('2. 正文覆盖到的问题,直接按正文回答,别再说"我只看到标题""内容不在资料里"。');
+    s.push('3. 正文里确实找不到的部分,就说"这篇里那段我没拿到,你可以点进去看原文",并给出文章链接。');
+    s.push('4. 整篇博客都没写过的,先直说"这个我博客里没写过",再用一两句常识补充,并说明那不是博客内容。');
+    s.push('5. 不要编造标题、日期、链接、数据;正文里没有的细节一律不加。');
+    s.push('6. 指向文章时用 markdown 链接:[文章标题](链接),链接只能来自下面出现的 URL。');
+    s.push('7. 一般回答 2~5 句;问细节时可以展开。不要说"作为 AI""根据提供的资料"。');
+    s.push('8. 不知道就说不知道。');
 
     if (IDX && IDX.posts && IDX.posts.length) {
       s.push('');
@@ -248,17 +317,14 @@
         s.push('- 《' + p.t + '》 ' + (p.d || '') + ' ' + (p.u || ''));
       });
     }
-    if (hits && hits.length) {
-      s.push('');
-      s.push('【博客摘录】');
-      hits.forEach(function (h) {
-        s.push('### 《' + h.title + '》 ' + h.date + ' ' + h.url);
-        s.push(String(h.text).slice(0, 420));
-        s.push('');
-      });
+
+    var ctx = buildContext(IDX, hits);
+    s.push('');
+    if (ctx) {
+      s.push('【博客正文】');
+      s.push(ctx);
     } else {
-      s.push('');
-      s.push('【博客摘录】(这次没检索到相关段落)');
+      s.push('【博客正文】(这次没有检索到相关正文,只能靠文章列表回答)');
     }
     return s.join('\n');
   }
@@ -294,7 +360,7 @@
     if (done && hits && hits.length) {
       var seen = {}, links = [];
       hits.forEach(function (h) {
-        if (!h.url || seen[h.url]) return;
+        if (!h.url || seen[h.url] || links.length >= 3) return;
         seen[h.url] = 1;
         links.push('<a href="' + esc(h.url) + '">' + esc(h.title) + '</a>');
       });

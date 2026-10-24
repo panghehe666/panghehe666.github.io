@@ -10,7 +10,7 @@ sitemap: false
 {%- for post in site.posts -%}
 {%- unless post.private_cipher -%}
 {%- if n > 0 -%},{%- endif -%}
-{"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: "%Y-%m-%d" | jsonify }},"g":{{ post.tags | join: " " | jsonify }},"x":{{ post.content | strip_html | jsonify }}}
+{"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: "%Y-%m-%d" | jsonify }},"g":{{ post.tags | join: " " | jsonify }},"x":{{ post.content | replace: "</h2>", "</h2>@H@" | replace: "</h3>", "</h3>@H@" | replace: "</h4>", "</h4>@H@" | strip_html | jsonify }}}
 {%- assign n = n | plus: 1 -%}
 {%- endunless -%}
 {%- endfor -%}
