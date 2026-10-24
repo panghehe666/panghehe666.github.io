@@ -97,7 +97,7 @@
   function tokenize(str) {
     var out = [], seen = {};
     function add(t) { if (t && !seen[t]) { seen[t] = 1; out.push(t); } }
-    var lat = String(str).toLowerCase().match(/[a-z][a-z0-9+#._-]{1,}/g) || [];
+    var lat = String(str).toLowerCase().match(/[a-z][a-z0-9+#._]{1,}/g) || [];
     lat.forEach(add);
     var segs = String(str).match(/[\u4e00-\u9fff]+/g) || [];
     segs.forEach(function (seg) {
@@ -238,6 +238,21 @@
       perPost[c.p] = (perPost[c.p] || 0) + 1;
       var pp = posts[c.p] || {};
       out.push({ p: c.p, id: id2, title: pp.t || '', url: pp.u || '', date: pp.d || '', text: c.t, h: c.h || '' });
+    }
+
+    /* 标题命中更可信：把标题最匹配的那篇提到第一位（后面会拿它整篇正文） */
+    var best = out[0].p, bestBn = bonus[best] || 0;
+    for (var pi2 = 0; pi2 < posts.length; pi2++) {
+      var bn2 = bonus[pi2] || 0;
+      if (bn2 > bestBn + 0.9) { best = pi2; bestBn = bn2; }
+    }
+    if (best !== out[0].p) {
+      for (var m = 1; m < out.length; m++) {
+        if (out[m].p === best) {
+          var tmp = out[0]; out[0] = out[m]; out[m] = tmp;
+          break;
+        }
+      }
     }
     return out;
   }
