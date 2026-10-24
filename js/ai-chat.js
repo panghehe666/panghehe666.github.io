@@ -68,7 +68,7 @@
     var blocks = [], inls = [];
     var s = String(src || '');
     s = s.replace(/```([\s\S]*?)```/g, function (_, c) {
-      blocks.push('<pre><code>' + esc(c.replace(/^[A-Za-z0-9+#._-]*\r?\n/, '')) + '</code></pre>');
+      blocks.push('<pre><code>' + esc(c.replace(/^[A-Za-z0-9+#._-]*\r?\n/, '').replace(/\s+$/, '')) + '</code></pre>');
       return '\u0000' + (blocks.length - 1) + '\u0000';
     });
     s = esc(s);
