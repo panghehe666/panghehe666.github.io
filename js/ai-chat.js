@@ -650,7 +650,11 @@
     });
   }
 
+  var scrim = document.getElementById('ai-scrim');
+  if (scrim) scrim.addEventListener('click', close);
+
   /* 初始化 */
+  if (document.querySelector('.cal-fab')) ROOT.classList.add('has-cal');
   syncModel();
   updateSend();
   warn.classList.toggle('on', !ready());
