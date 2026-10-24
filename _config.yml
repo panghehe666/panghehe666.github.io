@@ -33,6 +33,7 @@ exclude:
     "package.json",
     "README.md",
     "README.zh.md",
+    "BLOG.md",
   ]
 anchorjs: true # if you want to customize anchor. check out line:181 of `post.html`
 # If you have timezone issue (e.g. #68) in China, uncomment to use this:
