@@ -1,0 +1,135 @@
+{% if site.ai_chat != false %}
+<link rel="stylesheet" href="{{ '/css/ai-chat.css' | prepend: site.baseurl }}">
+
+<div id="ai-chat" data-base="{{ site.baseurl }}"
+     data-proxy="{{ site.ai_chat_proxy | default: '' }}"
+     data-title="{{ site.title }}">
+
+  <button id="ai-fab" type="button" aria-label="和我的 AI 分身聊聊天" title="问我点什么">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3.2l1.72 4.85a2 2 0 0 0 1.23 1.23L19.8 11l-4.85 1.72a2 2 0 0 0-1.23 1.23L12 18.8l-1.72-4.85a2 2 0 0 0-1.23-1.23L4.2 11l4.85-1.72a2 2 0 0 0 1.23-1.23L12 3.2z"/>
+      <path d="M18.6 16.4l.62 1.74 1.74.62-1.74.62-.62 1.74-.62-1.74-1.74-.62 1.74-.62.62-1.74z"/>
+    </svg>
+  </button>
+
+  <div id="ai-panel" class="ai-panel" role="dialog" aria-modal="true" aria-label="AI 问答">
+    <header class="ai-head">
+      <div class="ai-head-t">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3.6l1.5 4.2a1.8 1.8 0 0 0 1.1 1.1l4.2 1.5-4.2 1.5a1.8 1.8 0 0 0-1.1 1.1L12 17.2l-1.5-4.2a1.8 1.8 0 0 0-1.1-1.1L5.2 10.4l4.2-1.5a1.8 1.8 0 0 0 1.1-1.1L12 3.6z"/>
+        </svg>
+        <span>问答</span>
+      </div>
+      <div class="ai-head-a">
+        <button id="ai-hist" class="ai-ico-btn" type="button" aria-label="历史记录" title="历史记录">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.2 4.6v4.2h4.2"/><path d="M12 7.6V12l3 1.8"/>
+          </svg>
+        </button>
+        <button id="ai-set" class="ai-ico-btn" type="button" aria-label="设置" title="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 8.9 19.3a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.7 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 0 1 4 0v.09A1.7 1.7 0 0 0 15.1 4.7a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.09A1.7 1.7 0 0 0 20.96 10H21a2 2 0 0 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/>
+          </svg>
+        </button>
+        <button id="ai-close" class="ai-ico-btn" type="button" aria-label="关闭" title="关闭">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="ai-body" id="ai-body">
+      <div class="ai-hello" id="ai-hello">
+        <div class="ai-hi1">嗨,我是庞和合,问什么都行。</div>
+        <div class="ai-hi2">嗯,这是 AI 版的我,答案都从博客里翻。</div>
+        <div class="ai-chips" id="ai-chips"></div>
+      </div>
+      <div class="ai-thread" id="ai-thread"></div>
+    </div>
+
+    <div class="ai-warn" id="ai-warn">
+      还没配置 DeepSeek API Key,<b id="ai-warn-btn">点这里设置</b>
+    </div>
+
+    <div class="ai-foot">
+      <div class="ai-inputwrap">
+        <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
+        <div class="ai-tools">
+          <button id="ai-model" class="ai-pill" type="button" title="切换模型">
+            <span id="ai-model-name">DeepSeek Chat</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>
+          </button>
+          <button id="ai-deep" class="ai-pill" type="button" title="深度思考（DeepSeek Reasoner）">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5a5 5 0 0 1 3 9v2.5H9V13.5a5 5 0 0 1 3-9z"/><path d="M10 20h4"/></svg>
+            深入
+          </button>
+          <span class="ai-spacer"></span>
+          <button id="ai-mic" class="ai-mic" type="button" aria-label="语音输入">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>
+            </svg>
+          </button>
+          <button id="ai-send" class="ai-send" type="button" aria-label="发送">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19V5"/><path d="M5.5 11.5L12 5l6.5 6.5"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="ai-tip">AI 也会出错,回答来自我的文章</div>
+    </div>
+
+    <!-- 设置页 -->
+    <div class="ai-sheet" id="ai-sheet-set">
+      <div class="ai-sheet-hd">
+        <h4>接入设置</h4>
+        <button class="ai-ico-btn ai-sheet-close" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="ai-sheet-bd">
+        <div class="ai-field">
+          <label>DeepSeek API Key</label>
+          <input id="ai-key" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+          <div class="hint">只存在你本地浏览器(localStorage),不会上传。到
+            <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a> 申请。
+          </div>
+        </div>
+        <div class="ai-field">
+          <label>代理地址(可选)</label>
+          <input id="ai-proxy" type="text" placeholder="https://xxx.workers.dev" autocomplete="off" spellcheck="false">
+          <div class="hint">填了就优先走代理,访客不用自己填 Key。留空则直连 DeepSeek 官方接口。</div>
+        </div>
+        <div class="ai-btn-row">
+          <button id="ai-save" class="ai-btn primary" type="button">保存</button>
+          <button id="ai-clear" class="ai-btn" type="button">清除</button>
+        </div>
+        <div class="ai-note">
+          直连模式下,回答内容会带上你博客里相关文章的摘录作为上下文。代理模式的 Worker 代码见仓库
+          <code>_tools/deepseek-proxy.js</code>。
+        </div>
+      </div>
+    </div>
+
+    <!-- 历史页 -->
+    <div class="ai-sheet" id="ai-sheet-hist">
+      <div class="ai-sheet-hd">
+        <h4>历史记录</h4>
+        <button class="ai-ico-btn ai-sheet-close" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="ai-sheet-bd">
+        <div id="ai-hist-list"></div>
+        <div class="ai-btn-row" style="margin-top:14px">
+          <button id="ai-hist-clear" class="ai-btn" type="button">清空历史</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ '/js/ai-chat.js' | prepend: site.baseurl }}" defer></script>
+{% endif %}

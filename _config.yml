@@ -70,6 +70,12 @@ kramdown:
 netease_comment: false
 
 
+# AI 问答（基于博客全文检索 + DeepSeek）
+ai_chat: true
+# 可选：填 Cloudflare Worker 代理地址，填了访客不用自带 API Key
+ai_chat_proxy: ""
+
+
 # Analytics settings
 # Baidu Analytics
 # ba_track_id: [your track id]

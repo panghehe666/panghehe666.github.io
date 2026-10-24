@@ -1,0 +1,14 @@
+---
+layout: null
+sitemap: false
+---
+{%- assign n = 0 -%}
+{"generated":{{ site.time | date_to_xmlschema | jsonify }},"posts":[
+{%- for post in site.posts -%}
+{%- unless post.private_cipher -%}
+{%- if n > 0 -%},{%- endif -%}
+{"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: "%Y-%m-%d" | jsonify }},"g":{{ post.tags | join: " " | jsonify }},"x":{{ post.content | strip_html | jsonify }}}
+{%- assign n = n | plus: 1 -%}
+{%- endunless -%}
+{%- endfor -%}
+]}
