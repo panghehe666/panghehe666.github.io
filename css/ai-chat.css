@@ -292,6 +292,17 @@
 #ai-chat .ai-hist-item:hover { background: #20242b; border-color: rgba(0, 133, 161, .4); }
 #ai-chat .ai-hist-item .q { font-size: 13.5px; color: #dfe5ec; line-height: 1.6; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #ai-chat .ai-hist-item .t { font-size: 11.5px; color: #646d7a; margin-top: 5px; display: block; }
+
+/* 会话列表 */
+#ai-chat .ai-sess { display: flex; align-items: stretch; margin-bottom: 9px; background: #191c21; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; overflow: hidden; transition: .16s; }
+#ai-chat .ai-sess:hover { background: #20242b; border-color: rgba(0,133,161,.4); }
+#ai-chat .ai-sess.cur { border-color: rgba(0,133,161,.55); background: rgba(0,133,161,.09); }
+#ai-chat .ai-sess-main { flex: 1; min-width: 0; display: block; text-align: left; padding: 12px 14px; background: none; border: none; color: inherit; cursor: pointer; }
+#ai-chat .ai-sess-main .q { font-size: 13.5px; color: #dfe5ec; line-height: 1.6; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#ai-chat .ai-sess-main .t { font-size: 11.5px; color: #646d7a; margin-top: 5px; display: block; }
+#ai-chat .ai-sess-del { flex: none; width: 38px; border: none; background: none; color: #5f6875; font-size: 17px; line-height: 1; cursor: pointer; }
+#ai-chat .ai-sess-del:hover { background: rgba(255,90,90,.14); color: #ff8080; }
+
 #ai-chat .ai-empty { text-align: center; color: #5f6875; font-size: 13px; padding: 50px 20px; }
 
 /* 页面上有日历悬浮球时，往上让一格 */

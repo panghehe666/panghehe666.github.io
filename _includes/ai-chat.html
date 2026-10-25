@@ -25,7 +25,12 @@
         <span id="ai-admin-tag" class="ai-tag">管理员</span>
       </div>
       <div class="ai-head-a">
-        <button id="ai-hist" class="ai-ico-btn" type="button" aria-label="历史记录" title="历史记录">
+        <button id="ai-new" class="ai-ico-btn" type="button" aria-label="新增会话" title="新增会话">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+        </button>
+        <button id="ai-hist" class="ai-ico-btn" type="button" aria-label="会话列表" title="会话列表">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"/><path d="M3.2 4.6v4.2h4.2"/><path d="M12 7.6V12l3 1.8"/>
           </svg>
@@ -117,18 +122,19 @@
       </div>
     </div>
 
-    <!-- 历史页 -->
+    <!-- 会话页 -->
     <div class="ai-sheet" id="ai-sheet-hist">
       <div class="ai-sheet-hd">
-        <h4>历史记录</h4>
+        <h4>会话</h4>
         <button class="ai-ico-btn ai-sheet-close" type="button" aria-label="返回">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
         </button>
       </div>
       <div class="ai-sheet-bd">
+        <button id="ai-sess-new" class="ai-btn primary" type="button" style="width:100%;margin-bottom:12px;">＋ 新建会话</button>
         <div id="ai-hist-list"></div>
         <div class="ai-btn-row" style="margin-top:14px">
-          <button id="ai-hist-clear" class="ai-btn" type="button">清空历史</button>
+          <button id="ai-hist-clear" class="ai-btn" type="button">清空全部会话</button>
         </div>
       </div>
     </div>

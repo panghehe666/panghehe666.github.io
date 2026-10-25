@@ -26,7 +26,9 @@
     proxy: 'phh_ai_proxy',
     deep: 'phh_ai_deep',
     mode: 'phh_ai_mode',
-    hist: 'phh_ai_hist'
+    hist: 'phh_ai_hist',
+    sessions: 'phh_ai_sessions',
+    cur: 'phh_ai_cur'
   };
   var DEF_ENDPOINT = 'https://api.deepseek.com/chat/completions';
   var MORE_RE = /\[\[MORE\]\]/g;
@@ -54,6 +56,7 @@
       warn = $('ai-warn'), warnBtn = $('ai-warn-btn'),
       sheetSet = $('ai-sheet-set'), sheetHist = $('ai-sheet-hist'),
       histList = $('ai-hist-list'), keyIn = $('ai-key'), proxyIn = $('ai-proxy');
+  var helloNode = hello;  /* 保存引用:新建会话时把欢迎语再插回来 */
 
   /* ---------------- 状态 ---------------- */
   var msgs = [];          // {role, content}
@@ -63,6 +66,8 @@
   var ctrl = null;
   var lastAsk = '';
   var started = false;
+  var SESSIONS = [];      // 会话列表 [{id,title,ts,log:[{q,a}],msgs:[{role,content}]}]
+  var curId = '';         // 当前会话 id
 
   function deep() { return lsGet(LS.deep) === '1'; }
   /* 节能 = 只给相关小节；强爽 = 先给整篇，不够再给全站 */
@@ -542,6 +547,11 @@
     if (hello && hello.parentNode) hello.parentNode.removeChild(hello);
     hello = null;
   }
+  function showHello() {
+    if (!helloNode) return;
+    if (!helloNode.parentNode) bodyEl.insertBefore(helloNode, thread);
+    hello = helloNode;
+  }
 
   function addUser(text) {
     var d = document.createElement('div');
@@ -747,12 +757,11 @@
           /* 存带上下文的完整消息：下一轮它就成了稳定前缀，命中缓存 */
           msgs.push({ role: 'user', content: res.uc });
           msgs.push({ role: 'assistant', content: out || '(空)' });
-          msgs = trimMsgs(msgs);
           if (res.lv >= 1 && hits.length) {
             if (res.lv >= 2) (d.posts || []).forEach(function (pp) { fullSent[pp.t] = 1; });
             else fullSent[hits[0].title] = 1;
           }
-          saveHist(text, out);
+          saveTurn(text, out, res.uc);
         });
       })
       .catch(function (e) {
@@ -795,43 +804,153 @@
     updateSend();
   }
 
-  /* ---------------- 历史记录 ---------------- */
-  function getHist() {
-    try { return JSON.parse(lsGet(LS.hist) || '[]') || []; } catch (e) { return []; }
+  /* ---------------- 会话管理 ---------------- */
+  function newSessionId() {
+    return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   }
-  function saveHist(q, a) {
-    if (!a) return;
-    var h = getHist();
-    h.unshift({ q: q.slice(0, 80), a: a, t: Date.now() });
-    lsSet(LS.hist, JSON.stringify(h.slice(0, 24)));
+  function persistSessions() {
+    if (SESSIONS.length > 20) SESSIONS = SESSIONS.slice(0, 20);
+    lsSet(LS.sessions, JSON.stringify(SESSIONS));
   }
-  function renderHist() {
-    var h = getHist();
-    if (!h.length) { histList.innerHTML = '<div class="ai-empty">还没有历史记录</div>'; return; }
+  function findSession(id) {
+    for (var i = 0; i < SESSIONS.length; i++) if (SESSIONS[i].id === id) return SESSIONS[i];
+    return null;
+  }
+  function curSession() {
+    var s = findSession(curId);
+    if (!s) {
+      curId = SESSIONS.length ? SESSIONS[0].id : '';
+      s = findSession(curId);
+    }
+    if (!s) {
+      s = { id: newSessionId(), title: '', ts: Date.now(), log: [], msgs: [] };
+      SESSIONS.unshift(s);
+      persistSessions();
+    }
+    lsSet(LS.cur, curId);
+    return s;
+  }
+  /* 把一条问答存进当前会话(msgs 保存完整上下文,log 用于展示) */
+  function saveTurn(q, a, uc) {
+    if (!a && !uc) return;
+    var s = curSession();
+    s.log.push({ q: q, a: a });
+    s.msgs.push({ role: 'user', content: uc }, { role: 'assistant', content: a || '(空)' });
+    if (!s.title) s.title = String(q).slice(0, 40);
+    s.ts = Date.now();
+    persistSessions();
+  }
+  /* 把某会话的对话渲染到聊天区 */
+  function renderLog(lg) {
+    thread.innerHTML = '';
+    if (!lg || !lg.length) { showHello(); return; }
+    hideHello();
+    for (var i = 0; i < lg.length; i++) {
+      addUser(lg[i].q);
+      var node = addAssistant();
+      node.innerHTML = '<div class="ai-txt">' + md(lg[i].a) + '</div>';
+    }
+    toBottom();
+  }
+  function newSession() {
+    if (busy) stopStream();
+    var s = { id: newSessionId(), title: '', ts: Date.now(), log: [], msgs: [] };
+    SESSIONS.unshift(s);
+    curId = s.id;
+    persistSessions();
+    lsSet(LS.cur, curId);
+    msgs = []; lastP = -1; fullSent = {};
+    renderLog([]);
+    renderSessions();
+  }
+  function switchSession(id) {
+    var s = findSession(id);
+    if (!s) return;
+    curId = id;
+    lsSet(LS.cur, curId);
+    msgs = (s.msgs || []).slice();
+    lastP = -1; fullSent = {};
+    renderLog(s.log || []);
+    closeSheets();
+    renderSessions();
+  }
+  function deleteSession(id) {
+    for (var i = 0; i < SESSIONS.length; i++) {
+      if (SESSIONS[i].id === id) { SESSIONS.splice(i, 1); break; }
+    }
+    if (curId === id) {
+      if (SESSIONS.length) switchSession(SESSIONS[0].id);
+      else newSession();
+    }
+    persistSessions();
+    renderSessions();
+  }
+  function renderSessions() {
+    if (!SESSIONS.length) {
+      histList.innerHTML = '<div class="ai-empty">还没有会话,点「新建会话」开始</div>';
+      return;
+    }
     histList.innerHTML = '';
-    h.forEach(function (it) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'ai-hist-item';
-      var d = new Date(it.t);
-      b.innerHTML = '<span class="q">' + esc(it.q) + '</span><span class="t">' +
-        d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' +
-        pad(d.getHours()) + ':' + pad(d.getMinutes()) + '</span>';
-      b.addEventListener('click', function () {
-        hideHello();
-        thread.innerHTML = '';
-        msgs = [];
-        lastP = -1;
-        fullSent = {};
-        addUser(it.q);
-        var node = addAssistant();
-        node.innerHTML = '<div class="ai-txt">' + md(it.a) + '</div>';
-        msgs.push({ role: 'user', content: it.q }, { role: 'assistant', content: it.a });
-        toBottom();
-        closeSheets();
+    for (var i = 0; i < SESSIONS.length; i++) {
+      (function (s) {
+        var row = document.createElement('div');
+        row.className = 'ai-sess' + (s.id === curId ? ' cur' : '');
+        var d = new Date(s.ts);
+        var n = (s.log || []).length;
+        row.innerHTML =
+          '<button type="button" class="ai-sess-main">' +
+          '<span class="q">' + esc(s.title || '新会话') + '</span>' +
+          '<span class="t">' + n + ' 条消息 · ' + d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + '</span>' +
+          '</button>' +
+          '<button type="button" class="ai-sess-del" aria-label="删除会话" title="删除会话">×</button>';
+        row.querySelector('.ai-sess-main').addEventListener('click', function () { switchSession(s.id); });
+        row.querySelector('.ai-sess-del').addEventListener('click', function (e) {
+          e.stopPropagation();
+          deleteSession(s.id);
+        });
+        histList.appendChild(row);
+      })(SESSIONS[i]);
+    }
+  }
+  /* 启动时:读会话、迁移旧历史、恢复当前会话 */
+  function loadSessions() {
+    try { SESSIONS = JSON.parse(lsGet(LS.sessions) || '[]') || []; } catch (e) { SESSIONS = []; }
+    if (!Array.isArray(SESSIONS)) SESSIONS = [];
+    /* 旧版「历史记录」迁移:每条问答 -> 一个会话 */
+    var old = null;
+    try { old = JSON.parse(lsGet(LS.hist) || '[]') || []; } catch (e) { old = null; }
+    if (old && old.length && !SESSIONS.length) {
+      SESSIONS = old.map(function (it) {
+        return {
+          id: 's' + (it.t || Date.now()) + Math.floor(Math.random() * 1e4),
+          title: String(it.q || '新会话').slice(0, 40),
+          ts: it.t || Date.now(),
+          log: [{ q: it.q || '', a: it.a || '' }],
+          msgs: [
+            { role: 'user', content: it.q || '' },
+            { role: 'assistant', content: it.a || '' }
+          ]
+        };
       });
-      histList.appendChild(b);
-    });
+      persistSessions();
+      lsDel(LS.hist);
+    }
+    curId = lsGet(LS.cur);
+    if (!findSession(curId)) {
+      curId = SESSIONS.length ? SESSIONS[0].id : '';
+      if (!findSession(curId)) {
+        SESSIONS.unshift({ id: newSessionId(), title: '', ts: Date.now(), log: [], msgs: [] });
+        curId = SESSIONS[0].id;
+        persistSessions();
+      }
+      lsSet(LS.cur, curId);
+    }
+    var s = findSession(curId);
+    if (s) {
+      msgs = (s.msgs || []).slice();
+      renderLog(s.log || []);
+    }
   }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
 
@@ -854,7 +973,7 @@
       keyIn.value = lsGet(LS.key);
       proxyIn.value = lsGet(LS.proxy) || CFG_PROXY;
     }
-    if (el === sheetHist) renderHist();
+    if (el === sheetHist) renderSessions();
   }
   function closeSheets() {
     [sheetSet, sheetHist].forEach(function (s) { s.classList.remove('on'); });
@@ -881,6 +1000,8 @@
   $('ai-close').addEventListener('click', close);
   $('ai-set').addEventListener('click', function () { openSheet(sheetSet); });
   $('ai-hist').addEventListener('click', function () { openSheet(sheetHist); });
+  $('ai-new').addEventListener('click', function () { newSession(); closeSheets(); });
+  $('ai-sess-new').addEventListener('click', function () { newSession(); });
   Array.prototype.forEach.call(document.querySelectorAll('.ai-sheet-close'), function (b) {
     b.addEventListener('click', closeSheets);
   });
@@ -951,10 +1072,12 @@
     warn.classList.add('on');
   });
 
-  /* 历史清空 */
+  /* 清空全部会话 */
   $('ai-hist-clear').addEventListener('click', function () {
-    lsDel(LS.hist);
-    renderHist();
+    SESSIONS = [];
+    persistSessions();
+    newSession();
+    renderSessions();
   });
 
   /* 语音输入 */
@@ -990,6 +1113,7 @@
   /* 初始化 */
   if (isAdmin()) { var ap = $('ai-admin-tag'); if (ap) ap.classList.add('on'); }
   if (document.querySelector('.cal-fab')) ROOT.classList.add('has-cal');
+  loadSessions();
   syncModel();
   updateSend();
   warn.classList.toggle('on', !ready());
