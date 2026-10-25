@@ -1,0 +1,347 @@
+---
+layout: page
+title: "文章链图"
+description: "博客文章之间的链接关系图"
+permalink: /graph/
+header-img: "img/home-bg.jpg"
+---
+
+<div markdown="0">
+<style>
+.g-root{position:relative;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  color:#dbe4f3;line-height:1.65;
+  background:
+    radial-gradient(1100px 560px at 10% -12%, rgba(0,160,190,.16), transparent 60%),
+    radial-gradient(950px 480px at 94% -6%, rgba(155,107,255,.12), transparent 55%),
+    linear-gradient(180deg,#0a101f 0%,#0c1326 100%);
+  border:1px solid rgba(148,163,184,.16);border-radius:22px;padding:24px 22px 18px;
+  box-shadow:0 26px 70px rgba(2,6,18,.55), inset 0 1px 0 rgba(255,255,255,.05);
+  margin-bottom:36px;}
+.g-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;}
+.g-title{font-size:21px;font-weight:700;color:#e7ecf3;margin:0;letter-spacing:.03em;}
+.g-sub{font-size:12.5px;color:#8fa0bd;margin:6px 0 0;}
+.g-stats{font-size:12px;color:#7c8aa5;padding-top:6px;font-variant-numeric:tabular-nums;}
+.g-wrap{position:relative;margin:12px -22px 0;border-top:1px solid rgba(148,163,184,.12);
+  border-bottom:1px solid rgba(148,163,184,.12);background:#070c18;}
+#g-cv{display:block;width:100%;height:min(62vh,560px);touch-action:none;cursor:grab;}
+#g-cv.drag{cursor:grabbing;}
+.g-info{min-height:44px;margin-top:12px;padding:10px 14px;border:1px solid rgba(148,163,184,.14);
+  border-radius:12px;background:rgba(255,255,255,.04);font-size:13px;color:#c7d2e5;}
+.g-info b{color:#7cc0ff;}
+.g-info .go{color:#67e8f9;margin-left:10px;text-decoration:none;white-space:nowrap;}
+.g-info .go:hover{text-decoration:underline;}
+.g-hint{margin-top:10px;font-size:12px;color:#7c8aa5;}
+@media (max-width:640px){
+  .g-root{padding:16px 12px 14px;border-radius:16px;}
+  .g-wrap{margin:10px -12px 0;}
+  #g-cv{height:420px;}
+}
+</style>
+
+<div class="g-root">
+  <div class="g-head">
+    <div>
+      <h2 class="g-title">文章链图</h2>
+      <p class="g-sub">一个点 = 一篇文章 · 带 # 的点 = 标签 · 一条线 = 一次引用/同标签</p>
+    </div>
+    <div class="g-stats" id="g-stats">加载中…</div>
+  </div>
+  <div class="g-wrap">
+    <canvas id="g-cv"></canvas>
+  </div>
+  <div class="g-info" id="g-info">悬浮或点击节点查看详情;拖动节点;拖拽空白处移动画布;双击空白处回到中心。</div>
+  <p class="g-hint">提示:节点越大,被其他文章引用的次数越多;点文章节点会在新标签页打开原文。</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var cv = document.getElementById('g-cv');
+  if (!cv) return;
+  var info = document.getElementById('g-info');
+  var stats = document.getElementById('g-stats');
+  var ctx = cv.getContext('2d');
+  var W = 0, H = 0, dpr = 1;
+
+  var nodes = [], links = [], tagIdx = {};
+  var hover = null, drag = null, panning = false;
+  var ax = 0, ay = 0, alpha = 1;
+  var moved = 0, lastX = 0, lastY = 0, downNode = null;
+
+  var PALETTE = ['#4f8cff', '#a78bfa', '#34d399', '#f59e0b', '#ec4899', '#22d3ee', '#fb7185', '#a3e635', '#7dd3fc', '#fbbf24'];
+  function colorOf(tag) {
+    var h = 0;
+    for (var i = 0; i < String(tag).length; i++) h = (h * 31 + String(tag).charCodeAt(i)) % 997;
+    return PALETTE[h % PALETTE.length];
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function setup() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = cv.clientWidth || 600, h = cv.clientHeight || 460;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var ow = W, oh = H;
+    W = w; H = h;
+    if (ow && oh && nodes.length) {
+      var sx = W / ow, sy = H / oh;
+      for (var i = 0; i < nodes.length; i++) { nodes[i].x *= sx; nodes[i].y *= sy; }
+    }
+  }
+  window.addEventListener('resize', setup);
+
+  function build(d) {
+    var posts = (d && d.posts) || [];
+    /* 文章节点 */
+    for (var i = 0; i < posts.length; i++) {
+      var p = posts[i];
+      nodes.push({ id: 'p' + i, t: p.t, u: p.u, d: p.d, g: p.g || [], k: 'p',
+        x: 0, y: 0, vx: 0, vy: 0, fx: 0, fy: 0, rd: 0, col: colorOf((p.g || [])[0] || '') });
+    }
+    /* 标签节点 */
+    for (var j = 0; j < posts.length; j++) {
+      var gs = posts[j].g || [];
+      for (var k = 0; k < gs.length; k++) {
+        var tg = gs[k];
+        if (tagIdx[tg] === undefined) {
+          tagIdx[tg] = nodes.length;
+          nodes.push({ id: 't' + nodes.length, t: '#' + tg, u: '', d: '', g: [tg], k: 't',
+            x: 0, y: 0, vx: 0, vy: 0, fx: 0, fy: 0, rd: 0, col: colorOf(tg) });
+        }
+      }
+    }
+    function addEdge(a, b, kind) {
+      links.push({ s: a, t: b, kind: kind });
+      if (kind === 'ref') { nodes[a].rd++; nodes[b].rd++; }
+    }
+    for (var m = 0; m < posts.length; m++) {
+      var g2 = posts[m].g || [];
+      for (var n = 0; n < g2.length; n++) addEdge(m, tagIdx[g2[n]], 'tag');
+    }
+    var refs = (d && d.refs) || [];
+    for (var r = 0; r < refs.length; r++) {
+      var a = refs[r][0], b = refs[r][1];
+      if (a >= 0 && b >= 0 && a < posts.length && b < posts.length && a !== b) addEdge(a, b, 'ref');
+    }
+    stats.textContent = posts.length + ' 篇文章 · ' + refs.length + ' 条引用 · ' + Object.keys(tagIdx).length + ' 个标签';
+    /* 初始摆成环形 */
+    var cx0 = W / 2, cy0 = H / 2, R0 = Math.min(W, H) * 0.34;
+    for (var q = 0; q < nodes.length; q++) {
+      var ang = q / nodes.length * Math.PI * 2;
+      nodes[q].x = cx0 + Math.cos(ang) * R0 + (Math.random() - 0.5) * 40;
+      nodes[q].y = cy0 + Math.sin(ang) * R0 + (Math.random() - 0.5) * 40;
+    }
+    alpha = 1;
+    requestAnimationFrame(loop);
+  }
+
+  fetch('{{ site.baseurl }}/graph.json?v={{ site.time | date: "%s" }}')
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(build)
+    .catch(function () {
+      stats.textContent = '';
+      info.innerHTML = '<b>链图数据加载失败</b>,稍后刷新试试。';
+    });
+
+  /* ---------- 物理 ---------- */
+  function step() {
+    var i, j, n;
+    for (i = 0; i < nodes.length; i++) { nodes[i].fx = 0; nodes[i].fy = 0; }
+    /* 斥力 */
+    for (i = 0; i < nodes.length; i++) {
+      var a = nodes[i];
+      for (j = i + 1; j < nodes.length; j++) {
+        var b = nodes[j];
+        var dx = a.x - b.x, dy = a.y - b.y;
+        var d2 = dx * dx + dy * dy; if (d2 < 1) d2 = 1;
+        var f = 2600 / d2 * alpha; if (f > 4) f = 4;
+        var d = Math.sqrt(d2), ux = dx / d, uy = dy / d;
+        a.fx += ux * f; a.fy += uy * f;
+        b.fx -= ux * f; b.fy -= uy * f;
+      }
+    }
+    /* 弹簧 */
+    for (i = 0; i < links.length; i++) {
+      var l = links[i], sa = nodes[l.s], ta = nodes[l.t];
+      var dx = ta.x - sa.x, dy = ta.y - sa.y;
+      var d = Math.sqrt(dx * dx + dy * dy) || 1;
+      var rest = l.kind === 'tag' ? 108 : 150;
+      var f = (d - rest) * 0.02 * alpha;
+      sa.fx += dx / d * f; sa.fy += dy / d * f;
+      ta.fx -= dx / d * f; ta.fy -= dy / d * f;
+    }
+    /* 中心引力 + 积分 */
+    for (i = 0; i < nodes.length; i++) {
+      n = nodes[i];
+      n.fx += (W / 2 - n.x) * 0.0018 * alpha;
+      n.fy += (H / 2 - n.y) * 0.0018 * alpha;
+      if (n === drag) { n.vx = 0; n.vy = 0; continue; }
+      n.vx = (n.vx + n.fx) * 0.82;
+      n.vy = (n.vy + n.fy) * 0.82;
+      n.x += n.vx; n.y += n.vy;
+      if (n.x < 34) n.x = 34; else if (n.x > W - 34) n.x = W - 34;
+      if (n.y < 28) n.y = 28; else if (n.y > H - 26) n.y = H - 26;
+    }
+    alpha *= 0.992;
+    if (alpha < 0.012) alpha = 0.012;
+  }
+
+  /* ---------- 渲染 ---------- */
+  function radiusOf(n) {
+    if (n.k === 't') return 10;
+    return 8.5 + Math.min(n.rd, 10) * 1.6;
+  }
+  function shortLabel(n) {
+    var s = String(n.t || '');
+    if (n.k === 't') return s.length > 10 ? s.slice(0, 10) + '…' : s;
+    return s.length > 12 ? s.slice(0, 12) + '…' : s;
+  }
+  function isNeighbor(a, b) {
+    if (!a || !b) return false;
+    for (var i = 0; i < links.length; i++) {
+      var l = links[i];
+      if ((l.s === a.id || l.s === a) && (l.t === b.id || l.t === b)) return true;
+    }
+    return false;
+  }
+  function render() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#070c18';
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(ax, ay);
+    /* 边 */
+    for (var i = 0; i < links.length; i++) {
+      var l = links[i], sa = nodes[l.s], ta = nodes[l.t];
+      var hl = hover === sa || hover === ta;
+      ctx.globalAlpha = hover ? (hl ? 0.9 : 0.05) : (l.kind === 'tag' ? 0.26 : 0.5);
+      ctx.strokeStyle = l.kind === 'tag' ? '#4a5a7a' : sa.col;
+      ctx.lineWidth = l.kind === 'tag' ? 1 : 1.6;
+      ctx.beginPath();
+      ctx.moveTo(sa.x, sa.y);
+      ctx.lineTo(ta.x, ta.y);
+      ctx.stroke();
+    }
+    /* 节点 */
+    for (var j = 0; j < nodes.length; j++) {
+      var n = nodes[j];
+      var hl = hover === n;
+      var dim = hover && !hl && !isNeighbor(n, hover);
+      var r = radiusOf(n);
+      ctx.globalAlpha = dim ? 0.14 : (n.k === 't' ? 0.95 : 1);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = n.col;
+      ctx.fill();
+      ctx.globalAlpha = dim ? 0.1 : 1;
+      ctx.strokeStyle = 'rgba(255,255,255,.8)';
+      ctx.lineWidth = hl ? 2 : 1;
+      ctx.stroke();
+      if (n.k === 't') {
+        ctx.globalAlpha = dim ? 0.1 : 0.9;
+        ctx.strokeStyle = n.col;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r - 3.4, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      /* 标签文字 */
+      ctx.globalAlpha = dim ? 0.1 : (hl ? 1 : 0.9);
+      ctx.fillStyle = '#e7ecf3';
+      ctx.font = (n.k === 't' ? 'bold ' : '') + '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(shortLabel(n), n.x, n.y - r - 6);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  function loop() {
+    if (nodes.length) { step(); render(); }
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------- 交互 ---------- */
+  function toCanvas(e) {
+    var rect = cv.getBoundingClientRect();
+    return { x: e.clientX - rect.left - ax, y: e.clientY - rect.top - ay };
+  }
+  function hitNode(x, y) {
+    for (var i = nodes.length - 1; i >= 0; i--) {
+      var n = nodes[i], r = radiusOf(n) + 7;
+      var dx = x - n.x, dy = y - n.y;
+      if (dx * dx + dy * dy <= r * r) return n;
+    }
+    return null;
+  }
+  function showInfo(n) {
+    if (!n) {
+      info.innerHTML = '悬浮或点击节点查看详情;拖动节点;拖拽空白处移动画布;双击空白处回到中心。';
+      return;
+    }
+    if (n.k === 't') {
+      var cnt = 0;
+      for (var i = 0; i < links.length; i++) {
+        var l = links[i];
+        if (l.kind === 'tag' && (nodes[l.s] === n || nodes[l.t] === n)) cnt++;
+      }
+      info.innerHTML = '<b>' + esc(n.t) + '</b> 标签 · ' + cnt + ' 篇文章';
+    } else {
+      var tags = (n.g || []).map(function (t) { return esc(t); }).join(' · ');
+      info.innerHTML = '<b>' + esc(n.t) + '</b>' +
+        (n.d ? ' · ' + esc(n.d) : '') +
+        (tags ? ' · ' + tags : '') +
+        '<a class="go" href="' + esc(n.u) + '" target="_blank" rel="noopener">打开 →</a>';
+    }
+  }
+
+  cv.addEventListener('pointerdown', function (e) {
+    var p = toCanvas(e);
+    lastX = p.x; lastY = p.y; moved = 0;
+    var n = hitNode(p.x, p.y);
+    if (n) {
+      downNode = n; drag = n;
+      n.vx = 0; n.vy = 0;
+      alpha = Math.max(alpha, 0.4);
+      if (cv.setPointerCapture) cv.setPointerCapture(e.pointerId);
+    } else {
+      panning = true;
+      if (cv.setPointerCapture) cv.setPointerCapture(e.pointerId);
+    }
+    cv.classList.add('drag');
+  });
+  cv.addEventListener('pointermove', function (e) {
+    var p = toCanvas(e);
+    moved += Math.abs(p.x - lastX) + Math.abs(p.y - lastY);
+    if (drag) {
+      drag.x = p.x; drag.y = p.y;
+      alpha = Math.max(alpha, 0.3);
+      lastX = p.x; lastY = p.y;
+    } else if (panning) {
+      ax += p.x - lastX; ay += p.y - lastY;
+      lastX = p.x; lastY = p.y;
+    } else {
+      var n = hitNode(p.x, p.y);
+      if (n !== hover) { hover = n; showInfo(n); }
+    }
+  });
+  cv.addEventListener('pointerup', function () {
+    if (drag) {
+      var n = hitNode(lastX, lastY);
+      if (n === downNode && moved < 8 && n.u) window.open(n.u, '_blank');
+      drag = null; downNode = null;
+    }
+    panning = false;
+    cv.classList.remove('drag');
+  });
+  cv.addEventListener('pointercancel', function () { drag = null; panning = false; cv.classList.remove('drag'); });
+  cv.addEventListener('pointerleave', function () { if (!drag) { hover = null; showInfo(null); } });
+  cv.addEventListener('dblclick', function () { ax = 0; ay = 0; });
+
+  setup();
+})();
+</script>
+</div>

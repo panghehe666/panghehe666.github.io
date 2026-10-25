@@ -12,7 +12,7 @@
 - `_layouts/`、`_includes/`：主题模板（页脚、导航、文章布局等）
 - `css/`、`js/`：主题资源
 - `_config.yml`：站点配置（标题、SEO、分页、排除项）
-- 特殊页面：`calendar.html`（日历/贡献图）、`models.html`（可视化模型实验室）、`admin.html`（私密文章管理）
+- 特殊页面：`calendar.html`（日历/贡献图）、`models.html`（可视化模型实验室）、`admin.html`（私密文章管理）、`graph.html`+`graph.json`（文章链图，Obsidian 风格，导航栏入口）
 - 本文件 `BLOG.md` 已加入 `_config.yml` 的 exclude，不会被发布成页面
 
 ## 文章 front matter 模板

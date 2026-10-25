@@ -1,0 +1,25 @@
+---
+layout: null
+sitemap: false
+---
+{"generated":{{ site.time | date_to_xmlschema | jsonify }},"posts":[
+{%- for post in site.posts -%}
+{%- if forloop.index0 > 0 -%},{%- endif -%}
+{"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: '%Y-%m-%d' | jsonify }},"g":[{%- for tag in post.tags -%}{%- if forloop.index0 > 0 -%},{%- endif -%}{{ tag | jsonify }}{%- endfor -%}]}
+{%- endfor -%}
+],"refs":[
+{%- assign ln = 0 -%}
+{%- for post in site.posts -%}
+{%- capture pc -%}{{ post.content | markdownify }}{%- endcapture -%}
+{%- for other in site.posts -%}
+{%- if other.url != post.url -%}
+{%- assign ou = other.url | relative_url -%}
+{%- assign oua = site.url | append: ou -%}
+{%- if pc contains ou or pc contains oua -%}
+{%- if ln > 0 -%},{%- endif -%}[{{ forloop.parentloop.index0 }},{{ forloop.index0 }}]
+{%- assign ln = ln | plus: 1 -%}
+{%- endif -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endfor -%}
+]}
