@@ -38,6 +38,63 @@
 
     {{ content }}
 
+{% if page.layout == 'post' or page.url == '/' %}
+    <!-- 文章管理(仅管理员可见):笔=编辑 叉=删除 加=新建 -->
+    {% if page.layout == 'post' %}
+    <button type="button" class="pa-fab pa-edit" id="pa-edit" data-file="{{ page.path | split: '/' | last }}" aria-label="编辑这篇文章" title="编辑这篇文章">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 20l4-1L19.5 7.5a2.1 2.1 0 0 0-3-3L5 16l-1 4z"/>
+        <path d="M13.5 6.5l3 3"/>
+      </svg>
+    </button>
+    <button type="button" class="pa-fab pa-del" id="pa-del" data-file="{{ page.path | split: '/' | last }}" aria-label="删除这篇文章" title="删除这篇文章">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6L6 18"/>
+      </svg>
+    </button>
+    {% endif %}
+    {% if page.url == '/' %}
+    <button type="button" class="pa-fab pa-add" id="pa-add" aria-label="写新文章" title="写新文章">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+    </button>
+    {% endif %}
+
+    <div id="pa-panel" role="dialog" aria-modal="true" aria-label="文章编辑">
+      <div class="pa-scrim" id="pa-scrim"></div>
+      <div class="pa-card">
+        <h3 id="pa-title-h">编辑文章</h3>
+        <p class="pa-sub" id="pa-sub"></p>
+        <label>标题
+          <input id="pa-t" type="text" spellcheck="false" placeholder="文章标题">
+        </label>
+        <label>日期(仅新建时可改)
+          <input id="pa-date" type="date">
+        </label>
+        <label>文件名 slug(可选,默认按标题生成)
+          <input id="pa-slug" type="text" placeholder="deepseek-harness-android" spellcheck="false">
+        </label>
+        <label>标签(逗号分隔)
+          <input id="pa-tags" type="text" placeholder="开源分享, 前沿科技" spellcheck="false">
+        </label>
+        <label>正文(不含 front matter)
+          <textarea id="pa-body" placeholder="# 正文…"></textarea>
+        </label>
+        <div class="pa-btns">
+          <button type="button" class="pa-btn" id="pa-save">保存并上传</button>
+          <button type="button" class="pa-btn light" id="pa-cancel">取消</button>
+          <button type="button" class="pa-btn danger" id="pa-del2" style="display:none;">删除这篇文章</button>
+        </div>
+        <div class="pa-status" id="pa-status"></div>
+      </div>
+    </div>
+    <div class="pa-toast" id="pa-toast"></div>
+
+    <link rel="stylesheet" href="{{ '/css/post-admin.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
+    <script src="{{ '/js/post-admin.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}" defer></script>
+{% endif %}
+
     {% include footer.html %}
 
     {% include ai-chat.html %}
