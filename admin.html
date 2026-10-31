@@ -198,6 +198,42 @@ nav-style: invert
     border: 1px solid #eee;
     display: none;
   }
+
+  /* ---- 文章管理 ---- */
+  .admin-pbtns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 6px 0 12px; }
+  .admin-pbtn {
+    padding: 9px 16px; background: #fff; color: #111; border: 1px solid #111;
+    font-size: 12px; letter-spacing: .06em; cursor: pointer; border-radius: 0; transition: .15s;
+  }
+  .admin-pbtn:hover { background: #111; color: #fff; }
+  .admin-pbtn.danger { border-color: #c0392b; color: #c0392b; }
+  .admin-pbtn.danger:hover { background: #c0392b; color: #fff; }
+  .admin-post-list { margin: 8px 0 4px; }
+  .admin-post-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 2px; border-bottom: 1px solid #eee; }
+  .admin-post-item .nm {
+    flex: 1; min-width: 0; text-align: left; background: none; border: none; cursor: pointer;
+    font-size: 13px; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0;
+  }
+  .admin-post-item .nm:hover { text-decoration: underline; }
+  .admin-post-item .sz { color: #9a9a9a; font-size: 11px; margin-left: 8px; }
+  .admin-post-item .act { flex: none; }
+  .admin-pbtn.edit { padding: 4px 12px; font-size: 11px; }
+  .admin-pbtn.del { padding: 4px 9px; font-size: 11px; }
+  .pm-empty { color: #9a9a9a; font-size: 13px; padding: 8px 2px; }
+  #post-edit { display: none; margin-top: 20px; }
+  #post-edit.on { display: block; }
+  #post-edit label { margin-bottom: 14px; }
+  #post-edit input:disabled { color: #9a9a9a; }
+  .admin-status { min-height: 22px; margin-top: 14px; font-size: 13px; line-height: 1.6; color: #6b6b6b; }
+  .admin-status.busy { color: #9a6b00; }
+  .admin-status.ok { color: #1a7f37; }
+  .admin-status.err { color: #c0392b; }
+  .spin {
+    display: inline-block; width: 12px; height: 12px; margin-left: 6px; vertical-align: -2px;
+    border: 2px solid rgba(0,0,0,.18); border-top-color: currentColor; border-radius: 50%;
+    animation: pmspin .7s linear infinite;
+  }
+  @keyframes pmspin { to { transform: rotate(360deg); } }
 </style>
 
 <div class="admin-toast" id="admin-toast"><i class="fa fa-check"></i> 你已是管理员</div>
@@ -248,6 +284,51 @@ nav-style: invert
         <button type="button" class="admin-action" id="do-encrypt">生成密文</button>
         <button type="button" class="admin-action" id="copy-cipher" style="background:#fff;color:#111;border:1px solid #111;margin-top:8px;display:none;">复制密文</button>
         <div id="cipher-out"></div>
+      </div>
+
+      <!-- 文章管理:增删改 -->
+      <div class="admin-tool">
+        <h2>Posts</h2>
+        <p class="hint">
+          用 GitHub Token 直接增删改 <code>_posts/</code> 里的文章。Token 只保存在本机浏览器 localStorage,不会写进博客。
+          权限需要 <code>Contents: Read and write</code>(GitHub → Settings → Developer settings → Fine-grained tokens)。
+        </p>
+        <label>GitHub Token
+          <span class="admin-field">
+            <input id="gh-token" type="password" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
+            <button type="button" class="admin-eye" id="gh-eye" aria-label="显示"><i class="fa fa-eye"></i></button>
+          </span>
+        </label>
+        <div class="admin-pbtns">
+          <button type="button" class="admin-pbtn" id="pm-new">＋ 新文章</button>
+          <button type="button" class="admin-pbtn" id="pm-refresh">刷新列表</button>
+        </div>
+        <div class="admin-post-list" id="pm-list"></div>
+
+        <div id="post-edit">
+          <label>标题
+            <input id="pe-title" type="text" spellcheck="false" placeholder="文章标题">
+          </label>
+          <label>日期(仅新建时可改)
+            <input id="pe-date" type="date">
+          </label>
+          <label>文件名 slug(可选,默认按标题生成)
+            <input id="pe-slug" type="text" placeholder="deepseek-harness-android" spellcheck="false">
+          </label>
+          <label>标签(逗号分隔)
+            <input id="pe-tags" type="text" placeholder="开源分享, 前沿科技" spellcheck="false">
+          </label>
+          <label>正文(不含 front matter)
+            <textarea id="pe-body" placeholder="# 正文…"></textarea>
+          </label>
+          <div class="admin-pbtns">
+            <button type="button" class="admin-action" id="pm-save" style="width:auto;padding:12px 24px;margin-top:0;">保存并上传</button>
+            <button type="button" class="admin-pbtn" id="pm-cancel">取消</button>
+            <button type="button" class="admin-pbtn danger" id="pm-delete">删除这篇文章</button>
+          </div>
+        </div>
+
+        <div class="admin-status" id="pm-status"></div>
       </div>
     </div>
 
@@ -402,3 +483,236 @@ nav-style: invert
   });
 })();
 </script>
+
+<script>
+(function () {
+  'use strict';
+  var REPO = 'panghehe666/panghehe666.github.io';
+  var BRANCH = 'master';
+  var TOKEN_KEY = 'phh_admin_gh_token';
+  var $ = function (id) { return document.getElementById(id); };
+  var list = $('pm-list'), statusEl = $('pm-status'), editEl = $('post-edit');
+  var tokenIn = $('gh-token');
+  var st = { mode: null, file: null, sha: null, fm: null, busy: false };
+  if (!list || !editEl) return;
+
+  tokenIn.value = localStorage.getItem(TOKEN_KEY) || '';
+
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escAttr(s) { return esc(s).replace(/'/g, '&#39;'); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function token() {
+    var v = tokenIn.value.trim();
+    if (v) { try { localStorage.setItem(TOKEN_KEY, v); } catch (e) {} }
+    else { try { v = localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { v = ''; } }
+    return v;
+  }
+  function setStatus(html, cls) {
+    statusEl.className = 'admin-status ' + (cls || '');
+    statusEl.innerHTML = html;
+  }
+  function spin() { return '<span class="spin" aria-hidden="true"></span>'; }
+  function b64u(s) { return btoa(unescape(encodeURIComponent(s))); }
+  function enc(p) { return p.split('/').map(encodeURIComponent).join('/'); }
+  function api(method, path, payload) {
+    var opts = { method: method, headers: { 'Authorization': 'Bearer ' + token(), 'Accept': 'application/vnd.github+json' } };
+    if (payload !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(payload);
+    }
+    return fetch('https://api.github.com/repos/' + REPO + '/contents/' + enc(path), opts).then(function (resp) {
+      return resp.text().then(function (t) {
+        var d = {}; try { d = t ? JSON.parse(t) : {}; } catch (e) {}
+        if (!resp.ok) {
+          var m = d.message || ('HTTP ' + resp.status);
+          if (d.errors && d.errors.length) m += ':' + d.errors[0].message;
+          var e = new Error(m); e.status = resp.status; throw e;
+        }
+        return d;
+      });
+    });
+  }
+  function apiGet(path) { return api('GET', path); }
+  function apiPut(path, content, sha, msg) {
+    var p = { message: msg, content: b64u(content), branch: BRANCH };
+    if (sha) p.sha = sha;
+    return api('PUT', path, p);
+  }
+  function apiDel(path, sha, msg) { return api('DELETE', path, { message: msg, sha: sha, branch: BRANCH }); }
+
+  /* ---- front matter 解析/重建(保留 private_cipher 等未知字段) ---- */
+  function parseFM(text) {
+    var m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+    if (!m) return { fm: '', body: text };
+    return { fm: m[1], body: text.slice(m[0].length) };
+  }
+  function fmGet(fm, key) {
+    var m = fm.match(new RegExp('^\\s*' + key + '\\s*:\\s*(.+)$', 'm'));
+    return m ? m[1].trim() : '';
+  }
+  function fmGetTags(fm) {
+    var m = fm.match(/^tags\s*:[\s\S]*?(?=^\S|\z)/m);
+    if (!m) return [];
+    return (m[0].match(/^\s*-\s*([^\n]+)$/gm) || []).map(function (s) { return s.replace(/^\s*-\s*/, '').trim(); });
+  }
+  function fmSet(fm, key, val) {
+    var re = new RegExp('^\\s*' + key + '\\s*:.*$', 'm');
+    if (re.test(fm)) return fm.replace(re, key + ': ' + val);
+    return fm.replace(/\s*$/, '') + '\n' + key + ': ' + val;
+  }
+  function fmSetTags(fm, tags) {
+    var t = fm.replace(/^tags\s*:[\s\S]*?(?=^\S|\z)/m, '').replace(/\n{2,}$/, '');
+    return (t ? t + '\n' : '') + 'tags:\n' + tags.map(function (x) { return '    - ' + x; }).join('\n');
+  }
+  function buildFM(existing) {
+    var title = ($('pe-title').value || '').trim() || '未命名';
+    var tags = ($('pe-tags').value || '').split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!tags.length) tags = ['开源分享'];
+    if (existing) {
+      var fm = existing;
+      fm = fmSet(fm, 'title', '"' + title.replace(/"/g, '\\"') + '"');
+      fm = fmSetTags(fm, tags);
+      return fm;
+    }
+    var lines = ['---', 'layout:       post', 'title:        "' + title.replace(/"/g, '\\"') + '"',
+      'author:       "PHH"', 'header-style: text', 'catalog:      true'];
+    lines.push('tags:');
+    tags.forEach(function (tg) { lines.push('    - ' + tg); });
+    lines.push('---');
+    return lines.join('\n');
+  }
+  function slugify(title, slug) {
+    if (slug) {
+      slug = slug.trim().replace(/[^\w\u4e00-\u9fff-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      if (slug) return slug.slice(0, 60);
+    }
+    var s = String(title || '').toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-').replace(/^-+|-+$/g, '');
+    return (s || 'post').slice(0, 60);
+  }
+
+  /* ---- 列表 ---- */
+  function fmtSize(n) { return n > 1024 ? (n / 1024).toFixed(1) + 'KB' : n + 'B'; }
+  function refreshList(quiet) {
+    if (!token()) { setStatus('先填 GitHub Token,再点「刷新列表」。', 'err'); return; }
+    if (!quiet) setStatus('列表加载中…' + spin(), 'busy');
+    apiGet('_posts').then(function (arr) {
+      var files = (arr || []).filter(function (x) { return x.type === 'file'; });
+      list.innerHTML = files.length ? files.map(function (f) {
+        return '<div class="admin-post-item">' +
+          '<button type="button" class="nm" data-name="' + escAttr(f.name) + '">' + esc(f.name) +
+          '<span class="sz">' + fmtSize(f.size) + '</span></button>' +
+          '<span class="act">' +
+          '<button type="button" class="admin-pbtn edit" data-name="' + escAttr(f.name) + '">编辑</button> ' +
+          '<button type="button" class="admin-pbtn del" data-name="' + escAttr(f.name) + '">删</button>' +
+          '</span></div>';
+      }).join('') : '<div class="pm-empty">_posts 里没有文章</div>';
+      if (!quiet) setStatus('已加载 ' + files.length + ' 篇文章', 'ok');
+    }).catch(function (e) { setStatus('列表加载失败:' + esc(e.message), 'err'); });
+  }
+
+  list.addEventListener('click', function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest('button') : null;
+    if (!b || !b.getAttribute('data-name')) return;
+    var name = b.getAttribute('data-name');
+    if (b.classList.contains('del')) delPost(name); else loadPost(name);
+  });
+
+  /* ---- 编辑 / 新建 ---- */
+  function loadPost(name) {
+    if (st.busy) return;
+    setStatus('读取「' + esc(name) + '」…' + spin(), 'busy');
+    apiGet('_posts/' + name).then(function (d) {
+      var text = decodeURIComponent(escape(atob(d.content)));
+      var pf = parseFM(text);
+      var dt = fmGet(pf.fm, 'date') || name.slice(0, 10);
+      $('pe-title').value = fmGet(pf.fm, 'title').replace(/^"|"$/g, '');
+      $('pe-date').value = /^\d{4}-\d{2}-\d{2}$/.test(dt) ? dt : '';
+      $('pe-date').disabled = true;
+      $('pe-tags').value = fmGetTags(pf.fm).join(', ');
+      $('pe-slug').value = '';
+      $('pe-slug').disabled = true;
+      $('pe-body').value = pf.body;
+      st = { mode: 'edit', file: name, sha: d.sha, fm: pf.fm, busy: false };
+      editEl.classList.add('on');
+      setStatus('正在编辑:' + esc(name), '');
+    }).catch(function (e) { setStatus('读取失败:' + esc(e.message), 'err'); });
+  }
+  function newPost() {
+    if (st.busy) return;
+    var d = new Date();
+    $('pe-title').value = '';
+    $('pe-date').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    $('pe-date').disabled = false;
+    $('pe-tags').value = '开源分享, 前沿科技';
+    $('pe-slug').value = '';
+    $('pe-slug').disabled = false;
+    $('pe-body').value = '';
+    st = { mode: 'new', file: null, sha: null, fm: null, busy: false };
+    editEl.classList.add('on');
+    setStatus('新文章:填好内容后点「保存并上传」', '');
+    $('pe-title').focus();
+  }
+  function savePost() {
+    if (st.busy) return;
+    var title = ($('pe-title').value || '').trim();
+    var body = $('pe-body').value || '';
+    var slug = slugify(title, $('pe-slug').value);
+    st.busy = true;
+    if (st.mode === 'new') {
+      var date = $('pe-date').value || new Date().toISOString().slice(0, 10);
+      var file = date + '-' + slug + '.md';
+      var content = '---\n' + buildFM(null) + '\n---\n\n' + body + '\n';
+      setStatus('文章上传中…' + spin(), 'busy');
+      apiPut('_posts/' + file, content, null, 'add: ' + file).then(function () {
+        st.busy = false;
+        editEl.classList.remove('on');
+        st.mode = null;
+        setStatus('已添加 ✅ <b>' + esc(file) + '</b> · Pages 约 30–60 秒后上线', 'ok');
+        refreshList(true);
+      }).catch(function (e) { st.busy = false; setStatus('添加失败:' + esc(e.message), 'err'); });
+    } else if (st.mode === 'edit') {
+      var fm = buildFM(st.fm);
+      var content2 = '---\n' + fm + '\n---' + (body ? '\n\n' + body : '') + '\n';
+      setStatus('文章上传中…' + spin(), 'busy');
+      apiPut('_posts/' + st.file, content2, st.sha, 'update: ' + st.file).then(function (d) {
+        st.busy = false;
+        st.sha = d.content && d.content.sha;
+        var savedFile = st.file;
+        editEl.classList.remove('on');
+        st.mode = null;
+        setStatus('已修改 ✅ <b>' + esc(savedFile) + '</b> · Pages 约 30–60 秒后上线', 'ok');
+        refreshList(true);
+      }).catch(function (e) { st.busy = false; setStatus('修改失败:' + esc(e.message), 'err'); });
+    }
+  }
+  function delPost(name) {
+    if (st.busy) return;
+    if (!window.confirm('确定删除「' + name + '」?文章会从博客移除。')) return;
+    setStatus('删除中…' + spin(), 'busy');
+    apiGet('_posts/' + name).then(function (d) {
+      return apiDel('_posts/' + name, d.sha, 'delete: ' + name);
+    }).then(function () {
+      setStatus('已删除 ✅ <b>' + esc(name) + '</b> · Pages 约 30–60 秒后生效', 'ok');
+      if (st.file === name) { editEl.classList.remove('on'); st.mode = null; }
+      refreshList(true);
+    }).catch(function (e) { setStatus('删除失败:' + esc(e.message), 'err'); });
+  }
+
+  /* ---- 事件 ---- */
+  $('pm-new').addEventListener('click', newPost);
+  $('pm-refresh').addEventListener('click', function () { refreshList(false); });
+  $('pm-save').addEventListener('click', savePost);
+  $('pm-cancel').addEventListener('click', function () { if (st.busy) return; editEl.classList.remove('on'); st.mode = null; });
+  $('pm-delete').addEventListener('click', function () {
+    if (st.busy) return;
+    if (st.mode === 'edit' && st.file) delPost(st.file);
+    else { editEl.classList.remove('on'); st.mode = null; setStatus('已取消', ''); }
+  });
+  $('gh-eye').addEventListener('click', function () {
+    var show = tokenIn.type === 'password';
+    tokenIn.type = show ? 'text' : 'password';
+    this.innerHTML = '<i class="fa fa-eye' + (show ? '-slash' : '') + '"></i>';
+  });
+})();
+</script>
+
