@@ -173,7 +173,7 @@
   function initEditor(value) {
     if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
     $('pe-editor').innerHTML = '';
-    var h = Math.max(360, window.innerHeight - 320);
+    var h = Math.max(420, window.innerHeight - 250);
     vd = new Vditor('pe-editor', {
       mode: 'ir',
       lang: 'zh_CN',
@@ -216,9 +216,25 @@
         var dt = fmGet(pf.fm, 'date') || st.file.slice(0, 10);
         dateIn.value = /^\d{4}-\d{2}-\d{2}$/.test(dt) ? dt : '';
         dateIn.disabled = true;
-        nameEl.textContent = st.file;
-        initEditor(pf.body);
-        setStatus('正在编辑:' + esc(st.file) + ' · 光标所在行显示源码,移开自动渲染', '');
+        st.private = !!fmGet(pf.fm, 'private_cipher');
+        if (st.private) {
+          nameEl.textContent = '🔒 ' + st.file;
+          initEditor('');
+          setStatus('私密文章:正在解密…' + spin(), 'busy');
+          var dec = (window.PrivateCrypto && PrivateCrypto.decryptWithSession)
+            ? PrivateCrypto.decryptWithSession(fmGet(pf.fm, 'private_cipher'))
+            : Promise.reject(new Error('PrivateCrypto 未加载'));
+          dec.then(function (plain) {
+            initEditor(plain);
+            setStatus('🔒 私密文章:已解密为明文编辑,保存时自动重新加密', '');
+          }).catch(function (e) {
+            setStatus('私密文章解密失败:' + esc(e.message) + ' · 先到 <a href="/admin/">/admin/</a> 用管理员密码登录一次,再回来编辑。', 'err');
+          });
+        } else {
+          nameEl.textContent = st.file;
+          initEditor(pf.body);
+          setStatus('正在编辑:' + esc(st.file) + ' · 光标所在行显示源码,移开自动渲染', '');
+        }
       }).catch(function (e) { setStatus('读取失败:' + esc(e.message), 'err'); });
     } else {
       nameEl.textContent = '新文章';
@@ -262,13 +278,26 @@
     } else {
       apiGet('_posts/' + st.file).then(function (d) {
         var prev = decodeURIComponent(escape(atob(d.content)));
-        var content = '---\n' + fmSetTags(fmSet(st.fm, 'title', '"' + title.replace(/"/g, '\\"') + '"'), tags) + '\n---\n\n' + body + '\n';
-        return apiPutText('_posts/' + st.file, content, st.sha, 'update: ' + st.file).then(function (d2) {
-          return { prev: prev, d2: d2 };
+        var fm = fmSetTags(fmSet(st.fm, 'title', '"' + title.replace(/"/g, '\\"') + '"'), tags);
+        var prep;
+        if (st.private) {
+          prep = (window.PrivateCrypto && PrivateCrypto.encryptWithSession)
+            ? PrivateCrypto.encryptWithSession(body).then(function (cipher) {
+                return { fm: fmSet(fm, 'private_cipher', cipher), body: '' };
+              })
+            : Promise.reject(new Error('PrivateCrypto 未加载'));
+        } else {
+          prep = Promise.resolve({ fm: fm, body: body });
+        }
+        return prep.then(function (r0) {
+          var content = '---\n' + r0.fm + '\n---' + (r0.body ? '\n\n' + r0.body : '') + '\n';
+          return apiPutText('_posts/' + st.file, content, st.sha, 'update: ' + st.file).then(function (d2) {
+            return { prev: prev, d2: d2, fm: r0.fm };
+          });
         });
       }).then(function (r) {
         st.sha = r.d2.content && r.d2.content.sha;
-        st.fm = fmSetTags(fmSet(st.fm, 'title', '"' + title.replace(/"/g, '\\"') + '"'), tags);
+        st.fm = r.fm;
         st.busy = false;
         clearDirty();
         lastOp = { kind: 'edit', path: '_posts/' + st.file, prevContent: r.prev, newSha: st.sha };

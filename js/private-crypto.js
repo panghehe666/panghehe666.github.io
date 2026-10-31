@@ -108,6 +108,23 @@
     });
   }
 
+  function encryptWithSession(plain) {
+    var b64 = loadSessionKey();
+    if (!b64) return Promise.reject(new Error("no key"));
+    return importKeyFromB64(b64).then(function (key) {
+      var iv = crypto.getRandomValues(new Uint8Array(12));
+      return crypto.subtle
+        .encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(String(plain)))
+        .then(function (cipher) {
+          var c = new Uint8Array(cipher);
+          var packed = new Uint8Array(iv.length + c.length);
+          packed.set(iv, 0);
+          packed.set(c, iv.length);
+          return b64encode(packed);
+        });
+    });
+  }
+
   function unlockFromPassword(password) {
     return deriveKey(password)
       .then(function (key) {
@@ -364,6 +381,7 @@
     clearSession: clearSession,
     encryptText: encryptText,
     decryptWithSession: decryptWithSession,
+    encryptWithSession: encryptWithSession,
     loadSessionKey: loadSessionKey,
     tryRevealEncryptedPosts: tryRevealEncryptedPosts,
   };

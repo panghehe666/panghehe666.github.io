@@ -39,7 +39,7 @@
     {{ content }}
 
 {% if page.layout == 'post' or page.url == '/' %}
-    <!-- 文章管理(仅管理员):文章页笔→编辑页 / 叉→删除;首页加→写新文章 -->
+    <!-- 文章管理(仅管理员):文章页笔→编辑页;首页加→写新文章 -->
     {% if page.layout == 'post' %}
     <a class="pa-fab pa-edit" id="pa-edit" href="{{ site.baseurl }}/edit/?p={{ page.path | split: '/' | last }}" aria-label="编辑这篇文章" title="编辑这篇文章">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -47,11 +47,6 @@
         <path d="M13.5 6.5l3 3"/>
       </svg>
     </a>
-    <button type="button" class="pa-fab pa-del" id="pa-del" data-file="{{ page.path | split: '/' | last }}" aria-label="删除这篇文章" title="删除这篇文章">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
-        <path d="M6 6l12 12M18 6L6 18"/>
-      </svg>
-    </button>
     {% endif %}
     {% if page.url == '/' %}
     <a class="pa-fab pa-add" id="pa-add" href="{{ site.baseurl }}/edit/" aria-label="写新文章" title="写新文章">

@@ -1,7 +1,7 @@
 /* ============================================================
    PHH Blog · 编辑页(基于 Vditor IR 即时渲染)
    ============================================================ */
-.pe-root { max-width: 860px; margin: 0 auto; padding: 16px 14px 100px; font-family: -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+.pe-root { max-width: 940px; margin: 0 auto; padding: 14px 16px 100px; font-family: -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
 .pe-gate { padding: 160px 24px; text-align: center; color: #555; font-size: 15px; }
 .pe-gate a { color: #0085a1; }
 
@@ -44,8 +44,9 @@
 .pe-date-row input { border: 1px solid #ddd; border-radius: 6px; padding: 3px 8px; font-size: 12.5px; color: #555; }
 
 /* Vditor 容器 */
-#pe-editor { border-radius: 12px; overflow: hidden; border: 1px solid #e6e6e6; }
+#pe-editor { border: none; border-radius: 0; overflow: visible; }
 #pe-editor .vditor { border: none; }
+#pe-editor .vditor-toolbar { border-bottom: 1px solid #eee; background: #fff; }
 
 /* 状态 */
 .pe-status { min-height: 20px; margin-top: 12px; font-size: 13px; color: #666; line-height: 1.9; }
