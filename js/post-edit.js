@@ -176,6 +176,7 @@
     var h = Math.max(360, window.innerHeight - 320);
     vd = new Vditor('pe-editor', {
       mode: 'ir',
+      lang: 'zh_CN',
       value: value || '',
       cdn: '/vditor',
       height: h,
