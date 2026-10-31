@@ -1,6 +1,6 @@
 ---
 layout:       post
-title:        "Token 不够用？亲测 4 招，从此用不完"
+title: "Token 不够用？亲测 4 招，从此用不完"
 author:       "PHH"
 header-style: text
 catalog:      true
@@ -8,6 +8,8 @@ tags:
     - 开源分享
     - 前沿科技
     - AI
+tags:
+    - 开源分享
 ---
 
 <div class="post-toc" style="background:#f7f9fb;border:1px solid #e3e8ee;border-left:4px solid #0a84ff;border-radius:8px;padding:14px 18px 10px;margin:8px 0 28px;">
@@ -22,7 +24,7 @@ tags:
 </ul>
 </div>
 
-最近才算清自己一天到底烧了多少 token：七天 16 亿，平均每天 2 亿，看得我都有点肉疼。烧了这么多，自然也摸出点省 token 的门道，今天全部分享出来，亲测有效。废话不多说，直接上干货。
+最近才算清自己一天到底烧了多少 token：七天 16 亿，平均每天 2 亿，看得我叫那个触目惊心。烧了这么多，自然也摸出点省 token 的门道，今天全部分享出来，亲测有效。废话不多说，直接上干货。
 
 ## 一、先摸清你的 token 账单
 
