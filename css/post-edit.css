@@ -48,6 +48,19 @@
 #pe-editor .vditor { border: none; }
 #pe-editor .vditor-toolbar { border-bottom: 1px solid #eee; background: #fff; }
 
+/* 简易模式 */
+.pe-ta {
+  display: block; width: 100%; box-sizing: border-box; min-height: 55vh;
+  border: 1px solid #e2e2e2; border-radius: 10px; padding: 12px 14px;
+  font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+  font-size: 14px; line-height: 1.7; color: #111; background: #fcfdfe; resize: vertical;
+}
+.pe-fallback-note {
+  margin: 0 0 10px; padding: 9px 12px; border-radius: 8px;
+  background: #fff8e6; border: 1px solid #f0d9a0; color: #8a6d1f; font-size: 12.5px;
+}
+.pe-fallback-note a { color: #0085a1; margin-left: 10px; }
+
 /* 解密/加载占位 */
 .pe-loading { padding: 40px 0; text-align: center; color: #999; font-size: 13px; letter-spacing: .04em; }
 

@@ -170,9 +170,15 @@
   }
 
   /* ---------------- Vditor(IR 即时渲染) ---------------- */
+  var fbTimer = null, fbWatch = null, taEl = null;
   function initEditor(value) {
     if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
-    $('pe-editor').innerHTML = '';
+    if (fbTimer) { clearTimeout(fbTimer); fbTimer = null; }
+    if (fbWatch) { clearInterval(fbWatch); fbWatch = null; }
+    if (taEl) { taEl = null; }
+    st.fallback = false;
+    st.origValue = value || '';
+    $('pe-editor').innerHTML = '<div class="pe-loading" id="pe-loading">编辑器加载中…(首次需下载渲染引擎,请稍候)</div>';
     var h = Math.max(420, window.innerHeight - 250);
     vd = new Vditor('pe-editor', {
       mode: 'ir',
@@ -191,8 +197,62 @@
       ],
       upload: { handler: uploadFiles },
       preview: { hljs: { style: 'github' } },
+      after: function () { removeLoading(); },
       input: function () { markDirty(); }
     });
+    /* 引擎迟迟不出现(网络慢)→ 先给可用的简易 Markdown 编辑器,引擎就绪且没动过就自动切回 */
+    fbTimer = setTimeout(function () {
+      if (document.querySelector('#pe-editor .vditor')) return;
+      enterFallback();
+      fbWatch = setInterval(function () {
+        if (!document.querySelector('#pe-editor .vditor')) return;
+        clearInterval(fbWatch); fbWatch = null;
+        if (st.taDirty) return;
+        leaveFallback();
+      }, 1500);
+    }, 6000);
+  }
+  function removeLoading() {
+    var el = document.getElementById('pe-loading');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+  function enterFallback() {
+    if (st.fallback) return;
+    st.fallback = true;
+    st.taDirty = false;
+    var box = $('pe-editor');
+    box.innerHTML = '';
+    taEl = document.createElement('textarea');
+    taEl.className = 'pe-ta';
+    taEl.value = st.origValue;
+    taEl.spellcheck = false;
+    taEl.addEventListener('input', function () { st.taDirty = true; markDirty(); });
+    var note = document.createElement('div');
+    note.className = 'pe-fallback-note';
+    note.innerHTML = '渲染引擎加载较慢,已切换到简易 Markdown 模式(内容不受影响,可直接编辑保存)。' +
+      '<a href="#" id="pe-retry">重试完整编辑器</a>';
+    box.appendChild(note);
+    box.appendChild(taEl);
+    var rt = document.getElementById('pe-retry');
+    if (rt) rt.addEventListener('click', function (e) { e.preventDefault(); location.reload(); });
+    setStatus('简易模式 · 引擎加载完后会自动切回完整编辑器', '');
+  }
+  function leaveFallback() {
+    if (!st.fallback) return;
+    st.fallback = false;
+    var box = $('pe-editor');
+    var note = box.querySelector('.pe-fallback-note');
+    if (note) note.parentNode.removeChild(note);
+    if (taEl && taEl.parentNode) taEl.parentNode.removeChild(taEl);
+    if (taEl && vd && typeof vd.setValue === 'function' && taEl.value !== st.origValue) {
+      try { vd.setValue(taEl.value); } catch (e) {}
+    }
+    taEl = null;
+    setStatus('完整编辑器已就绪 · 光标所在行显示源码,移开自动渲染', '');
+  }
+  function getBody() {
+    if (st.fallback && taEl) return String(taEl.value || '');
+    return String((vd && vd.getValue && vd.getValue()) || '');
   }
   /* 只在宽度变化(转屏)时调整编辑器;软键盘/地址栏引起的高度抖动直接忽略,避免边打字边重排 */
   var lastW = window.innerWidth, rzTimer = null;
@@ -260,9 +320,9 @@
     el.appendChild(b);
   }
   function save() {
-    if (!vd || st.busy) return;
+    if (st.busy || (!vd && !st.fallback)) return;
     if (!token()) { setStatus('还没有配置 GitHub Token,<a href="/admin/">去管理员页</a>填一次。', 'err'); return; }
-    var body = String(vd.getValue() || '').replace(/[\s\n]+$/, '');
+    var body = getBody().replace(/[\s\n]+$/, '');
     var title = titleIn.value.trim() || '未命名';
     var tags = collectTags();
     st.busy = true;
