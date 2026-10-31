@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vditor 诊断</title>
+<link rel="stylesheet" href="/vditor/dist/index.css">
+<style>body{font-family:sans-serif;padding:10px;} #diag{color:#c00;white-space:pre-wrap;font-size:12px;background:#fff;padding:8px;}</style>
+</head>
+<body>
+<pre id="diag">=== 诊断开始 ===</pre>
+<div id="ed"></div>
+<script>
+var t0 = Date.now();
+var D = document.getElementById('diag');
+function log(s){ D.textContent += '[' + (Date.now()-t0) + 'ms] ' + s + '\n'; }
+window.onerror = function(m, s, l){ log('ONERROR ' + m + ' @' + s + ':' + l); };
+window.addEventListener('unhandledrejection', function(e){ log('REJECT ' + ((e.reason&&e.reason.message)||e.reason)); });
+log('页面开始');
+</script>
+<script src="/vditor/dist/index.min.js" onerror="log('index.min.js 加载失败')"></script>
+<script>
+log('index.min.js 已执行, Vditor=' + typeof Vditor);
+try {
+  var v = new Vditor('ed', {
+    mode: 'ir',
+    value: '# 标题测试\n\n段落。',
+    cdn: '/vditor',
+    height: 260,
+    cache: { enable: false }
+  });
+  log('构造函数已返回');
+} catch (e) { log('THROW ' + e.message); }
+var checks = [200, 600, 1500, 3000, 6000, 10000, 15000];
+checks.forEach(function(ms){
+  setTimeout(function(){
+    var box = document.querySelector('#ed .vditor');
+    var ir = document.querySelector('#ed .vditor-ir');
+    log('检查: .vditor=' + (box ? 'YES' : 'no') +
+        ' | toolbar=' + (document.querySelector('#ed .vditor-toolbar') ? 'YES' : 'no') +
+        ' | ir=' + (ir ? 'YES' : 'no') +
+        ' | 内容=' + JSON.stringify(((ir && ir.textContent) || '').trim().slice(0, 40)) +
+        ' | Lute=' + (window.Lute ? 'YES' : 'no'));
+  }, ms);
+});
+</script>
+</body>
+</html>
