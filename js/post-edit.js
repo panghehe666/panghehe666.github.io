@@ -194,11 +194,15 @@
       input: function () { markDirty(); }
     });
   }
+  /* 只在宽度变化(转屏)时调整编辑器;软键盘/地址栏引起的高度抖动直接忽略,避免边打字边重排 */
+  var lastW = window.innerWidth, rzTimer = null;
   window.addEventListener('resize', function () {
-    if (!vd) return;
-    try {
-      if (typeof vd.resize === 'function') vd.resize();
-    } catch (e) {}
+    if (!vd || window.innerWidth === lastW) return;
+    lastW = window.innerWidth;
+    if (rzTimer) clearTimeout(rzTimer);
+    rzTimer = setTimeout(function () {
+      try { if (typeof vd.resize === 'function') vd.resize(); } catch (e) {}
+    }, 260);
   });
 
   /* ---------------- 加载 ---------------- */
@@ -219,15 +223,16 @@
         st.private = !!fmGet(pf.fm, 'private_cipher');
         if (st.private) {
           nameEl.textContent = '🔒 ' + st.file;
-          initEditor('');
+          $('pe-editor').innerHTML = '<div class="pe-loading">正在解密…</div>';
           setStatus('私密文章:正在解密…' + spin(), 'busy');
-          var dec = (window.PrivateCrypto && PrivateCrypto.decryptWithSession)
-            ? PrivateCrypto.decryptWithSession(fmGet(pf.fm, 'private_cipher'))
+          var dec = (window.PrivateCrypto && window.PrivateCrypto.decryptWithSession)
+            ? window.PrivateCrypto.decryptWithSession(fmGet(pf.fm, 'private_cipher'))
             : Promise.reject(new Error('PrivateCrypto 未加载'));
           dec.then(function (plain) {
             initEditor(plain);
             setStatus('🔒 私密文章:已解密为明文编辑,保存时自动重新加密', '');
           }).catch(function (e) {
+            initEditor('');
             setStatus('私密文章解密失败:' + esc(e.message) + ' · 先到 <a href="/admin/">/admin/</a> 用管理员密码登录一次,再回来编辑。', 'err');
           });
         } else {
