@@ -170,12 +170,10 @@
   }
 
   /* ---------------- Vditor(IR 即时渲染) ---------------- */
-  var fbTimer = null, fbWatch = null, taEl = null;
+  var taEl = null;
   function initEditor(value) {
     if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
-    if (fbTimer) { clearTimeout(fbTimer); fbTimer = null; }
-    if (fbWatch) { clearInterval(fbWatch); fbWatch = null; }
-    if (taEl) { taEl = null; }
+    taEl = null;
     st.fallback = false;
     st.origValue = value || '';
     $('pe-editor').innerHTML = '<div class="pe-loading" id="pe-loading">编辑器加载中…(首次需下载渲染引擎,请稍候)</div>';
@@ -200,76 +198,10 @@
       after: function () { removeLoading(); },
       input: function () { markDirty(); }
     });
-    /* 引擎迟迟不出现(网络慢)→ 先给可用的简易 Markdown 编辑器,引擎就绪且没动过就自动切回 */
-    fbTimer = setTimeout(function () {
-      if (document.querySelector('#pe-editor .vditor')) return;
-      enterFallback();
-      fbWatch = setInterval(function () {
-        if (!document.querySelector('#pe-editor .vditor')) return;
-        clearInterval(fbWatch); fbWatch = null;
-        if (st.taDirty) return;
-        leaveFallback();
-      }, 1500);
-    }, 6000);
   }
   function removeLoading() {
     var el = document.getElementById('pe-loading');
     if (el && el.parentNode) el.parentNode.removeChild(el);
-  }
-  function enterFallback() {
-    if (st.fallback) return;
-    st.fallback = true;
-    st.taDirty = false;
-    var box = $('pe-editor');
-    box.innerHTML = '';
-    taEl = document.createElement('textarea');
-    taEl.className = 'pe-ta';
-    taEl.value = st.origValue;
-    taEl.spellcheck = false;
-    taEl.addEventListener('input', function () { st.taDirty = true; markDirty(); });
-    var note = document.createElement('div');
-    note.className = 'pe-fallback-note';
-    note.innerHTML = '渲染引擎加载较慢,已切换到简易 Markdown 模式(内容不受影响,可直接编辑保存)。' +
-      '<a href="#" id="pe-retry">重试完整编辑器</a>';
-    box.appendChild(note);
-    box.appendChild(taEl);
-    var rt = document.getElementById('pe-retry');
-    if (rt) rt.addEventListener('click', function (e) { e.preventDefault(); location.reload(); });
-    setStatus('简易模式 · 引擎加载完后会自动切回完整编辑器', '');
-  }
-  function leaveFallback() {
-    if (!st.fallback) return;
-    st.fallback = false;
-    var box = $('pe-editor');
-    var note = box.querySelector('.pe-fallback-note');
-    if (note) note.parentNode.removeChild(note);
-    if (taEl && taEl.parentNode) taEl.parentNode.removeChild(taEl);
-    if (taEl && vd && typeof vd.setValue === 'function' && taEl.value !== st.origValue) {
-      try { vd.setValue(taEl.value); } catch (e) {}
-    }
-    taEl = null;
-    setStatus('完整编辑器已就绪 · 光标所在行显示源码,移开自动渲染', '');
-  }
-  /* 普通编辑模式(加密文章专用):纯 textarea,不加载 Vditor/IR 引擎 */
-  function initPlain(value) {
-    if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
-    if (fbTimer) { clearTimeout(fbTimer); fbTimer = null; }
-    if (fbWatch) { clearInterval(fbWatch); fbWatch = null; }
-    st.fallback = true;
-    st.taDirty = false;
-    st.origValue = value || '';
-    var box = $('pe-editor');
-    box.innerHTML = '';
-    var note = document.createElement('div');
-    note.className = 'pe-plain-note';
-    note.textContent = '普通编辑模式:直接编辑 Markdown 源码,保存时自动加密。';
-    taEl = document.createElement('textarea');
-    taEl.className = 'pe-ta';
-    taEl.value = value || '';
-    taEl.spellcheck = false;
-    taEl.addEventListener('input', function () { st.taDirty = true; markDirty(); });
-    box.appendChild(note);
-    box.appendChild(taEl);
   }
   function getBody() {
     if (st.fallback && taEl) return String(taEl.value || '');
