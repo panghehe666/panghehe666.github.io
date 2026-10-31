@@ -56,8 +56,8 @@
     </a>
     {% endif %}
     <div class="pa-toast" id="pa-toast"></div>
-    <link rel="stylesheet" href="{{ '/css/post-admin.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
-    <script src="{{ '/js/post-admin.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}" defer></script>
+    <link rel="stylesheet" href="{{ '/css/post-admin.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}">
+    <script src="{{ '/js/post-admin.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 {% endif %}
 
     {% include footer.html %}
