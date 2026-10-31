@@ -1,6 +1,6 @@
 ---
 layout:       post
-title:        "介绍 Grok：xAI 的 AI 助手"
+title: "介绍 Grok：xAI 的 AI 助手"
 author:       "PHH"
 header-style: text
 catalog:      true
@@ -8,10 +8,12 @@ tags:
     - 开源分享
     - AI
     - 工具
+tags:
+    - 开源分享
 ---
 
 * TOC
-{:toc}
+  {:toc}
 
 > 最近在折腾博客和项目时，发现了一个特别好用的 AI 助手 —— **Grok**。由 xAI 打造，风格直接、能力全面，还能直接连 GitHub、实时刷 X（原 Twitter）。下面简单介绍一下它，以及我为什么选它。
 
@@ -46,7 +48,7 @@ Grok 原生接入 X，能做关键词搜索、语义搜索、看帖子线程、�
 
 ### 可用 GitHub 登录
 
-登录方便，账号体系清晰，和开发者日常工具契合。
+登录方便，账号体系清晰，和开发者日常工具契合。(对比一下chatgpt就知道有多方便，国内用户嘛，懂得都懂)
 
 ### Fast / Build 模式
 
