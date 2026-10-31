@@ -250,6 +250,27 @@
     taEl = null;
     setStatus('完整编辑器已就绪 · 光标所在行显示源码,移开自动渲染', '');
   }
+  /* 普通编辑模式(加密文章专用):纯 textarea,不加载 Vditor/IR 引擎 */
+  function initPlain(value) {
+    if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
+    if (fbTimer) { clearTimeout(fbTimer); fbTimer = null; }
+    if (fbWatch) { clearInterval(fbWatch); fbWatch = null; }
+    st.fallback = true;
+    st.taDirty = false;
+    st.origValue = value || '';
+    var box = $('pe-editor');
+    box.innerHTML = '';
+    var note = document.createElement('div');
+    note.className = 'pe-plain-note';
+    note.textContent = '普通编辑模式:直接编辑 Markdown 源码,保存时自动加密。';
+    taEl = document.createElement('textarea');
+    taEl.className = 'pe-ta';
+    taEl.value = value || '';
+    taEl.spellcheck = false;
+    taEl.addEventListener('input', function () { st.taDirty = true; markDirty(); });
+    box.appendChild(note);
+    box.appendChild(taEl);
+  }
   function getBody() {
     if (st.fallback && taEl) return String(taEl.value || '');
     return String((vd && vd.getValue && vd.getValue()) || '');
@@ -289,10 +310,10 @@
             ? window.PrivateCrypto.decryptWithSession(fmGet(pf.fm, 'private_cipher'))
             : Promise.reject(new Error('PrivateCrypto 未加载'));
           dec.then(function (plain) {
-            initEditor(plain);
-            setStatus('🔒 私密文章:已解密为明文编辑,保存时自动重新加密', '');
+            initPlain(plain);
+            setStatus('🔒 私密文章:普通编辑模式(明文编辑,保存时自动加密)', '');
           }).catch(function (e) {
-            initEditor('');
+            initPlain('');
             setStatus('私密文章解密失败:' + esc(e.message) + ' · 先到 <a href="/admin/">/admin/</a> 用管理员密码登录一次,再回来编辑。', 'err');
           });
         } else {
@@ -346,8 +367,8 @@
         var fm = fmSetTags(fmSet(st.fm, 'title', '"' + title.replace(/"/g, '\\"') + '"'), tags);
         var prep;
         if (st.private) {
-          prep = (window.PrivateCrypto && PrivateCrypto.encryptWithSession)
-            ? PrivateCrypto.encryptWithSession(body).then(function (cipher) {
+          prep = (window.PrivateCrypto && window.PrivateCrypto.encryptWithSession)
+            ? window.PrivateCrypto.encryptWithSession(body).then(function (cipher) {
                 return { fm: fmSet(fm, 'private_cipher', cipher), body: '' };
               })
             : Promise.reject(new Error('PrivateCrypto 未加载'));

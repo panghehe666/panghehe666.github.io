@@ -51,7 +51,7 @@
 /* 简易模式 */
 .pe-ta {
   display: block; width: 100%; box-sizing: border-box; min-height: 55vh;
-  border: 1px solid #e2e2e2; border-radius: 10px; padding: 12px 14px;
+  border: 1px solid #ededed; border-radius: 10px; padding: 12px 14px;
   font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
   font-size: 14px; line-height: 1.7; color: #111; background: #fcfdfe; resize: vertical;
 }
@@ -60,6 +60,12 @@
   background: #fff8e6; border: 1px solid #f0d9a0; color: #8a6d1f; font-size: 12.5px;
 }
 .pe-fallback-note a { color: #0085a1; margin-left: 10px; }
+
+.pe-plain-note {
+  margin: 0 0 10px; padding: 8px 12px; border-radius: 8px;
+  background: #f4fafb; border: 1px solid #dbeef2; color: #4a6b70; font-size: 12.5px;
+}
+.pe-plain-note a { color: #0085a1; }
 
 /* 解密/加载占位 */
 .pe-loading { padding: 40px 0; text-align: center; color: #999; font-size: 13px; letter-spacing: .04em; }
