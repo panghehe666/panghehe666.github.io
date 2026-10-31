@@ -1,6 +1,7 @@
 /* ============================================================
-   PHH Blog · 文章管理悬浮按钮(仅管理员可见)
-   笔 = 编辑(右下)  × = 删除(左上)  ＋ = 写新文章(首页右下)
+   PHH Blog · 悬浮管理按钮(仅管理员)
+   文章页:✏️ → /edit/ 编辑 · × → 删除
+   首页:＋ → /edit/ 写新文章
    ============================================================ */
 .pa-fab {
   position: fixed; z-index: 1040; display: none;
@@ -21,52 +22,7 @@ html.is-admin .pa-fab { display: flex; }
 .pa-del { top: 80px; left: 16px; background: #fff; color: #c0392b; border: 1px solid #c0392b; }
 .pa-del:hover { background: #c0392b; color: #fff; }
 
-/* 编辑面板 */
-#pa-panel { position: fixed; inset: 0; z-index: 1050; display: none; }
-#pa-panel.on { display: block; }
-.pa-scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); }
-.pa-card {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: min(680px, calc(100% - 24px)); max-height: calc(100% - 40px); overflow: auto;
-  background: #fff; color: #111; border-radius: 14px; padding: 22px 22px 18px;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, .4); box-sizing: border-box;
-}
-.pa-card h3 { margin: 0 0 4px; font-size: 16px; }
-.pa-sub { margin: 0 0 14px; font-size: 12.5px; color: #777; line-height: 1.6; }
-.pa-sub a { color: #0085a1; }
-.pa-sub.warn { color: #9a6b00; }
-.pa-card label { display: block; font-size: 12px; color: #666; margin-bottom: 12px; }
-.pa-card input, .pa-card textarea {
-  display: block; width: 100%; margin-top: 6px; padding: 9px 10px;
-  border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #111;
-  background: #fff; box-sizing: border-box; font-family: inherit;
-}
-.pa-card textarea { min-height: 240px; resize: vertical; line-height: 1.6; }
-.pa-card input:disabled { color: #999; background: #f5f5f5; }
-.pa-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
-.pa-btn {
-  padding: 10px 18px; border-radius: 8px; border: 1px solid #111; background: #111; color: #fff;
-  font-size: 13px; cursor: pointer; transition: .15s;
-}
-.pa-btn:hover { background: #333; }
-.pa-btn.light { background: #fff; color: #111; }
-.pa-btn.danger { background: #fff; color: #c0392b; border-color: #c0392b; }
-.pa-btn.danger:hover { background: #c0392b; color: #fff; }
-.pa-btn.undo { background: #fff; color: #1a7f37; border-color: #1a7f37; }
-.pa-btn.undo:hover { background: #1a7f37; color: #fff; }
-.pa-status { min-height: 22px; margin-top: 12px; font-size: 13px; color: #666; line-height: 1.9; }
-.pa-status.busy { color: #9a6b00; }
-.pa-status.ok { color: #1a7f37; }
-.pa-status.err { color: #c0392b; }
-.pa-status .pa-btn { padding: 4px 12px; margin-left: 10px; font-size: 12px; }
-.pa-spin {
-  display: inline-block; width: 12px; height: 12px; margin-left: 6px; vertical-align: -2px;
-  border: 2px solid rgba(0, 0, 0, .18); border-top-color: currentColor; border-radius: 50%;
-  animation: paspin .7s linear infinite;
-}
-@keyframes paspin { to { transform: rotate(360deg); } }
-
-/* 轻提示(删除等) */
+/* 轻提示 */
 .pa-toast {
   position: fixed; top: 80px; left: 50%; z-index: 3000;
   transform: translate(-50%, -12px); padding: 10px 16px;
@@ -74,9 +30,24 @@ html.is-admin .pa-fab { display: flex; }
   opacity: 0; pointer-events: none; transition: .25s; line-height: 1.9;
 }
 .pa-toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
-.pa-toast .pa-btn { padding: 4px 12px; margin-left: 10px; font-size: 12px; border-color: #fff; background: transparent; color: #fff; }
+.pa-toast .pa-btn { padding: 4px 12px; margin-left: 10px; font-size: 12px; border: 1px solid #fff; background: transparent; color: #fff; border-radius: 6px; cursor: pointer; }
+
+/* 首页列表上的管理工具(仅管理员) */
+.adm-post-tools { display: none; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; }
+html.is-admin .adm-post-tools { display: flex; }
+.adm-post-tools .adm-status { color: #999; }
+.adm-post-tools .adm-status.lock { color: #9a6b00; }
+.adm-post-tools .adm-pen, .adm-post-tools .adm-del {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 8px; border: 1px solid #ddd; background: #fff;
+  color: #555; cursor: pointer; text-decoration: none; transition: .15s;
+}
+.adm-post-tools .adm-pen:hover { border-color: #0085a1; color: #0085a1; }
+.adm-post-tools .adm-del { color: #c0392b; border-color: #eec9c9; }
+.adm-post-tools .adm-del:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
+.adm-post-tools svg { width: 13px; height: 13px; }
+.adm-hidden { display: none !important; }
 
 @media (max-width: 640px) {
   .pa-del { top: 74px; left: 10px; }
-  .pa-card { padding: 18px 14px 14px; }
 }

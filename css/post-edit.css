@@ -1,0 +1,66 @@
+/* ============================================================
+   PHH Blog · 编辑页(基于 Vditor IR 即时渲染)
+   ============================================================ */
+.pe-root { max-width: 860px; margin: 0 auto; padding: 16px 14px 100px; font-family: -apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+.pe-gate { padding: 160px 24px; text-align: center; color: #555; font-size: 15px; }
+.pe-gate a { color: #0085a1; }
+
+/* 顶栏 */
+.pe-bar {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; margin: 0 -14px 16px;
+  background: rgba(255,255,255,.94); backdrop-filter: blur(10px);
+  border-bottom: 1px solid #eee;
+}
+.pe-back { color: #555; text-decoration: none; font-size: 13px; white-space: nowrap; }
+.pe-back:hover { color: #0085a1; }
+.pe-name { flex: 1; min-width: 60px; font-size: 12.5px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-spacer { flex: 1; }
+.pe-dirty { display: none; color: #9a6b00; font-size: 12px; }
+.pe-dirty.on { display: inline; }
+.pe-btn {
+  padding: 7px 14px; border-radius: 8px; border: 1px solid #111; background: #111; color: #fff;
+  font-size: 13px; cursor: pointer; transition: .15s; white-space: nowrap;
+}
+.pe-btn:hover { background: #333; }
+.pe-btn.light { background: #fff; color: #111; }
+.pe-btn.danger { background: #fff; color: #c0392b; border-color: #c0392b; }
+.pe-btn.danger:hover { background: #c0392b; color: #fff; }
+.pe-btn.undo { background: #fff; color: #1a7f37; border-color: #1a7f37; }
+.pe-btn:disabled { opacity: .5; cursor: default; }
+
+/* 元信息 */
+.pe-meta { border-bottom: 1px solid #eee; padding-bottom: 14px; margin-bottom: 8px; }
+#pe-title {
+  display: block; width: 100%; border: none; outline: none; background: transparent;
+  font-size: 32px; font-weight: 800; line-height: 1.25; color: #111; padding: 0 0 6px;
+  border-bottom: 1px solid transparent;
+}
+#pe-title:hover, #pe-title:focus { border-bottom-color: #ddd; }
+.pe-tags-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: #999; }
+#pe-tags { flex: 1; border: none; outline: none; background: transparent; font-size: 13px; color: #0085a1; padding: 2px 0; }
+.pe-date-row { margin-top: 8px; font-size: 12.5px; color: #aaa; display: flex; align-items: center; gap: 8px; }
+.pe-date-row input { border: 1px solid #ddd; border-radius: 6px; padding: 3px 8px; font-size: 12.5px; color: #555; }
+
+/* Vditor 容器 */
+#pe-editor { border-radius: 12px; overflow: hidden; border: 1px solid #e6e6e6; }
+#pe-editor .vditor { border: none; }
+
+/* 状态 */
+.pe-status { min-height: 20px; margin-top: 12px; font-size: 13px; color: #666; line-height: 1.9; }
+.pe-status.busy { color: #9a6b00; }
+.pe-status.ok { color: #1a7f37; }
+.pe-status.err { color: #c0392b; }
+.pe-status .pe-btn { padding: 3px 12px; margin-left: 10px; font-size: 12px; }
+.pe-spin {
+  display: inline-block; width: 12px; height: 12px; margin-left: 6px; vertical-align: -2px;
+  border: 2px solid rgba(0,0,0,.18); border-top-color: currentColor; border-radius: 50%;
+  animation: pespin .7s linear infinite;
+}
+@keyframes pespin { to { transform: rotate(360deg); } }
+
+@media (max-width: 640px) {
+  #pe-title { font-size: 26px; }
+  .pe-btn { padding: 7px 11px; font-size: 12.5px; }
+}

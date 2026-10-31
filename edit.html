@@ -1,0 +1,42 @@
+---
+layout: default
+title: 编辑文章
+description: "仅限管理员"
+permalink: /edit/
+nav-style: invert
+---
+
+<div class="pe-gate" id="pe-gate" style="display:none;">
+  <p>这是编辑页,仅管理员可用。</p>
+  <p><a href="/admin/">去管理员页登录</a></p>
+</div>
+
+<div class="pe-root" id="pe-root">
+  <div class="pe-bar">
+    <a class="pe-back" id="pe-back" href="{{ site.baseurl }}/">← 返回</a>
+    <span class="pe-name" id="pe-name"></span>
+    <span class="pe-dirty" id="pe-dirty">● 未保存</span>
+    <span class="pe-spacer"></span>
+    <button class="pe-btn light" id="pe-preview" type="button">预览 ↗</button>
+    <button class="pe-btn" id="pe-save" type="button">保存</button>
+    <button class="pe-btn danger" id="pe-del" type="button">删除</button>
+  </div>
+
+  <div class="pe-meta">
+    <input id="pe-title" type="text" placeholder="文章标题" autocomplete="off" spellcheck="false">
+    <div class="pe-tags-row">
+      标签:<input id="pe-tags" type="text" placeholder="开源分享, 前沿科技" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="pe-date-row">
+      日期:<input id="pe-date" type="date">
+    </div>
+  </div>
+
+  <div id="pe-editor"></div>
+  <div class="pe-status" id="pe-status"></div>
+</div>
+
+<link rel="stylesheet" href="{{ '/vditor/dist/index.css' | prepend: site.baseurl }}">
+<link rel="stylesheet" href="{{ '/css/post-edit.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
+<script src="{{ '/vditor/dist/index.min.js' | prepend: site.baseurl }}" defer></script>
+<script src="{{ '/js/post-edit.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}" defer></script>
