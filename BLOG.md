@@ -67,3 +67,4 @@ tags:
   2. 部署 `_tools/deepseek-proxy.js` 到 Cloudflare Worker，把地址填进 `_config.yml` 的
      `ai_chat_proxy`，访客就免填 Key
 - 关闭整个模块：`_config.yml` 里 `ai_chat: false`
+
