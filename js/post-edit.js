@@ -158,15 +158,17 @@
   function uploadFiles(files) {
     var list = Array.prototype.slice.call(files || []);
     if (!list.length) return Promise.resolve({ msg: '', code: 0, data: { errFiles: [], succMap: {} } });
-    var base = 'img/in-post/' + (st.url && st.file ? st.file.slice(11, -3) : slugify(titleIn.value || 'post')) + '/';
+    var slug = (st.url && st.file ? st.file.slice(11, -3) : slugify(titleIn.value || 'post'));
     var succMap = {}, errFiles = [];
     return Promise.all(list.map(function (f) {
       return readAsDataURL(f).then(function (dataUrl) {
         var b64 = String(dataUrl).split(',')[1] || '';
         var name = Date.now() + '-' + String(f.name || 'image.png').replace(/[^\w.\u4e00-\u9fff-]/g, '_');
-        var path = base + name;
-        return apiPutRawB64(path, b64, 'upload image: ' + path).then(function () {
-          succMap[f.name || name] = '/img/in-post/' + base.slice('img/in-post/'.length) + name;
+        /* 图片进 img/,其余文件(文档/压缩包/音视频等)进 files/ */
+        var isImg = /^image\//.test(f.type || '') || /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(f.name || '');
+        var path = (isImg ? 'img/in-post/' : 'files/in-post/') + slug + '/' + name;
+        return apiPutRawB64(path, b64, 'upload file: ' + path).then(function () {
+          succMap[f.name || name] = '/' + path;
         });
       }).catch(function () { errFiles.push(f.name || 'unknown'); });
     })).then(function () {
@@ -195,14 +197,17 @@
       height: h,
       cache: { enable: false },
       toolbar: [
+        'upload', 'undo', 'redo', '|',
         'headings', 'bold', 'italic', 'strike', 'link', '|',
         'list', 'ordered-list', 'check', 'quote', 'line', 'code', 'inline-code', '|',
         'table', '|',
-        'upload', '|',
-        'undo', 'redo', '|',
         'edit-mode', 'preview', 'fullscreen'
       ],
-      upload: { handler: uploadFiles },
+      upload: {
+        handler: uploadFiles,
+        accept: 'image/*,video/*,audio/*,.pdf,.txt,.md,.markdown,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.apk',
+        multiple: true
+      },
       preview: { hljs: { style: 'github' } },
       after: function () { $('pe-editor').classList.remove('pe-booting'); removeLoading(); },
       input: function () { markDirty(); }
