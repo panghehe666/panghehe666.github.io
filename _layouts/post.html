@@ -107,7 +107,7 @@ layout: default
     var marker = null;
     for (var i = 0; i < paras.length; i++) {
       var t = paras[i].textContent.replace(/\s+/g, '');
-      if (t === '[Toc]' || t === '[ToC]' || t === '[TOC]') { marker = paras[i]; break; }
+      if (t.toLowerCase() === '[toc]') { marker = paras[i]; break; }
     }
     if (!marker) return;
     var heads = container.querySelectorAll('h1,h2,h3,h4,h5,h6');
