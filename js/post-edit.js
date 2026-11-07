@@ -157,9 +157,10 @@
   }
   function uploadFiles(files) {
     var list = Array.prototype.slice.call(files || []);
-    if (!list.length) return Promise.resolve({ msg: '', code: 0, data: { errFiles: [], succMap: {} } });
+    if (!list.length) return Promise.resolve();
     var slug = (st.url && st.file ? st.file.slice(11, -3) : slugify(titleIn.value || 'post'));
-    var succMap = {}, errFiles = [];
+    var errFiles = [];
+    setStatus('正在上传 ' + list.length + ' 个文件…' + spin(), 'busy');
     return Promise.all(list.map(function (f) {
       return readAsDataURL(f).then(function (dataUrl) {
         var b64 = String(dataUrl).split(',')[1] || '';
@@ -168,11 +169,28 @@
         var isImg = /^image\//.test(f.type || '') || /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(f.name || '');
         var path = (isImg ? 'img/in-post/' : 'files/in-post/') + slug + '/' + name;
         return apiPutRawB64(path, b64, 'upload file: ' + path).then(function () {
-          succMap[f.name || name] = '/' + path;
+          return { name: f.name || name, url: '/' + path, isImg: isImg };
         });
-      }).catch(function () { errFiles.push(f.name || 'unknown'); });
-    })).then(function () {
-      return { msg: '', code: 0, data: { errFiles: errFiles, succMap: succMap } };
+      }).catch(function () {
+        errFiles.push(f.name || 'unknown');
+        return null;
+      });
+    })).then(function (results) {
+      var uploaded = results.filter(Boolean);
+      /* Vditor 自定义 handler 不会处理 succMap,上传成功后必须主动写入正文 */
+      if (uploaded.length && vd && typeof vd.insertMD === 'function') {
+        var markdown = uploaded.map(function (item) {
+          var label = String(item.name).replace(/[\[\]]/g, '');
+          return (item.isImg ? '!' : '') + '[' + label + '](' + item.url + ')';
+        }).join('\n\n');
+        vd.insertMD(markdown + '\n\n');
+        markDirty();
+      }
+      if (errFiles.length) {
+        setStatus('部分文件上传失败:' + esc(errFiles.join(', ')), 'err');
+        return '上传失败:' + errFiles.join(', ');
+      }
+      setStatus('已上传并插入 ' + uploaded.length + ' 个文件 ✅', 'ok');
     });
   }
 
