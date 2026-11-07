@@ -77,13 +77,12 @@ ai_chat_proxy: ""
 
 
 # Analytics settings
-# Baidu Analytics
+# 私有站已停用全部第三方统计与广告脚本（AdSense / Google Analytics / ghbtns / fastclick）。
+# 原因：它们都是能读取浏览器 sessionStorage 的外部 JS，而登录后 DeepSeek Key 与
+# GitHub Token 就放在 sessionStorage 里。要恢复统计，先想清楚这个取舍。
 # ba_track_id: [your track id]
-
-
-# Google Analytics
-ga_track_id: "UA-49627206-1" # Format: UA-xxxxxx-xx
-ga_domain: panghehe666.github.io
+# ga_track_id: ""
+# ga_domain: ""
 
 
 # Sidebar settings
