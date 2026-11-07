@@ -85,13 +85,21 @@
     ]);
   }
 
-  /* ---------------- 密文格式判定与打包 ---------------- */
+  /* ---------------- 密文格式判定与打包 ----------------
+     v2 密文最终形态是 "PHH2:" + Base64(JSON)，而不是裸 JSON。
+     原因：private_cipher 要写进 YAML front matter，裸 JSON 以 { 开头
+     会被 YAML 当成 flow mapping 解析，直接导致整篇文章构建失败。
+     加前缀后整个值是 [A-Za-z0-9+/=:] 的普通标量，YAML / JSON / HTML 属性里都安全。
+     secrets.enc.json 是独立文件、不进 front matter，所以它保持裸 JSON 便于查看。 */
+  var V2_PREFIX = "PHH2:";
+
   function isV2(payload) {
-    return typeof payload === "string" && payload.charAt(0) === "{";
+    return typeof payload === "string" && payload.indexOf(V2_PREFIX) === 0;
   }
   function parseV2(payload) {
     try {
-      var o = JSON.parse(payload);
+      var raw = isV2(payload) ? atob(payload.slice(V2_PREFIX.length)) : payload;
+      var o = JSON.parse(raw);
       if (!o || o.v !== 2 || !o.s || !o.c) return null;
       return o;
     } catch (e) {
@@ -99,10 +107,21 @@
     }
   }
   function packV2(saltB64, ivBytes, cipherBytes) {
+    var json = JSON.stringify({
+      v: 2,
+      s: saltB64,
+      c: b64encode(concatBytes(ivBytes, cipherBytes)),
+    });
+    return V2_PREFIX + btoa(json);
+  }
+  /* 信封文件用：裸 JSON（带 salt / 密文 / 已配置项名 / 创建时间） */
+  function packEnvelope(saltB64, ivBytes, cipherBytes, names) {
     return JSON.stringify({
       v: 2,
       s: saltB64,
       c: b64encode(concatBytes(ivBytes, cipherBytes)),
+      k: names,
+      created: new Date().toISOString(),
     });
   }
 
@@ -210,7 +229,7 @@
       });
   }
 
-  /* 创建 / 更新信封。secrets = {deepseek, github}；返回信封 JSON 文本 */
+  /* 创建 / 更新信封。secrets = {deepseek, github}；返回信封 JSON 文本（裸 JSON，供文件使用） */
   function sealSecrets(password, secrets, saltB64) {
     var salt = saltB64 || b64encode(randomBytes(16));
     return deriveV2(password, salt).then(function (key) {
@@ -218,13 +237,7 @@
         var names = [];
         if (secrets.deepseek) names.push("deepseek");
         if (secrets.github) names.push("github");
-        return JSON.stringify({
-          v: 2,
-          s: salt,
-          c: b64encode(concatBytes(p.iv, p.cipher)),
-          k: names,
-          created: new Date().toISOString(),
-        });
+        return packEnvelope(salt, p.iv, p.cipher, names);
       });
     });
   }
@@ -259,7 +272,12 @@
       var env = parseV2(payload);
       var k2 = loadSessionKeyV2();
       if (!env || !k2) return Promise.reject(new Error("no key"));
-      /* 密文自带 salt：与本站 salt 一致时用缓存密钥，否则按该 salt 重新派生（需密码，故不支持） */
+      /* 密文自带 salt，必须与当前会话的站点 salt 一致；
+         不一致说明这条密文是用别的密码/别次初始化生成的，缓存密钥解不开。 */
+      var cur = load(K_SALT);
+      if (cur && env.s !== cur) {
+        return Promise.reject(new Error("salt mismatch：这条密文不是当前密码生成的"));
+      }
       return importKeyB64(k2).then(function (key) {
         return aesDecryptPacked(env.c, key);
       });
