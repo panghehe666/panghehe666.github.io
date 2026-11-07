@@ -13,11 +13,20 @@
 
   function isAdmin() {
     try {
+      if (window.PrivateCrypto && window.PrivateCrypto.isUnlocked && window.PrivateCrypto.isUnlocked()) return true;
+      if (sessionStorage.getItem('blog_admin') === '1') return true;
       return document.documentElement.classList.contains('is-admin') ||
         localStorage.getItem('blog_admin') === '1';
     } catch (e) { return false; }
   }
+  /* 取值顺序：管理员信封里的 GitHub Token > 本机手动填过的 Token */
   function token() {
+    try {
+      if (window.PrivateCrypto && window.PrivateCrypto.getSecret) {
+        var t = (window.PrivateCrypto.getSecret('github') || '').trim();
+        if (t) return t;
+      }
+    } catch (e) {}
     try { return (localStorage.getItem(TOKEN_KEY) || '').trim(); } catch (e) { return ''; }
   }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
