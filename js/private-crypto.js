@@ -346,6 +346,7 @@
     var post = document.querySelector("div.post-container");
     if (post) ensureHeadingIds(post);
     rebuildCatalog();
+    if (window.renderPostToc) window.renderPostToc(post || el);
   }
 
   function tryRevealEncryptedPosts() {

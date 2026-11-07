@@ -88,6 +88,70 @@ layout: default
     </div>
 </article>
 
+<script type="text/javascript">
+(function () {
+  function slugId(text, used) {
+    var base = String(text || '').trim().toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\u4e00-\u9fff-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'section';
+    var id = base, n = 2;
+    while (used[id]) { id = base + '-' + n; n++; }
+    used[id] = true;
+    return id;
+  }
+  window.renderPostToc = function (container) {
+    if (!container) return;
+    var paras = container.querySelectorAll('p');
+    var marker = null;
+    for (var i = 0; i < paras.length; i++) {
+      var t = paras[i].textContent.replace(/\s+/g, '');
+      if (t === '[Toc]' || t === '[ToC]' || t === '[TOC]') { marker = paras[i]; break; }
+    }
+    if (!marker) return;
+    var heads = container.querySelectorAll('h1,h2,h3,h4,h5,h6');
+    if (!heads.length) return;
+    var used = {};
+    heads.forEach(function (h) {
+      if (!h.id) h.id = slugId(h.textContent, used); else used[h.id] = true;
+    });
+    var wrap = document.createElement('div');
+    wrap.className = 'post-toc';
+    var rootUl = document.createElement('ul');
+    wrap.appendChild(rootUl);
+    var stack = [{ level: 0, ul: rootUl }];
+    heads.forEach(function (h) {
+      var level = parseInt(h.tagName.charAt(1), 10) || 1;
+      while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
+      if (level > stack[stack.length - 1].level) {
+        var last = stack[stack.length - 1].ul.lastElementChild;
+        var sub = document.createElement('ul');
+        if (last) last.appendChild(sub); else stack[stack.length - 1].ul.appendChild(sub);
+        stack.push({ level: level, ul: sub });
+      }
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      li.appendChild(a);
+      stack[stack.length - 1].ul.appendChild(li);
+    });
+    marker.parentNode.replaceChild(wrap, marker);
+  };
+  var run = function () { window.renderPostToc(document.querySelector('div.post-container')); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+})();
+</script>
+<style>
+  .post-toc { border: 1px solid #e8e8e8; background: #fafbfc; border-radius: 8px; padding: 12px 18px; margin: 0 0 20px; font-size: 15px; }
+  .post-toc ul { list-style: none; padding-left: 18px; margin: 4px 0; }
+  .post-toc > ul { padding-left: 0; }
+  .post-toc li { margin: 4px 0; }
+  .post-toc a { color: #337ab7; text-decoration: none; }
+  .post-toc a:hover { text-decoration: underline; }
+</style>
+
 {% if page.mathjax %}
   {% include mathjax_support.html %}
 {% endif %}
