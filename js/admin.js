@@ -3,6 +3,8 @@
 
   function isAdmin() {
     try {
+      if (window.PrivateCrypto && window.PrivateCrypto.isUnlocked && window.PrivateCrypto.isUnlocked()) return true;
+      if (sessionStorage.getItem(KEY) === "1") return true;
       return localStorage.getItem(KEY) === "1";
     } catch (e) {
       return false;
