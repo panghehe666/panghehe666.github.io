@@ -702,7 +702,7 @@ nav-style: invert
             var cm = fm.match(/^\s*private_cipher\s*:\s*(.+)$/m);
             if (!cm) { skipped++; return; }
             var cipher = cm[1].trim();
-            if (cipher.charAt(0) === "{") { skipped++; return; } /* 已是 v2 */
+            if (cipher.indexOf("PHH2:") === 0) { skipped++; return; } /* 已是 v2 */
             return PC.decryptLegacyWithPassword(cipher, oldPass).then(function (plain) {
               return PC.encryptWithSession(plain);
             }).then(function (newCipher) {
