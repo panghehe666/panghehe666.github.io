@@ -12,6 +12,21 @@
   /* 管理页 / 离线页不显示 */
   if (/^\/(admin|offline)(\/|$)/.test(location.pathname)) return;
 
+  /* 面向私有：未登录管理员时 AI 助手完全不存在——
+     不渲染悬浮球与面板、不加载索引、不发任何请求。
+     这里直接把整个组件从 DOM 里摘掉，而不是仅靠 CSS 隐藏。 */
+  function unlockedNow() {
+    try {
+      if (window.PrivateCrypto && window.PrivateCrypto.isUnlocked) return window.PrivateCrypto.isUnlocked();
+      if (window.PrivateCrypto && window.PrivateCrypto.loadSessionKey) return !!window.PrivateCrypto.loadSessionKey();
+    } catch (e) {}
+    return false;
+  }
+  if (!unlockedNow()) {
+    if (ROOT.parentNode) ROOT.parentNode.removeChild(ROOT);
+    return;
+  }
+
   var BASE = ROOT.getAttribute('data-base') || '';
   var CFG_PROXY = (ROOT.getAttribute('data-proxy') || '').trim();
   /* 每次构建换一个版本号：既躲开 GitHub Pages 的 10 分钟缓存，
@@ -38,9 +53,19 @@
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
+  /* 管理员信封里的 DeepSeek Key（登录时解出，存在 sessionStorage） */
+  function envelopeKey() {
+    try {
+      if (window.PrivateCrypto && window.PrivateCrypto.getSecret) {
+        return (window.PrivateCrypto.getSecret('deepseek') || '').trim();
+      }
+    } catch (e) {}
+    return '';
+  }
+  /* 取值顺序：信封里的 Key > 访客自己在设置页填的 Key > 站点配置的代理 */
   function cfg() {
     return {
-      key: lsGet(LS.key).trim(),
+      key: envelopeKey() || lsGet(LS.key).trim(),
       proxy: lsGet(LS.proxy).trim() || CFG_PROXY
     };
   }
