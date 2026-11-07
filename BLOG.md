@@ -62,9 +62,39 @@ tags:
 - 多轮省 token：历史里存的是**带正文的完整消息**，同一篇文章第二轮起不再重发（`alreadySent` / `fullSent` 判断），
   且历史是稳定前缀 → DeepSeek 前缀缓存命中；追问（以「那/再/这…」开头）会优先接着上一篇聊
 - 回答：DeepSeek `deepseek-chat`（「深入」开关切 `deepseek-reasoner`），SSE 流式
-- 两种接入方式：
-  1. 访客自己在面板「设置」里填 API Key（存 localStorage，只在本人浏览器）
-  2. 部署 `_tools/deepseek-proxy.js` 到 Cloudflare Worker，把地址填进 `_config.yml` 的
+- 面向私有：**未登录管理员时 AI 组件整个不存在**——`ai-chat.js` 开头检测到没解锁就把 `#ai-chat`
+  节点从 DOM 里摘掉并 return，不渲染悬浮球、不加载索引、不发任何请求；`default.html` 另有
+  `html:not(.is-admin) #ai-chat{display:none}` 兜住首屏闪烁
+- 三种接入方式（取值优先级从高到低）：
+  1. **密钥信封**（默认，见下节）：管理员登录后 `sessionStorage` 里的 DeepSeek Key 自动生效，无需任何配置
+  2. 访客自己在面板「设置」里填 API Key（存 localStorage，只在本人浏览器）
+  3. 部署 `_tools/deepseek-proxy.js` 到 Cloudflare Worker，把地址填进 `_config.yml` 的
      `ai_chat_proxy`，访客就免填 Key
 - 关闭整个模块：`_config.yml` 里 `ai_chat: false`
 
+## 密钥信封与管理员登录（2026-11 改造）
+
+**核心思路**：DeepSeek API Key 与 GitHub Token 用管理员密码加密后存进仓库的 `secrets.enc.json`。
+仓库公开也不要紧——没有密码它就是一段废 Base64。登录后一个密码同时解锁三样东西：
+私密文章解密、AI 助手、文章发布/改/删。
+
+- **登录校验 = 能否解开信封**。`admin.html` 里原来那个公开的 SHA-256 口令哈希已删除，
+  改 localStorage `blog_admin` 不再是管理员（`on()` 只看 `PrivateCrypto.isUnlocked()`）
+- **信封格式**：`{"v":2,"s":<Base64 站点随机 salt>,"c":<Base64 IV+密文>,"k":["deepseek","github"],"created":<ISO>}`
+  明文部分是 `{"deepseek":"sk-...","github":"github_pat_..."}`
+- **密文格式两代并存**（`js/private-crypto.js` 自动识别，不会破坏旧文章）：
+  - legacy：裸 Base64(IV12+密文)，salt 硬编码 `panghehe666-blog-private-v1`、PBKDF2 12 万次。
+    只用于解密改造前已存在的私密文章
+  - v2：`PHH2:` + Base64(JSON)，PBKDF2 30 万次、salt 随机。**前缀是必需的**——
+    裸 JSON 以 `{` 开头会被 YAML 当成 flow mapping，写进 front matter 直接让整篇文章构建失败
+- **密钥落 sessionStorage**（关标签页即清除）；登录页勾「记住此设备」才额外写 localStorage
+- **管理页四个工具**：Secrets（更新信封里的密钥并重新提交）、Migrate（换密码后把 legacy
+  私密文章用旧密码解开、新密钥重加密后提交，只跑一次）、Encrypt（单篇生成 v2 密文）、Posts（原有的增删改）
+- **首次使用**：`secrets.enc.json` 不存在时管理页自动切到 First Run 界面，填密码 + 两个密钥
+  → 加密 → 用刚填的 GitHub Token 把信封 PUT 进仓库 → 自动登录
+- **已移除的第三方脚本**（都是能读 sessionStorage 的外部 JS，私有站不需要）：
+  AdSense、Google Analytics、ghbtns Star iframe、cdnjs 的 fastclick。`_includes/ads.html` 已清空但保留文件，
+  否则 `page.html` 里的 include 会报错
+- **安全边界（务必记住）**：整套方案的强度 = 管理员密码强度。信封密文是公开的，
+  可以无限次离线爆破，所以密码要 ≥ 20 位随机串，别用生日+姓名结构。
+  密码忘了 = 私密文章和信封里的密钥一起永久丢失，无找回途径，必须离线备份
