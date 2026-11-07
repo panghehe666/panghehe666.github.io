@@ -68,3 +68,9 @@ tags:
      `ai_chat_proxy`，访客就免填 Key
 - 关闭整个模块：`_config.yml` 里 `ai_chat: false`
 
+## 私有化密钥体系(登录即用)
+
+- `js/site-secrets.js`:管理员密钥密文({gh, ds}),由 `/setup/` 用管理员密码加密写入,明文永不进仓库。
+- `js/secrets-boot.js`:页面加载时(已登录管理员+有会话密钥)解密成 sessionStorage `phh_secrets`。
+- AI 助手:未登录管理员隐藏,登录后自动取 DeepSeek Key;文章编辑自动取 GitHub Token。
+- 隐私文章:AES-GCM 密文存 `private_cipher`,登录管理员后浏览器解密。

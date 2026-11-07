@@ -10,7 +10,11 @@
   var ROOT = document.getElementById('ai-chat');
   if (!ROOT) return;
   /* 管理页 / 离线页不显示 */
-  if (/^\/(admin|offline)(\/|$)/.test(location.pathname)) return;
+  if (/^\/(admin|offline|setup)(\/|$)/.test(location.pathname)) return;
+  /* 私有化:未登录管理员,隐藏 AI 功能 */
+  var _isAdmin = (function () { try { return localStorage.getItem('blog_admin') === '1'; } catch (e) { return false; } })();
+  if (!_isAdmin) { ROOT.style.display = 'none'; return; }
+  if (window.PHHSECRETS) { try { PHHSECRETS.ensure(); } catch (e) {} }
 
   var BASE = ROOT.getAttribute('data-base') || '';
   var CFG_PROXY = (ROOT.getAttribute('data-proxy') || '').trim();
@@ -39,8 +43,10 @@
   function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
   function cfg() {
+    var k = lsGet(LS.key).trim();
+    if (!k && window.PHHSECRETS && PHHSECRETS.ds) { try { k = PHHSECRETS.ds() || ''; } catch (e) {} }
     return {
-      key: lsGet(LS.key).trim(),
+      key: k,
       proxy: lsGet(LS.proxy).trim() || CFG_PROXY
     };
   }

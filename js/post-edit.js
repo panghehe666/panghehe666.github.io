@@ -41,8 +41,12 @@
 
   /* ---------------- 基础 ---------------- */
   function token() {
-    try { return (localStorage.getItem(TOKEN_KEY) || '').trim(); } catch (e) { return ''; }
+    var t = '';
+    try { t = (localStorage.getItem(TOKEN_KEY) || '').trim(); } catch (e) {}
+    if (!t && window.PHHSECRETS && PHHSECRETS.gh) { try { t = PHHSECRETS.gh() || ''; } catch (e) {} }
+    return t;
   }
+  if (window.PHHSECRETS) { try { PHHSECRETS.ensure(); } catch (e) {} }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function b64u(s) { return btoa(unescape(encodeURIComponent(s))); }

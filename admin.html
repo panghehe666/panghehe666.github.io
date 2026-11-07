@@ -290,7 +290,7 @@ nav-style: invert
       <div class="admin-tool">
         <h2>Posts</h2>
         <p class="hint">
-          用 GitHub Token 直接增删改 <code>_posts/</code> 里的文章。Token 只保存在本机浏览器 localStorage,不会写进博客。
+          已登录管理员后,GitHub Token 会自动注入,可直接增删改 <code>_posts/</code> 里的文章(下面只是手动覆盖用的备用输入框),不会写进博客。
           权限需要 <code>Contents: Read and write</code>(GitHub → Settings → Developer settings → Fine-grained tokens)。
         </p>
         <label>GitHub Token
@@ -410,6 +410,7 @@ nav-style: invert
       unlock.then(function () {
         document.documentElement.classList.add("is-admin");
         paint();
+        if (window.PHHSECRETS) { try { PHHSECRETS.ensure(); } catch (e) {} }
         showToast('<i class="fa fa-check"></i> 你已是管理员', function () {
           var n = nextUrl();
           if (new URLSearchParams(location.search).get("next")) {

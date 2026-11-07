@@ -66,7 +66,9 @@
 
     {% unless page.url == '/edit/' %}{% include ai-chat.html %}{% endunless %}
 
+    <script src="{{ '/js/site-secrets.js' | prepend: site.baseurl }}"></script>
     <script src="{{ '/js/private-crypto.js' | prepend: site.baseurl }}"></script>
+    <script src="{{ '/js/secrets-boot.js' | prepend: site.baseurl }}"></script>
     <script src="{{ '/js/admin.js' | prepend: site.baseurl }}"></script>
 
 <img src="/img/icon_wechat.png" width="0" height="0" />

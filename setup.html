@@ -1,0 +1,106 @@
+---
+layout: default
+title: 密钥配置
+description: "一次性:把 AI Key 与 GitHub Token 加密进站点"
+permalink: /setup/
+nav-style: invert
+---
+
+<style>
+  .su-wrap { max-width: 620px; margin: 0 auto; padding: 90px 16px 80px; font-family: -apple-system,"Segoe UI","PingFang SC",sans-serif; }
+  .su-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 26px 24px 20px; }
+  .su-card h1 { font-size: 22px; margin: 0 0 6px; }
+  .su-sub { color: #777; font-size: 13px; line-height: 1.7; margin: 0 0 20px; }
+  .su-card label { display: block; font-size: 12px; color: #666; margin-bottom: 14px; }
+  .su-card input { display: block; width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: ui-monospace, monospace; }
+  .su-btn { width: 100%; margin-top: 6px; padding: 12px; border: none; border-radius: 8px; background: #111; color: #fff; font-size: 14px; cursor: pointer; }
+  .su-btn:disabled { opacity: .5; }
+  .su-status { min-height: 22px; margin-top: 14px; font-size: 13px; color: #666; line-height: 1.8; }
+  .su-status.ok { color: #1a7f37; } .su-status.err { color: #c0392b; } .su-status.busy { color: #9a6b00; }
+  .su-spin { display:inline-block; width:12px; height:12px; margin-left:6px; vertical-align:-2px; border:2px solid rgba(0,0,0,.18); border-top-color:currentColor; border-radius:50%; animation: su .7s linear infinite; }
+  @keyframes su { to { transform: rotate(360deg); } }
+  .su-note { margin-top: 16px; padding: 10px 12px; border-radius: 8px; background: #f4fafb; border: 1px solid #dbeef2; color: #4a6b70; font-size: 12.5px; line-height: 1.7; }
+</style>
+
+<div class="su-wrap">
+  <div class="su-card">
+    <h1>密钥配置(一次性)</h1>
+    <p class="su-sub">把 DeepSeek Key 与 GitHub Token 用你的「管理员密码」加密,写进站点。之后只要登录管理员,AI 助手和文章增删改都会自动就绪,不用再配置。明文永不上传。</p>
+    <label>DeepSeek API Key
+      <input id="su-ds" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+    </label>
+    <label>GitHub Token(Contents 读写)
+      <input id="su-gh" type="password" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
+    </label>
+    <label>管理员密码(用来加密,不会上传)
+      <input id="su-pass" type="password" placeholder="管理员密码" autocomplete="off">
+    </label>
+    <button class="su-btn" id="su-go" type="button">加密并写入站点</button>
+    <div class="su-status" id="su-status"></div>
+    <div class="su-note">· 加密用 AES-GCM(PBKDF2 750000 轮),密文写在 <code>js/site-secrets.js</code><br>· 只有输入正确管理员密码才能解开;密码错了生成的密文永远解不开,重来一次即可</div>
+  </div>
+</div>
+
+<script src="{{ '/js/private-crypto.js' | prepend: site.baseurl }}"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var REPO = 'panghehe666/panghehe666.github.io';
+  var st = $('su-status');
+  function setStatus(html, cls) { st.className = 'su-status ' + (cls || ''); st.innerHTML = html; }
+  function spin() { return '<span class="su-spin"></span>'; }
+  function b64u(s) { return btoa(unescape(encodeURIComponent(s))); }
+
+  function sha256Hex(text) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (buf) {
+      return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    });
+  }
+  function api(method, path, payload) {
+    var token = ($('su-gh').value || '').trim();
+    var opts = { method: method, headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' } };
+    if (payload) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(payload); }
+    return fetch('https://api.github.com/repos/' + REPO + '/contents/' + path, opts).then(function (r) {
+      return r.text().then(function (t) {
+        var d = {}; try { d = t ? JSON.parse(t) : {}; } catch (e) {}
+        if (!r.ok) { var e = new Error(d.message || ('HTTP ' + r.status)); e.status = r.status; throw e; }
+        return d;
+      });
+    });
+  }
+
+  document.getElementById('su-go').addEventListener('click', function () {
+    var ds = ($('su-ds').value || '').trim();
+    var gh = ($('su-gh').value || '').trim();
+    var pass = $('su-pass').value || '';
+    if (!ds || !gh || !pass) { setStatus('三项都要填。', 'err'); return; }
+    if (!window.PrivateCrypto) { setStatus('private-crypto.js 未加载,刷新重试。', 'err'); return; }
+    this.disabled = true;
+    setStatus('正在校验密码…' + spin(), 'busy');
+    fetch('/admin/').then(function (r) { return r.text(); }).then(function (html) {
+      var m = html.match(/PASS_HASH\s*=\s*"([a-f0-9]{64})"/);
+      if (!m) throw new Error('没找到管理员密码校验值');
+      return sha256Hex(pass).then(function (hex) {
+        if (hex !== m[1]) throw new Error('管理员密码不对');
+        setStatus('正在加密…' + spin(), 'busy');
+        return PrivateCrypto.encryptText(JSON.stringify({ gh: gh, ds: ds }), pass);
+      });
+    }).then(function (cipher) {
+      setStatus('正在写入站点…' + spin(), 'busy');
+      return api('GET', 'js/site-secrets.js').then(function (d) { return d.sha; }).catch(function () { return null; })
+        .then(function (sha) {
+          var content = '/* 管理员密钥密文(由 /setup/ 用管理员密码生成,勿手动改) */\nwindow.SITE_SECRETS_CIPHER = "' + cipher + '";\n';
+          var payload = { message: '配置管理员密钥(加密写入)', content: b64u(content) };
+          if (sha) payload.sha = sha;
+          return api('PUT', 'js/site-secrets.js', payload);
+        });
+    }).then(function () {
+      setStatus('完成 ✅ 密钥已加密写入。60 秒后生效;之后在 /admin/ 用管理员密码登录即可自动加载。', 'ok');
+    }).catch(function (e) {
+      setStatus('失败:' + String(e.message || e), 'err');
+      document.getElementById('su-go').disabled = false;
+    });
+  });
+})();
+</script>
