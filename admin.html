@@ -592,7 +592,11 @@ nav-style: invert
         errLine("admin-error", "");
         return;
       }
-      errLine("admin-error", "密码不对，或信封已损坏（解密失败）");
+      if (e && e.code === "corrupt") {
+        errLine("admin-error", "secrets.enc.json 存在但格式不对，无法解析。检查文件是否被截断或改坏");
+        return;
+      }
+      errLine("admin-error", "密码不对（解密失败）。密码是唯一校验，没有别的提示");
     });
   }
 
