@@ -85,8 +85,10 @@ tags:
 - **密文格式两代并存**（`js/private-crypto.js` 自动识别，不会破坏旧文章）：
   - legacy：裸 Base64(IV12+密文)，salt 硬编码 `panghehe666-blog-private-v1`、PBKDF2 12 万次。
     只用于解密改造前已存在的私密文章
-  - v2：`PHH2:` + Base64(JSON)，PBKDF2 30 万次、salt 随机。**前缀是必需的**——
-    裸 JSON 以 `{` 开头会被 YAML 当成 flow mapping，写进 front matter 直接让整篇文章构建失败
+  - v2：`PHH2:` + Base64(IV12+密文)，PBKDF2 30 万次、salt 为站点级随机值（存在信封里，不随每条密文重复）。
+    与 legacy 同构、只多 5 个字符前缀，所以私密文章的 front matter 体积不会膨胀。
+    **前缀是必需的**——密文若是裸 JSON，以 `{` 开头会被 YAML 当成 flow mapping，
+    写进 front matter 直接让整篇文章构建失败
 - **密钥落 sessionStorage**（关标签页即清除）；登录页勾「记住此设备」才额外写 localStorage
 - **管理页四个工具**：Secrets（更新信封里的密钥并重新提交）、Migrate（换密码后把 legacy
   私密文章用旧密码解开、新密钥重加密后提交，只跑一次）、Encrypt（单篇生成 v2 密文）、Posts（原有的增删改）
