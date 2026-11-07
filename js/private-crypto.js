@@ -96,23 +96,17 @@
   function isV2(payload) {
     return typeof payload === "string" && payload.indexOf(V2_PREFIX) === 0;
   }
+  /* v2 载荷 = 前缀 + Base64(IV12 + 密文)，与 legacy 同构、只多 5 个字符。
+     salt 不重复存进每条密文：它是站点级的，存在 secrets.enc.json 里，
+     登录时随派生密钥一起进会话。这样私密文章的 front matter 体积不会膨胀。 */
   function parseV2(payload) {
-    try {
-      var raw = isV2(payload) ? atob(payload.slice(V2_PREFIX.length)) : payload;
-      var o = JSON.parse(raw);
-      if (!o || o.v !== 2 || !o.s || !o.c) return null;
-      return o;
-    } catch (e) {
-      return null;
-    }
+    if (!isV2(payload)) return null;
+    var c = payload.slice(V2_PREFIX.length).trim();
+    if (!c) return null;
+    return { v: 2, c: c };
   }
   function packV2(saltB64, ivBytes, cipherBytes) {
-    var json = JSON.stringify({
-      v: 2,
-      s: saltB64,
-      c: b64encode(concatBytes(ivBytes, cipherBytes)),
-    });
-    return V2_PREFIX + btoa(json);
+    return V2_PREFIX + b64encode(concatBytes(ivBytes, cipherBytes));
   }
   /* 信封文件用：裸 JSON（带 salt / 密文 / 已配置项名 / 创建时间） */
   function packEnvelope(saltB64, ivBytes, cipherBytes, names) {
@@ -189,19 +183,24 @@
   function envelopeUrl() {
     return ENVELOPE_URL + "?v=" + Date.now();
   }
-  /* 返回 {found:bool, env:object|null} */
+  /* 返回 {found:bool, env:object|null, corrupt:bool} */
   function fetchEnvelope() {
     return fetch(envelopeUrl(), { cache: "no-store" })
       .then(function (r) {
-        if (r.status === 404) return { found: false, env: null };
+        if (r.status === 404) return { found: false, env: null, corrupt: false };
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.text().then(function (t) {
-          var env = parseV2(t);
-          return { found: true, env: env };
+          var env = null;
+          try {
+            var o = JSON.parse(t);
+            if (o && o.v === 2 && o.s && o.c) env = o;
+          } catch (e) {}
+          /* 信封文件是裸 JSON（不是 PHH2: 载荷），只有它需要携带站点 salt */
+          return { found: true, env: env, corrupt: !env };
         });
       })
       .catch(function () {
-        return { found: false, env: null };
+        return { found: false, env: null, corrupt: false };
       });
   }
 
@@ -250,6 +249,11 @@
       else localStorage.removeItem(K_REMEMBER);
     } catch (e) {}
     return fetchEnvelope().then(function (r) {
+      if (r.corrupt) {
+        var e0 = new Error("信封文件存在但无法解析");
+        e0.code = "corrupt";
+        throw e0;
+      }
       if (!r.found || !r.env) {
         var e = new Error("no-envelope");
         e.code = "no-envelope";
@@ -272,12 +276,7 @@
       var env = parseV2(payload);
       var k2 = loadSessionKeyV2();
       if (!env || !k2) return Promise.reject(new Error("no key"));
-      /* 密文自带 salt，必须与当前会话的站点 salt 一致；
-         不一致说明这条密文是用别的密码/别次初始化生成的，缓存密钥解不开。 */
-      var cur = load(K_SALT);
-      if (cur && env.s !== cur) {
-        return Promise.reject(new Error("salt mismatch：这条密文不是当前密码生成的"));
-      }
+      /* v2 密钥在派生时就绑定了站点 salt，salt 不必再随密文比对 */
       return importKeyB64(k2).then(function (key) {
         return aesDecryptPacked(env.c, key);
       });
