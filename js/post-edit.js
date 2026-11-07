@@ -26,6 +26,7 @@
     if (ga) ga.href = '/admin/?next=' + encodeURIComponent(location.pathname + location.search);
     return;
   }
+  document.body.classList.add('pe-page');
 
   var $ = function (id) { return document.getElementById(id); };
   var titleIn = $('pe-title'), tagsIn = $('pe-tags'), dateIn = $('pe-date');
@@ -180,7 +181,11 @@
     taEl = null;
     st.fallback = false;
     st.origValue = value || '';
-    $('pe-editor').innerHTML = '<div class="pe-loading" id="pe-loading">编辑器加载中…(首次需下载渲染引擎,请稍候)</div>';
+    var box = $('pe-editor');
+    /* 占位文本会被 Vditor 当成初始内容吸入正文:容器必须清空,加载提示改用 CSS 伪元素(pe-booting) */
+    box.innerHTML = '';
+    box.classList.add('pe-booting');
+    if (typeof Vditor === 'undefined') { initPlain(value); return; }
     var h = Math.max(420, window.innerHeight - 250);
     vd = new Vditor('pe-editor', {
       mode: 'ir',
@@ -199,10 +204,24 @@
       ],
       upload: { handler: uploadFiles },
       preview: { hljs: { style: 'github' } },
-      after: function () { removeLoading(); },
+      after: function () { $('pe-editor').classList.remove('pe-booting'); removeLoading(); },
       input: function () { markDirty(); }
     });
   }
+  /* 纯文本降级模式(私密文章/Vditor 加载失败时用) */
+  function initPlain(value) {
+    if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
+    st.fallback = true;
+    st.origValue = value || '';
+    var box = $('pe-editor');
+    box.innerHTML = '<p class="pe-plain-note">纯文本编辑模式:支持 Markdown 源码,保存时按原文写入。</p>' +
+      '<textarea class="pe-ta" id="pe-ta" spellcheck="false" placeholder="在这里输入 Markdown 正文…"></textarea>';
+    taEl = $('pe-ta');
+    taEl.value = value || '';
+    taEl.addEventListener('input', markDirty);
+    removeLoading();
+  }
+
   function removeLoading() {
     var el = document.getElementById('pe-loading');
     if (el && el.parentNode) el.parentNode.removeChild(el);
@@ -383,6 +402,8 @@
   });
   titleIn.addEventListener('input', markDirty);
   tagsIn.addEventListener('input', markDirty);
+  /* Vditor 的 input 回调在部分版本/场景下不触发,容器事件委托兜底,保证「未保存」标记可靠 */
+  $('pe-editor').addEventListener('input', markDirty);
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();

@@ -44,9 +44,18 @@
 .pe-date-row input { border: 1px solid #ddd; border-radius: 6px; padding: 3px 8px; font-size: 12.5px; color: #555; }
 
 /* Vditor 容器 */
-#pe-editor { border: none; border-radius: 0; overflow: visible; }
+#pe-editor { border: none; border-radius: 0; overflow: visible; position: relative; }
 #pe-editor .vditor { border: none; }
 #pe-editor .vditor-toolbar { border-bottom: 1px solid #eee; background: #fff; }
+/* 引擎加载提示(伪元素,不会被吸入正文) */
+#pe-editor.pe-booting { min-height: 220px; }
+#pe-editor.pe-booting::after {
+  content: '编辑器加载中…(首次需下载渲染引擎,请稍候)';
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 64px; background: #fff;
+  color: #999; font-size: 13px; letter-spacing: .04em;
+}
 
 /* 简易模式 */
 .pe-ta {
@@ -78,7 +87,129 @@
 }
 @keyframes pespin { to { transform: rotate(360deg); } }
 
+/* dev-expert · anti-slop: P5 H5 E5 S5 R5 V5 */
 @media (max-width: 640px) {
-  #pe-title { font-size: 26px; }
-  .pe-btn { padding: 7px 11px; font-size: 12.5px; }
+  .pe-page { margin: 0; overflow-x: clip; }
+  .pe-page .navbar-custom,
+  .pe-page footer { display: none; }
+  .pe-root {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    margin: 0;
+    padding: 0 12px env(safe-area-inset-bottom);
+    overflow: hidden;
+  }
+  .pe-bar {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin: 0;
+    padding: 6px 0;
+  }
+  .pe-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 44px;
+    width: 44px;
+    min-height: 44px;
+    font-size: 0;
+  }
+  .pe-back::before { content: "←"; font-size: 24px; }
+  .pe-name,
+  .pe-spacer { display: none; }
+  .pe-dirty { margin-right: auto; }
+  .pe-dirty.on { font-size: 0; }
+  .pe-dirty.on::before { content: "●"; font-size: 12px; }
+  .pe-btn { min-height: 44px; padding: 6px 10px; font-size: 12.5px; }
+  .pe-meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 8px;
+    flex: 0 0 auto;
+    margin: 0;
+    padding-bottom: 6px;
+  }
+  #pe-title {
+    grid-column: 1 / -1;
+    min-height: 48px;
+    padding: 4px 0 6px;
+    font-size: 28px;
+  }
+  .pe-tags-row { min-width: 0; margin-top: 4px; }
+  #pe-tags { width: 100%; min-width: 0; }
+  .pe-date-row { gap: 0; margin-top: 4px; font-size: 0; }
+  .pe-date-row input { max-width: 128px; min-height: 32px; padding: 3px 4px; font-size: 12px; }
+  #pe-editor {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #pe-editor .vditor {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto !important;
+    min-height: 0;
+  }
+  #pe-editor .vditor-content {
+    order: 1;
+    flex: 1 1 auto;
+    height: auto !important;
+    min-height: 0;
+  }
+  #pe-editor .vditor-ir { height: 100%; }
+  #pe-editor .vditor-reset {
+    box-sizing: border-box;
+    min-height: 100% !important;
+    padding: 14px 4px 24px !important;
+    font-size: 16px !important;
+    line-height: 1.75 !important;
+  }
+  #pe-editor .vditor-toolbar {
+    order: 2;
+    flex: 0 0 auto;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    max-width: 100%;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-top: 1px solid #eee;
+    border-bottom: none;
+    scrollbar-width: none;
+  }
+  #pe-editor .vditor-toolbar::after { display: none; }
+  #pe-editor .vditor-toolbar__item,
+  #pe-editor .vditor-toolbar__divider { float: none; flex: 0 0 auto; }
+  #pe-editor .vditor-toolbar::-webkit-scrollbar { display: none; }
+  #pe-editor .vditor-toolbar__item button { min-width: 36px; min-height: 44px; }
+  .pe-ta {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    padding: 14px 4px;
+    border: none;
+    border-radius: 0;
+    font-size: 16px;
+    resize: none;
+  }
+  .pe-status {
+    flex: 0 0 auto;
+    max-height: 52px;
+    min-height: 0;
+    margin: 0;
+    padding: 4px 0;
+    overflow: auto;
+    font-size: 12px;
+  }
+  .pe-status:empty { display: none; }
 }
