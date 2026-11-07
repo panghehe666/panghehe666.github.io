@@ -228,6 +228,30 @@ nav-style: invert
   .admin-status.busy { color: #9a6b00; }
   .admin-status.ok { color: #1a7f37; }
   .admin-status.err { color: #c0392b; }
+  .admin-status { font-size: 13px; color: #555; margin: 0 0 16px; letter-spacing: .02em; }
+  .admin-status b { color: #1a7f37; font-weight: 700; }
+  #bs-error, #sec-error, #mig-error {
+    min-height: 1.4em; color: #c0392b; font-size: 13px; margin: 4px 0 12px; line-height: 1.6;
+  }
+  .admin-out {
+    margin-top: 14px; font-size: 12px; line-height: 1.6; color: #444;
+    max-height: 180px; overflow: auto; padding: 12px;
+    background: #fafafa; border: 1px solid #eee;
+    display: none; white-space: pre-wrap; word-break: break-all;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  .admin-card label.admin-check {
+    display: flex; align-items: flex-start; gap: 8px;
+    margin: 18px 0 0; font-size: 13px; line-height: 1.6;
+    color: #666; letter-spacing: 0; text-transform: none; cursor: pointer;
+  }
+  .admin-card label.admin-check input { width: auto; margin: 3px 0 0; padding: 0; flex: none; }
+  /* 首次创建信封：与登录表单互斥显示 */
+  #admin-bootstrap { display: none; }
+  .admin-stage.is-bootstrap #admin-form { display: none; }
+  .admin-stage.is-bootstrap #admin-bootstrap { display: block; }
+  .admin-stage.is-in #admin-bootstrap { display: none; }
+  .admin-stage.is-in.is-bootstrap #admin-form { display: none; }
   .spin {
     display: inline-block; width: 12px; height: 12px; margin-left: 6px; vertical-align: -2px;
     border: 2px solid rgba(0,0,0,.18); border-top-color: currentColor; border-radius: 50%;
@@ -254,17 +278,100 @@ nav-style: invert
           <button type="button" class="admin-eye" id="admin-eye" aria-label="显示密码"><i class="fa fa-eye"></i></button>
         </span>
       </label>
+      <label class="admin-check">
+        <input id="admin-remember" type="checkbox">
+        <span>记住此设备：密钥额外写入 localStorage，关掉浏览器也不用重输密码。不勾则只存在本次会话，关标签页即清除。</span>
+      </label>
       <p id="admin-error"></p>
       <button type="submit">Enter</button>
-      <p class="admin-recall">登录由 Grok 生成，密码见当时聊天记录。</p>
+      <p class="admin-recall">
+        登录 = 用密码解开仓库里的 <code>secrets.enc.json</code>。解不开就不是管理员，没有别的入口，
+        改浏览器 localStorage 也没用。
+      </p>
     </form>
+
+    <form id="admin-bootstrap">
+      <p class="admin-kicker">First Run</p>
+      <h1>Setup</h1>
+      <div class="admin-rule"></div>
+      <p class="lead">
+        仓库里还没有密钥信封。设一个管理员密码，把 DeepSeek API Key 和 GitHub Token 一起加密进去，
+        之后任何设备只要输这个密码，就能同时解锁私密文章、AI 助手和文章发布，不用再单独配置任何密钥。
+      </p>
+      <label>管理员密码（至少 16 位）
+        <span class="admin-field">
+          <input id="bs-pass" type="password" autocomplete="new-password">
+          <button type="button" class="admin-eye" id="bs-eye" aria-label="显示密码"><i class="fa fa-eye"></i></button>
+        </span>
+      </label>
+      <label>再输一次
+        <input id="bs-pass2" type="password" autocomplete="new-password">
+      </label>
+      <label>DeepSeek API Key（可稍后在 Secrets 里补）
+        <input id="bs-deepseek" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+      </label>
+      <label>GitHub Token（必填，用来把信封提交进仓库）
+        <input id="bs-github" type="password" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
+      </label>
+      <p id="bs-error"></p>
+      <button type="button" class="admin-action" id="bs-submit">创建信封并登录</button>
+      <p class="admin-recall">
+        密码是唯一防线，也是唯一钥匙：忘了它，私密文章和信封里的密钥会一起永久丢失，没有任何找回途径。
+        请离线抄一份存好，不要只存在脑子里。
+      </p>
+    </form>
+
 
     <div id="admin-done">
       <p class="admin-kicker">Inside</p>
       <h1>Admin</h1>
       <div class="admin-rule"></div>
-      <p class="lead">已是管理员。隐私文章会在浏览器中用 AES-GCM 解密。可在下方生成密文。</p>
+      <p class="lead">
+        已解锁。私密文章会在浏览器里用 AES-GCM 解密；AI 助手与文章发布所需的密钥已从信封中取出，
+        无需再单独配置。关闭标签页即清除（除非登录时勾了「记住此设备」）。
+      </p>
       <button type="button" id="admin-logout">登出</button>
+
+      <!-- 密钥信封：DeepSeek Key 与 GitHub Token -->
+      <div class="admin-tool">
+        <h2>Secrets</h2>
+        <p class="hint">
+          DeepSeek API Key 与 GitHub Token 用管理员密码加密后，存在仓库的 <code>secrets.enc.json</code> 里。
+          仓库公开也不要紧——没有密码，它就是一段废 Base64。登录之后这两项会自动供给 AI 助手与发布流程，
+          换设备不用再手填。
+        </p>
+        <p class="admin-status" id="sec-state">尚未读取</p>
+        <label>管理员密码（重新加密时需要）
+          <span class="admin-field">
+            <input id="sec-pass" type="password" autocomplete="off">
+            <button type="button" class="admin-eye" id="sec-eye" aria-label="显示"><i class="fa fa-eye"></i></button>
+          </span>
+        </label>
+        <label>新的 DeepSeek API Key（留空表示不改）
+          <input id="sec-deepseek" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+        </label>
+        <label>新的 GitHub Token（留空表示不改）
+          <input id="sec-github" type="password" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
+        </label>
+        <p id="sec-error"></p>
+        <button type="button" class="admin-action" id="sec-submit">更新并提交</button>
+      </div>
+
+      <!-- 旧格式私密文章迁移 -->
+      <div class="admin-tool">
+        <h2>Migrate</h2>
+        <p class="hint">
+          换了新密码之后，用旧密码加密的私密文章会解不开。这里用旧密码解开、再用当前会话的新密钥重新加密，
+          然后提交回仓库。已经是新格式的文章会自动跳过。<b>只在换密码后跑一次。</b>
+        </p>
+        <label>升级前的旧密码
+          <input id="mig-oldpass" type="password" autocomplete="off" spellcheck="false">
+        </label>
+        <p id="mig-error"></p>
+        <button type="button" class="admin-action" id="mig-submit">开始迁移</button>
+        <pre id="mig-out" class="admin-out"></pre>
+      </div>
+
 
       <div class="admin-tool">
         <h2>Encrypt</h2>
@@ -290,8 +397,9 @@ nav-style: invert
       <div class="admin-tool">
         <h2>Posts</h2>
         <p class="hint">
-          用 GitHub Token 直接增删改 <code>_posts/</code> 里的文章。Token 只保存在本机浏览器 localStorage,不会写进博客。
-          权限需要 <code>Contents: Read and write</code>(GitHub → Settings → Developer settings → Fine-grained tokens)。
+          用 GitHub Token 直接增删改 <code>_posts/</code> 里的文章。<b>登录管理员后会自动使用密钥信封里的 Token，这里通常不用填。</b>
+          只有在信封里没配 Token 时才需要手填（手填的值只存在本机浏览器 localStorage，不会写进博客）。
+          权限需要 <code>Contents: Read and write</code>，且只授权这一个仓库（GitHub → Settings → Developer settings → Fine-grained tokens）。
         </p>
         <label>GitHub Token
           <span class="admin-field">
@@ -338,37 +446,83 @@ nav-style: invert
 
 <script>
 (function () {
-  var USER = "panghehe666";
-  var PASS_HASH = "a37ec979c4ced20dacf51ca9a94eaeae5c149ea4b869187aaccad30b47d71f37";
-  var KEY = "blog_admin";
+  "use strict";
+
+  var REPO = "panghehe666/panghehe666.github.io";
+  var BRANCH = "master";
+  var ENV_PATH = "secrets.enc.json";
+  var PC = window.PrivateCrypto;
+
   var stage = document.getElementById("admin-stage");
   var toast = document.getElementById("admin-toast");
   var toastTimer = null;
 
+  /* ============ GitHub Contents API ============ */
+  function ghToken() {
+    if (PC && PC.getSecret) {
+      var t = (PC.getSecret("github") || "").trim();
+      if (t) return t;
+    }
+    var inp = document.getElementById("gh-token");
+    if (inp && inp.value.trim()) return inp.value.trim();
+    try { return (localStorage.getItem("phh_admin_gh_token") || "").trim(); } catch (e) { return ""; }
+  }
+  function b64u(s) { return btoa(unescape(encodeURIComponent(s))); }
+  function gh(method, path, payload, token) {
+    var opts = {
+      method: method,
+      headers: { "Authorization": "Bearer " + (token || ghToken()), "Accept": "application/vnd.github+json" }
+    };
+    if (payload !== undefined) {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(payload);
+    }
+    return fetch("https://api.github.com/repos/" + REPO + "/contents/" + path, opts).then(function (resp) {
+      return resp.text().then(function (t) {
+        var d = {};
+        try { d = t ? JSON.parse(t) : {}; } catch (e) {}
+        if (!resp.ok) {
+          var err = new Error(d.message || ("HTTP " + resp.status));
+          err.status = resp.status;
+          throw err;
+        }
+        return d;
+      });
+    });
+  }
+  function ghGet(path, token) { return gh("GET", path, undefined, token); }
+  function ghPut(path, content, sha, msg, token) {
+    var p = { message: msg, content: b64u(content), branch: BRANCH };
+    if (sha) p.sha = sha;
+    return gh("PUT", path, p, token);
+  }
+
+  /* ============ 界面状态 ============ */
+  /* 登录判定 = 本地是否真的握着能解密信的密钥。
+     不再看任何前端标记，改 localStorage 不再是管理员。 */
   function on() {
-    try {
-      var flag = localStorage.getItem(KEY) === "1";
-      if (!flag) return false;
-      // 有登录标志但本设备无解密密钥(新会话/新设备):视为未解锁,直接显示登录表单,无需先登出再登录
-      if (window.PrivateCrypto && !PrivateCrypto.loadSessionKey()) return false;
-      return true;
-    } catch (e) { return false; }
+    try { return !!(PC && PC.isUnlocked && PC.isUnlocked()); } catch (e) { return false; }
   }
   function paint() {
-    stage.classList.toggle("is-in", on());
-    document.documentElement.classList.toggle("is-admin", on());
+    var logged = on();
+    stage.classList.toggle("is-in", logged);
+    document.documentElement.classList.toggle("is-admin", logged);
+    var nav = document.getElementById("admin-login-btn");
+    if (nav) {
+      if (logged) {
+        nav.innerHTML = '<i class="fa fa-user-secret"></i> 管理台·密文';
+        nav.setAttribute("title", "进入管理员页");
+      } else {
+        nav.innerHTML = '<i class="fa fa-sign-in"></i> 管理员';
+        nav.setAttribute("title", "管理员登录");
+      }
+    }
+    if (logged) renderSecretState();
   }
   function nextUrl() {
     var q = new URLSearchParams(location.search).get("next");
     if (q && q.charAt(0) === "/" && q.indexOf("//") !== 0) return q;
     return "/";
-  }
-  function sha256Hex(text) {
-    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function (buf) {
-      return Array.from(new Uint8Array(buf)).map(function (b) {
-        return b.toString(16).padStart(2, "0");
-      }).join("");
-    });
   }
   function showToast(messageHtml, then) {
     if (toastTimer) clearTimeout(toastTimer);
@@ -382,78 +536,242 @@ nav-style: invert
     }, 1100);
   }
   function bindEye(btnId, inputId) {
-    document.getElementById(btnId).addEventListener("click", function () {
+    var b = document.getElementById(btnId);
+    if (!b) return;
+    b.addEventListener("click", function () {
       var input = document.getElementById(inputId);
       var icon = this.querySelector("i");
       var show = input.type === "password";
       input.type = show ? "text" : "password";
-      icon.className = show ? "fa fa-eye-slash" : "fa fa-eye";
+      if (icon) icon.className = show ? "fa fa-eye-slash" : "fa fa-eye";
       this.setAttribute("aria-label", show ? "隐藏密码" : "显示密码");
     });
   }
+  function setBusy(el, busy, text) {
+    if (!el) return;
+    el.disabled = !!busy;
+    el.style.opacity = busy ? "0.6" : "1";
+    if (text !== undefined) el.textContent = text;
+  }
+  function errLine(id, msg) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = msg || "";
+  }
 
+  /* ============ 信封状态渲染 ============ */
+  function renderSecretState() {
+    var box = document.getElementById("sec-state");
+    if (!box || !PC) return;
+    var s = PC.loadSecrets ? PC.loadSecrets() : {};
+    box.innerHTML =
+      "DeepSeek API Key：" + (s.deepseek ? "<b>已解锁</b>" : "<b>未配置</b>") +
+      " · GitHub Token：" + (s.github ? "<b>已解锁</b>" : "<b>未配置</b>");
+  }
+
+  /* ============ 登录 ============ */
+  function doLogin() {
+    var pass = document.getElementById("admin-pass").value || "";
+    var remember = !!(document.getElementById("admin-remember") || {}).checked;
+    if (!pass) { errLine("admin-error", "请输入管理员密码"); return; }
+    errLine("admin-error", "");
+    var btn = document.querySelector("#admin-form button[type=submit]");
+    setBusy(btn, true, "解锁中…");
+
+    PC.login(pass, { remember: remember }).then(function () {
+      setBusy(btn, false, "Enter");
+      document.getElementById("admin-pass").value = "";
+      paint();
+      showToast('<i class="fa fa-check"></i> 已解锁', function () {
+        if (new URLSearchParams(location.search).get("next")) location.href = nextUrl();
+      });
+    }).catch(function (e) {
+      setBusy(btn, false, "Enter");
+      if (e && e.code === "no-envelope") {
+        /* 仓库里还没有信封：切到首次创建流程 */
+        stage.classList.add("is-bootstrap");
+        errLine("admin-error", "");
+        return;
+      }
+      errLine("admin-error", "密码不对，或信封已损坏（解密失败）");
+    });
+  }
+
+  /* ============ 首次创建信封 ============ */
+  function collectSecrets(prefix) {
+    var d = (document.getElementById(prefix + "-deepseek").value || "").trim();
+    var g = (document.getElementById(prefix + "-github").value || "").trim();
+    return { deepseek: d, github: g };
+  }
+  function doBootstrap() {
+    var pass = document.getElementById("bs-pass").value || "";
+    var pass2 = document.getElementById("bs-pass2").value || "";
+    var sec = collectSecrets("bs");
+    if (!pass) { errLine("bs-error", "请设一个管理员密码"); return; }
+    if (pass.length < 16) { errLine("bs-error", "密码至少 16 位。信封密文是公开的，密码短了会被离线爆破"); return; }
+    if (pass !== pass2) { errLine("bs-error", "两次输入的密码不一致"); return; }
+    if (!sec.github) { errLine("bs-error", "需要 GitHub Token 才能把信封提交进仓库"); return; }
+    errLine("bs-error", "");
+    var btn = document.getElementById("bs-submit");
+    setBusy(btn, true, "加密并提交中…");
+
+    PC.sealSecrets(pass, sec).then(function (json) {
+      return ghPut(ENV_PATH, json + "\n", null, "chore: add secrets envelope", sec.github);
+    }).then(function () {
+      /* 提交成功后用同一密码登录，顺带把密钥缓存进会话 */
+      return PC.login(pass, { remember: false });
+    }).then(function () {
+      setBusy(btn, false, "创建信封并登录");
+      ["bs-pass", "bs-pass2", "bs-deepseek", "bs-github"].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.value = "";
+      });
+      stage.classList.remove("is-bootstrap");
+      paint();
+      showToast('<i class="fa fa-check"></i> 信封已创建');
+    }).catch(function (e) {
+      setBusy(btn, false, "创建信封并登录");
+      errLine("bs-error", "失败：" + (e && e.message ? e.message : e));
+    });
+  }
+
+  /* ============ 登录后更新信封里的密钥 ============ */
+  function doUpdateSecrets() {
+    var pass = document.getElementById("sec-pass").value || "";
+    var sec = collectSecrets("sec");
+    if (!pass) { errLine("sec-error", "更新信封需要再输一次管理员密码"); return; }
+    if (!sec.deepseek && !sec.github) { errLine("sec-error", "至少填一项要更新的密钥"); return; }
+    errLine("sec-error", "");
+    var btn = document.getElementById("sec-submit");
+    setBusy(btn, true, "重新加密并提交中…");
+
+    /* 合并：没填的沿用当前已解锁的值 */
+    var cur = PC.loadSecrets ? PC.loadSecrets() : {};
+    var merged = {
+      deepseek: sec.deepseek || cur.deepseek || "",
+      github: sec.github || cur.github || ""
+    };
+
+    PC.fetchEnvelope().then(function (r) {
+      var salt = r.env && r.env.s ? r.env.s : "";
+      return PC.sealSecrets(pass, merged, salt);
+    }).then(function (json) {
+      return ghGet(ENV_PATH).then(function (d) { return d.sha; }).catch(function () { return null; })
+        .then(function (sha) { return ghPut(ENV_PATH, json + "\n", sha, "chore: rotate secrets envelope"); });
+    }).then(function () {
+      return PC.login(pass, { remember: PC.remember ? PC.remember() : false });
+    }).then(function () {
+      setBusy(btn, false, "更新并提交");
+      ["sec-pass", "sec-deepseek", "sec-github"].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.value = "";
+      });
+      paint();
+      showToast('<i class="fa fa-check"></i> 密钥已更新');
+    }).catch(function (e) {
+      setBusy(btn, false, "更新并提交");
+      errLine("sec-error", "失败：" + (e && e.message ? e.message : e));
+    });
+  }
+
+  /* ============ 旧格式私密文章迁移 ============ */
+  /* 换了新密码之后，用旧密码加密的文章就解不开了。
+     这个工具用旧密码解开、用当前会话的新密钥重新加密，再提交回仓库。 */
+  function doMigrate() {
+    var oldPass = document.getElementById("mig-oldpass").value || "";
+    if (!oldPass) { errLine("mig-error", "请输入旧密码（升级前那个）"); return; }
+    if (!PC.loadSessionKeyV2 || !PC.loadSessionKeyV2()) {
+      errLine("mig-error", "当前会话没有新密钥，请先用新密码登录一次");
+      return;
+    }
+    errLine("mig-error", "");
+    var btn = document.getElementById("mig-submit");
+    var out = document.getElementById("mig-out");
+    setBusy(btn, true, "扫描中…");
+    out.style.display = "block";
+    out.textContent = "正在列出 _posts …";
+
+    ghGet("_posts").then(function (arr) {
+      var files = (arr || []).filter(function (x) { return x.type === "file"; });
+      var done = 0, changed = 0, skipped = 0, failed = [];
+      var chain = Promise.resolve();
+      files.forEach(function (f) {
+        chain = chain.then(function () {
+          return ghGet("_posts/" + f.name).then(function (d) {
+            var text = decodeURIComponent(escape(atob(d.content)));
+            var m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+            if (!m) { skipped++; return; }
+            var fm = m[1];
+            var cm = fm.match(/^\s*private_cipher\s*:\s*(.+)$/m);
+            if (!cm) { skipped++; return; }
+            var cipher = cm[1].trim();
+            if (cipher.charAt(0) === "{") { skipped++; return; } /* 已是 v2 */
+            return PC.decryptLegacyWithPassword(cipher, oldPass).then(function (plain) {
+              return PC.encryptWithSession(plain);
+            }).then(function (newCipher) {
+              var newFm = fm.replace(/^(\s*private_cipher\s*:\s*).+$/m, "$1" + newCipher);
+              var content = "---\n" + newFm + "\n---\n" + text.slice(m[0].length);
+              return ghPut("_posts/" + f.name, content, d.sha, "chore: migrate private cipher to v2");
+            }).then(function () {
+              changed++;
+              out.textContent = "已迁移 " + f.name;
+            }).catch(function (e) {
+              failed.push(f.name + "：" + (e && e.message ? e.message : e));
+            }).then(function () { done++; });
+          }).catch(function () { done++; });
+        });
+      });
+      return chain.then(function () {
+        setBusy(btn, false, "开始迁移");
+        out.textContent = "完成：迁移 " + changed + " 篇，跳过 " + skipped + " 篇（非私密或已是新格式）" +
+          (failed.length ? "，失败 " + failed.length + " 篇\n" + failed.join("\n") : "");
+        if (changed) showToast('<i class="fa fa-check"></i> 迁移完成');
+      });
+    }).catch(function (e) {
+      setBusy(btn, false, "开始迁移");
+      errLine("mig-error", "失败：" + (e && e.message ? e.message : e));
+    });
+  }
+
+  /* ============ 启动 ============ */
   paint();
   bindEye("admin-eye", "admin-pass");
   bindEye("encrypt-eye", "encrypt-pass");
+  bindEye("bs-eye", "bs-pass");
+  bindEye("sec-eye", "sec-pass");
+
+  /* 有信封 → 登录界面；没有 → 首次创建界面 */
+  if (PC && PC.fetchEnvelope) {
+    PC.fetchEnvelope().then(function (r) {
+      if (!r.found) stage.classList.add("is-bootstrap");
+    });
+  }
 
   document.getElementById("admin-form").addEventListener("submit", function (e) {
     e.preventDefault();
-    var user = (document.getElementById("admin-user").value || "").trim();
-    var pass = document.getElementById("admin-pass").value || "";
-    var err = document.getElementById("admin-error");
-    if (user !== USER) { err.textContent = "用户名或密码错误"; return; }
-    sha256Hex(pass).then(function (hex) {
-      if (hex !== PASS_HASH) { err.textContent = "用户名或密码错误"; return; }
-      var unlock = window.PrivateCrypto
-        ? PrivateCrypto.unlockFromPassword(pass)
-        : Promise.resolve().then(function () { localStorage.setItem(KEY, "1"); });
-      unlock.then(function () {
-        document.documentElement.classList.add("is-admin");
-        paint();
-        showToast('<i class="fa fa-check"></i> 你已是管理员', function () {
-          var n = nextUrl();
-          if (new URLSearchParams(location.search).get("next")) {
-            location.href = n;
-          }
-        });
-      });
-    });
+    doLogin();
   });
 
   document.getElementById("admin-logout").addEventListener("click", function () {
-    if (window.PrivateCrypto) PrivateCrypto.clearSession();
-    else localStorage.removeItem(KEY);
-    document.documentElement.classList.remove("is-admin");
+    if (PC) PC.clearSession();
     paint();
-    var nav = document.getElementById("admin-login-btn");
-    if (nav) {
-      nav.innerHTML = '<i class="fa fa-sign-in"></i> 管理员';
-      nav.setAttribute("title", "管理员登录");
-    }
-    showToast('<i class="fa fa-sign-out"></i> 已登出管理员');
+    showToast('<i class="fa fa-sign-out"></i> 已登出，密钥已从本机清除');
   });
 
+  var bsBtn = document.getElementById("bs-submit");
+  if (bsBtn) bsBtn.addEventListener("click", doBootstrap);
+  var secBtn = document.getElementById("sec-submit");
+  if (secBtn) secBtn.addEventListener("click", doUpdateSecrets);
+  var migBtn = document.getElementById("mig-submit");
+  if (migBtn) migBtn.addEventListener("click", doMigrate);
+
+  /* ---- 原有的单篇加密工具（现在产出 v2 格式） ---- */
   document.getElementById("do-encrypt").addEventListener("click", function () {
     var plain = document.getElementById("plain-in").value || "";
     var pass = document.getElementById("encrypt-pass").value || "";
     var out = document.getElementById("cipher-out");
     var copyBtn = document.getElementById("copy-cipher");
-    if (!plain.trim()) {
-      out.style.display = "block";
-      out.textContent = "请先输入正文";
-      return;
-    }
-    if (!pass) {
-      out.style.display = "block";
-      out.textContent = "请输入管理员密码";
-      return;
-    }
-    if (!window.PrivateCrypto) {
-      out.style.display = "block";
-      out.textContent = "加密模块未加载";
-      return;
-    }
-    PrivateCrypto.encryptText(plain, pass).then(function (cipher) {
+    if (!plain.trim()) { out.style.display = "block"; out.textContent = "请先输入正文"; return; }
+    if (!pass) { out.style.display = "block"; out.textContent = "请输入管理员密码"; return; }
+    if (!PC) { out.style.display = "block"; out.textContent = "加密模块未加载"; return; }
+    PC.encryptText(plain, pass).then(function (cipher) {
       out.style.display = "block";
       out.textContent = cipher;
       copyBtn.style.display = "block";
@@ -468,9 +786,7 @@ nav-style: invert
     var text = document.getElementById("cipher-out").textContent || "";
     if (!text) return;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () {
-        showToast('<i class="fa fa-check"></i> 已复制');
-      });
+      navigator.clipboard.writeText(text).then(function () { showToast('<i class="fa fa-check"></i> 已复制'); });
     } else {
       var ta = document.createElement("textarea");
       ta.value = text;
@@ -502,6 +818,13 @@ nav-style: invert
   function escAttr(s) { return esc(s).replace(/'/g, '&#39;'); }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function token() {
+    /* 优先用密钥信封里的 Token（登录时解出，存 sessionStorage） */
+    try {
+      if (window.PrivateCrypto && window.PrivateCrypto.getSecret) {
+        var s = (window.PrivateCrypto.getSecret('github') || '').trim();
+        if (s) return s;
+      }
+    } catch (e) {}
     var v = tokenIn.value.trim();
     if (v) { try { localStorage.setItem(TOKEN_KEY, v); } catch (e) {} }
     else { try { v = localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { v = ''; } }
