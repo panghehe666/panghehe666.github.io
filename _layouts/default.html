@@ -5,6 +5,8 @@
 
 <style>
     html:not(.is-admin) .post-private { display: none !important; }
+    /* 面向私有：未登录管理员时 AI 助手入口完全不可见（js 侧还会把节点整个摘掉） */
+    html:not(.is-admin) #ai-chat { display: none !important; }
     html:not(.is-admin) body.is-private-page .intro-header,
     html:not(.is-admin) body.is-private-page article { display: none !important; }
     html:not(.is-admin) body.is-private-page #private-gate { display: block !important; }
@@ -19,7 +21,8 @@
 </style>
 <script>
     try {
-        if (localStorage.getItem('blog_admin') === '1') {
+        /* 会话级（sessionStorage）优先，其次才是「记住此设备」写入的 localStorage */
+        if (sessionStorage.getItem('blog_admin') === '1' || localStorage.getItem('blog_admin') === '1') {
             document.documentElement.classList.add('is-admin');
         }
     } catch (e) {}
@@ -59,8 +62,6 @@
     <link rel="stylesheet" href="{{ '/css/post-admin.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}">
     <script src="{{ '/js/post-admin.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 {% endif %}
-
-    {% include footer.html %}
 
     {% include footer.html %}
 
