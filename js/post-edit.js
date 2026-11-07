@@ -226,7 +226,10 @@
         accept: 'image/*,video/*,audio/*,.pdf,.txt,.md,.markdown,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.apk',
         multiple: true
       },
-      preview: { hljs: { style: 'github' } },
+      preview: {
+        hljs: { style: 'github' },
+        markdown: { toc: true }
+      },
       after: function () { $('pe-editor').classList.remove('pe-booting'); removeLoading(); },
       input: function () { markDirty(); }
     });
