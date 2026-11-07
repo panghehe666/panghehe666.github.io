@@ -3,7 +3,7 @@
 
   function isAdmin() {
     try {
-      return localStorage.getItem(KEY) === "1";
+      return localStorage.getItem(KEY) === "1" && !!localStorage.getItem("blog_admin_key");
     } catch (e) {
       return false;
     }

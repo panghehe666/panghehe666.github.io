@@ -2,16 +2,17 @@
 layout: null
 sitemap: false
 ---
+{%- assign pubs = site.posts | where_exp: "item", "item.private_cipher == nil" -%}
 {"generated":{{ site.time | date_to_xmlschema | jsonify }},"posts":[
-{%- for post in site.posts -%}
+{%- for post in pubs -%}
 {%- if forloop.index0 > 0 -%},{%- endif -%}
 {"t":{{ post.title | jsonify }},"u":{{ post.url | relative_url | jsonify }},"d":{{ post.date | date: '%Y-%m-%d' | jsonify }},"g":[{%- for tag in post.tags -%}{%- if forloop.index0 > 0 -%},{%- endif -%}{{ tag | jsonify }}{%- endfor -%}]}
 {%- endfor -%}
 ],"refs":[
 {%- assign ln = 0 -%}
-{%- for post in site.posts -%}
+{%- for post in pubs -%}
 {%- capture pc -%}{{ post.content | markdownify }}{%- endcapture -%}
-{%- for other in site.posts -%}
+{%- for other in pubs -%}
 {%- if other.url != post.url -%}
 {%- assign ou = other.url | relative_url -%}
 {%- assign oua = site.url | append: ou -%}

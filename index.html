@@ -15,7 +15,11 @@ description: "「天地本宽 而鄙者自隘」"
         </h3>
         {% endif %}
         <div class="post-content-preview">
-            {% if post.lang == 'en' %}
+            {% if post.private_cipher %}
+                此文已加密，仅管理员登录后可见。
+            {% elsif post.tags contains '隐私' %}
+                此文已加密，仅管理员登录后可见。
+            {% elsif post.lang == 'en' %}
                 {{ post.content | strip_html | truncate:300 }}
             {% else %}
                 {{ post.content | strip_html | truncate:200 }}

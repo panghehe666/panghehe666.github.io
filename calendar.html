@@ -172,8 +172,13 @@ header-img: "img/home-bg.jpg"
 <script>
 (function () {
   var posts = [
+{% assign cal_first = true %}
 {% for post in site.posts %}
-    { date: "{{ post.date | date: '%Y-%m-%d' }}", title: {{ post.title | jsonify }}, url: "{{ post.url | prepend: site.baseurl }}" }{% unless forloop.last %},{% endunless %}
+{% unless post.private_cipher %}
+{% unless cal_first %},{% endunless %}
+    { date: "{{ post.date | date: '%Y-%m-%d' }}", title: {{ post.title | jsonify }}, url: "{{ post.url | prepend: site.baseurl }}" }
+{% assign cal_first = false %}
+{% endunless %}
 {% endfor %}
   ];
 

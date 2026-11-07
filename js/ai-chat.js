@@ -11,8 +11,12 @@
   if (!ROOT) return;
   /* 管理页 / 离线页不显示 */
   if (/^\/(admin|offline|setup)(\/|$)/.test(location.pathname)) return;
-  /* 私有化:未登录管理员,隐藏 AI 功能 */
-  var _isAdmin = (function () { try { return localStorage.getItem('blog_admin') === '1'; } catch (e) { return false; } })();
+  /* 未登录管理员(没有会话密钥)时不初始化 AI,按钮也不出现 */
+  var _isAdmin = (function () {
+    try {
+      return localStorage.getItem('blog_admin') === '1' && !!localStorage.getItem('blog_admin_key');
+    } catch (e) { return false; }
+  })();
   if (!_isAdmin) { ROOT.style.display = 'none'; return; }
   if (window.PHHSECRETS) { try { PHHSECRETS.ensure(); } catch (e) {} }
 

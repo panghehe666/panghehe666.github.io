@@ -8,6 +8,7 @@
     html:not(.is-admin) body.is-private-page .intro-header,
     html:not(.is-admin) body.is-private-page article { display: none !important; }
     html:not(.is-admin) body.is-private-page #private-gate { display: block !important; }
+    html:not(.is-admin) #ai-chat { display: none !important; }
     #admin-login-btn .fa { margin-right: 6px; }
     .private-cipher-shell {
       min-height: 120px;
@@ -19,7 +20,7 @@
 </style>
 <script>
     try {
-        if (localStorage.getItem('blog_admin') === '1') {
+        if (localStorage.getItem('blog_admin') === '1' && localStorage.getItem('blog_admin_key')) {
             document.documentElement.classList.add('is-admin');
         }
     } catch (e) {}
@@ -62,7 +63,6 @@
 
     {% include footer.html %}
 
-    {% include footer.html %}
 
     {% unless page.url == '/edit/' %}{% include ai-chat.html %}{% endunless %}
 
