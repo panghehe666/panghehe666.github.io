@@ -22,14 +22,14 @@
     p = new Promise(function (res) {
       if (!isAdmin()) return res(null);
       var m = mem();
-      if (m && (m.gh || m.ds)) return res(m);
+      if (m && (m.gh || m.ds || m.kimi)) return res(m);
       var cipher = (window.SITE_SECRETS_CIPHER || '').trim();
       var PC = window.PrivateCrypto;
       if (!cipher || !PC || !PC.decryptWithSession || !PC.loadSessionKey || !PC.loadSessionKey()) return res(null);
       PC.decryptWithSession(cipher).then(function (text) {
         var o = null;
         try { o = JSON.parse(text); } catch (e) {}
-        if (o && (o.gh || o.ds)) { save(o); document.dispatchEvent(new CustomEvent('phh-secrets', { detail: o })); }
+        if (o && (o.gh || o.ds || o.kimi)) { save(o); document.dispatchEvent(new CustomEvent('phh-secrets', { detail: o })); }
         res(o);
       }).catch(function () { res(null); });
     });
@@ -47,7 +47,8 @@
     ensure: ensure,
     get: function () { return mem() || {}; },
     gh: function () { return sync('gh'); },
-    ds: function () { return sync('ds'); }
+    ds: function () { return sync('ds'); },
+    kimi: function () { return sync('kimi'); }
   };
   ensure();
 })();

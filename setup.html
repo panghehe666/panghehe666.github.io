@@ -25,9 +25,12 @@ nav-style: invert
 <div class="su-wrap">
   <div class="su-card">
     <h1>密钥配置(一次性)</h1>
-    <p class="su-sub">把 DeepSeek Key 与 GitHub Token 用你的「管理员密码」加密,写进站点。之后只要登录管理员,AI 助手和文章增删改都会自动就绪,不用再配置。明文永不上传。</p>
+    <p class="su-sub">把 DeepSeek Key、Kimi Key 与 GitHub Token 用你的「管理员密码」加密,写进站点。之后只要登录管理员,AI 助手和文章增删改都会自动就绪,不用再配置。明文永不上传。</p>
     <label>DeepSeek API Key
       <input id="su-ds" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+    </label>
+    <label>Kimi API Key(月之暗面,选填)
+      <input id="su-kimi" type="password" placeholder="sk-...(留空则不配置 Kimi)" autocomplete="off" spellcheck="false">
     </label>
     <label>GitHub Token(Contents 读写)
       <input id="su-gh" type="password" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
@@ -72,9 +75,10 @@ nav-style: invert
 
   document.getElementById('su-go').addEventListener('click', function () {
     var ds = ($('su-ds').value || '').trim();
+    var kimi = ($('su-kimi').value || '').trim();
     var gh = ($('su-gh').value || '').trim();
     var pass = $('su-pass').value || '';
-    if (!ds || !gh || !pass) { setStatus('三项都要填。', 'err'); return; }
+    if (!ds || !gh || !pass) { setStatus('DeepSeek Key、GitHub Token、管理员密码必填(Kimi 选填)。', 'err'); return; }
     if (!window.PrivateCrypto) { setStatus('private-crypto.js 未加载,刷新重试。', 'err'); return; }
     this.disabled = true;
     setStatus('正在校验密码…' + spin(), 'busy');
@@ -84,7 +88,9 @@ nav-style: invert
       return sha256Hex(pass).then(function (hex) {
         if (hex !== m[1]) throw new Error('管理员密码不对');
         setStatus('正在加密…' + spin(), 'busy');
-        return PrivateCrypto.encryptText(JSON.stringify({ gh: gh, ds: ds }), pass);
+        var secrets = { gh: gh, ds: ds };
+        if (kimi) secrets.kimi = kimi;
+        return PrivateCrypto.encryptText(JSON.stringify(secrets), pass);
       });
     }).then(function (cipher) {
       setStatus('正在写入站点…' + spin(), 'busy');

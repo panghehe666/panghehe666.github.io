@@ -31,14 +31,39 @@
 
   var LS = {
     key: 'phh_ai_key',
+    keyKimi: 'phh_ai_key_kimi',
     proxy: 'phh_ai_proxy',
     deep: 'phh_ai_deep',
+    model: 'phh_ai_model',
     mode: 'phh_ai_mode',
     hist: 'phh_ai_hist',
     sessions: 'phh_ai_sessions',
     cur: 'phh_ai_cur'
   };
-  var DEF_ENDPOINT = 'https://api.deepseek.com/chat/completions';
+  /* 两家模型都直连官方接口(均已验证允许浏览器跨域);
+     节能/强爽模式与模型无关,控制的是给多少博客上下文 */
+  var PROVIDERS = {
+    ds: {
+      name: 'DeepSeek',
+      endpoint: 'https://api.deepseek.com/chat/completions',
+      lsKey: 'phh_ai_key',
+      secret: function () { return window.PHHSECRETS && PHHSECRETS.ds ? PHHSECRETS.ds() : ''; },
+      models: [
+        { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: 'V3 对话,快' },
+        { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', desc: 'R1 推理,想得深' }
+      ]
+    },
+    kimi: {
+      name: 'Kimi',
+      endpoint: 'https://api.moonshot.cn/v1/chat/completions',
+      lsKey: 'phh_ai_key_kimi',
+      secret: function () { return window.PHHSECRETS && PHHSECRETS.kimi ? PHHSECRETS.kimi() : ''; },
+      models: [
+        { id: 'kimi-k3', label: 'Kimi K3', desc: '日常对话,快' },
+        { id: 'kimi-k3.1-pro', label: 'Kimi K3.1 Pro', desc: '旗舰,能力最强' }
+      ]
+    }
+  };
   var MORE_RE = /\[\[MORE\]\]/g;
 
   /* ---------------- localStorage ---------------- */
@@ -46,12 +71,32 @@
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
 
+  /* 当前选中的 {provider, model};兼容旧版 deep 开关 */
+  function selModel() {
+    var v = lsGet(LS.model);
+    if (v) {
+      var parts = v.split(':'), pv = PROVIDERS[parts[0]];
+      if (pv) {
+        for (var i = 0; i < pv.models.length; i++) {
+          if (pv.models[i].id === parts.slice(1).join(':')) return { p: parts[0], m: pv.models[i] };
+        }
+      }
+    }
+    if (lsGet(LS.deep) === '1') return { p: 'ds', m: PROVIDERS.ds.models[1] };
+    return { p: 'ds', m: PROVIDERS.ds.models[0] };
+  }
+
   function cfg() {
-    var k = lsGet(LS.key).trim();
-    if (!k && window.PHHSECRETS && PHHSECRETS.ds) { try { k = PHHSECRETS.ds() || ''; } catch (e) {} }
+    var sel = selModel(), pv = PROVIDERS[sel.p];
+    var k = lsGet(pv.lsKey).trim();
+    if (!k) { try { k = (pv.secret && pv.secret()) || ''; } catch (e) {} }
     return {
+      provider: sel.p,
+      pv: pv,
+      model: sel.m,
       key: k,
-      proxy: lsGet(LS.proxy).trim() || CFG_PROXY
+      /* 代理只服务 DeepSeek;Kimi 官方接口本身允许跨域,直连即可 */
+      proxy: sel.p === 'ds' ? (lsGet(LS.proxy).trim() || CFG_PROXY) : ''
     };
   }
   function ready() { var c = cfg(); return !!(c.key || c.proxy); }
@@ -65,7 +110,8 @@
       tipEl = $('ai-tip'), micBtn = $('ai-mic'),
       warn = $('ai-warn'), warnBtn = $('ai-warn-btn'),
       sheetSet = $('ai-sheet-set'), sheetHist = $('ai-sheet-hist'),
-      histList = $('ai-hist-list'), keyIn = $('ai-key'), proxyIn = $('ai-proxy');
+      histList = $('ai-hist-list'), keyIn = $('ai-key'), keyKimiIn = $('ai-key-kimi'),
+      proxyIn = $('ai-proxy'), modelMenu = $('ai-model-menu');
   var helloNode = hello;  /* 保存引用:新建会话时把欢迎语再插回来 */
 
   /* ---------------- 状态 ---------------- */
@@ -79,10 +125,8 @@
   var SESSIONS = [];      // 会话列表 [{id,title,ts,log:[{q,a}],msgs:[{role,content}]}]
   var curId = '';         // 当前会话 id
 
-  function deep() { return lsGet(LS.deep) === '1'; }
   /* 节能 = 只给相关小节；强爽 = 先给整篇，不够再给全站 */
   function ecoMode() { return lsGet(LS.mode) !== 'max'; }
-  function modelId() { return deep() ? 'deepseek-reasoner' : 'deepseek-chat'; }
 
   /* ---------------- 工具 ---------------- */
   function esc(s) {
@@ -612,7 +656,7 @@
   }
 
   /* ---------------- 请求 ---------------- */
-  function endpoint() { var c = cfg(); return c.proxy || DEF_ENDPOINT; }
+  function endpoint() { var c = cfg(); return c.proxy || c.pv.endpoint; }
 
   function headers() {
     var c = cfg(), h = { 'Content-Type': 'application/json' };
@@ -680,12 +724,13 @@
   function errText(e) {
     if (!e) return '出错了';
     if (e.name === 'AbortError') return '';
-    if (e.status === 401) return 'Key 不对(401)。设置里检查一下 API Key。';
-    if (e.status === 402) return 'DeepSeek 账户余额不足(402),充点钱再来。';
+    var pname = cfg().pv.name;
+    if (e.status === 401) return pname + ' 的 Key 不对(401)。设置里检查一下 API Key。';
+    if (e.status === 402) return pname + ' 账户余额不足(402),充点钱再来。';
     if (e.status === 422) return '请求参数有问题(422)。' + (e.body || '').slice(0, 120);
     if (e.status === 429) return '请求太频繁(429),歇几秒再问。';
     if (e.status === 400) return '请求被拒(400)。' + (e.body || '').slice(0, 160);
-    if (e.status >= 500) return 'DeepSeek 那边打嗝了(HTTP ' + e.status + '),等会儿再试。';
+    if (e.status >= 500) return pname + ' 那边打嗝了(HTTP ' + e.status + '),等会儿再试。';
     if (/Failed to fetch|NetworkError|Load failed|network/i.test(e.message || '')) return '网络不通。检查网络,或确认代理地址可用。';
     return '出错了:' + (e.message || e);
   }
@@ -740,8 +785,11 @@
             .concat(history)
             .concat([{ role: 'user', content: uc }]);
 
-          var payload = { model: modelId(), messages: messages, stream: true, max_tokens: eco ? 800 : 1400 };
-          if (!deep()) payload.temperature = 1.0;
+          /* Kimi 是推理模型,思考过程也占 max_tokens,多给一些余量 */
+          var maxTok = cfg().provider === 'kimi' ? (eco ? 1600 : 2600) : (eco ? 800 : 1400);
+          var payload = { model: cfg().model.id, messages: messages, stream: true, max_tokens: maxTok };
+          /* reasoner 不支持 temperature;kimi 用服务端默认值更稳 */
+          if (cfg().model.id === 'deepseek-chat') payload.temperature = 1.0;
 
           var acc = '', rea = '';
           return stream(payload,
@@ -981,6 +1029,7 @@
     [sheetSet, sheetHist].forEach(function (s) { s.classList.toggle('on', s === el); });
     if (el === sheetSet) {
       keyIn.value = lsGet(LS.key);
+      keyKimiIn.value = lsGet(LS.keyKimi);
       proxyIn.value = lsGet(LS.proxy) || CFG_PROXY;
     }
     if (el === sheetHist) renderSessions();
@@ -1047,19 +1096,59 @@
     input.style.height = Math.min(input.scrollHeight, 112) + 'px';
   }
 
-  /* 模型切换 */
-  modelBtn.addEventListener('click', function () {
-    var next = !deep();
-    lsSet(LS.deep, next ? '1' : '0');
-    syncModel();
+  /* 模型选择菜单(DeepSeek / Kimi 全部可用模型) */
+  function buildModelMenu() {
+    if (!modelMenu) return;
+    modelMenu.innerHTML = '';
+    Object.keys(PROVIDERS).forEach(function (pk) {
+      var pv = PROVIDERS[pk];
+      var g = document.createElement('div');
+      g.className = 'ai-mm-group';
+      g.textContent = pv.name;
+      modelMenu.appendChild(g);
+      pv.models.forEach(function (m) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ai-mm-item';
+        b.dataset.sel = pk + ':' + m.id;
+        b.innerHTML = '<span class="ai-mm-label">' + esc(m.label) + '</span>' +
+          '<span class="ai-mm-desc">' + esc(m.desc || '') + '</span>';
+        b.addEventListener('click', function () {
+          lsSet(LS.model, pk + ':' + m.id);
+          closeModelMenu();
+          syncModel();
+          warn.classList.toggle('on', !ready());
+        });
+        modelMenu.appendChild(b);
+      });
+    });
+  }
+  function closeModelMenu() { if (modelMenu) modelMenu.classList.remove('on'); }
+  modelBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (!modelMenu) return;
+    var willOpen = !modelMenu.classList.contains('on');
+    closeModelMenu();
+    if (willOpen) {
+      var cur = selModel();
+      var sel = cur.p + ':' + cur.m.id;
+      Array.prototype.forEach.call(modelMenu.querySelectorAll('.ai-mm-item'), function (b) {
+        b.classList.toggle('cur', b.dataset.sel === sel);
+      });
+      modelMenu.classList.add('on');
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (modelMenu && modelMenu.classList.contains('on') &&
+        !modelMenu.contains(e.target) && e.target !== modelBtn) closeModelMenu();
   });
   modeBtn.addEventListener('click', function () {
     lsSet(LS.mode, ecoMode() ? 'max' : 'eco');
     syncModel();
   });
   function syncModel() {
-    var d = deep(), eco = ecoMode();
-    modelName.textContent = d ? 'DeepSeek Reasoner' : 'DeepSeek Chat';
+    var cur = selModel(), eco = ecoMode();
+    modelName.textContent = cur.m.label;
     modeName.textContent = eco ? '节能' : '强爽';
     modeBtn.classList.toggle('on', !eco);
     if (tipEl) {
@@ -1072,13 +1161,14 @@
   /* 设置 */
   $('ai-save').addEventListener('click', function () {
     lsSet(LS.key, keyIn.value.trim());
+    lsSet(LS.keyKimi, keyKimiIn.value.trim());
     lsSet(LS.proxy, proxyIn.value.trim());
     warn.classList.toggle('on', !ready());
     closeSheets();
   });
   $('ai-clear').addEventListener('click', function () {
-    lsDel(LS.key); lsDel(LS.proxy);
-    keyIn.value = ''; proxyIn.value = CFG_PROXY;
+    lsDel(LS.key); lsDel(LS.keyKimi); lsDel(LS.proxy);
+    keyIn.value = ''; keyKimiIn.value = ''; proxyIn.value = CFG_PROXY;
     warn.classList.add('on');
   });
 
@@ -1124,6 +1214,7 @@
   if (isAdmin()) { var ap = $('ai-admin-tag'); if (ap) ap.classList.add('on'); }
   if (document.querySelector('.cal-fab')) ROOT.classList.add('has-cal');
   loadSessions();
+  buildModelMenu();
   syncModel();
   updateSend();
   warn.classList.toggle('on', !ready());

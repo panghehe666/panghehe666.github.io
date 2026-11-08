@@ -59,12 +59,13 @@
     </div>
 
     <div class="ai-warn" id="ai-warn">
-      还没配置 DeepSeek API Key,<b id="ai-warn-btn">点这里设置</b>
+      当前模型还没配置 API Key,<b id="ai-warn-btn">点这里设置</b>
     </div>
 
     <div class="ai-foot">
       <div class="ai-inputwrap">
         <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
+        <div id="ai-model-menu" class="ai-model-menu"></div>
         <div class="ai-tools">
           <button id="ai-model" class="ai-pill" type="button" title="切换模型">
             <span id="ai-model-name">DeepSeek Chat</span>
@@ -104,6 +105,13 @@
           <input id="ai-key" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
           <div class="hint">只存在你本地浏览器(localStorage),不会上传。到
             <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a> 申请。
+          </div>
+        </div>
+        <div class="ai-field">
+          <label>Kimi API Key(月之暗面)</label>
+          <input id="ai-key-kimi" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+          <div class="hint">选用 Kimi 模型时使用,同样只存在本地。到
+            <a href="https://platform.moonshot.cn/console/api-keys" target="_blank" rel="noopener">platform.moonshot.cn</a> 申请。
           </div>
         </div>
         <div class="ai-field">

@@ -227,6 +227,37 @@
 #ai-chat .ai-send.stop { background: rgba(236, 139, 156, .16); color: #ec8b9c; }
 #ai-chat .ai-tip { text-align: center; font-size: 11px; color: #5c6572; margin-top: 8px; letter-spacing: .02em; }
 
+/* 模型选择菜单 */
+#ai-chat .ai-inputwrap { position: relative; }
+#ai-chat .ai-model-menu {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 40;
+  display: none;
+  background: #1c2027;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
+  max-height: 260px; overflow-y: auto;
+}
+#ai-chat .ai-model-menu.on { display: block; }
+#ai-chat .ai-mm-group {
+  padding: 8px 10px 3px;
+  font-size: 11px; color: #6a7380; letter-spacing: .06em;
+}
+#ai-chat .ai-mm-item {
+  display: flex; align-items: baseline; gap: 8px;
+  width: 100%; padding: 9px 10px;
+  border: none; border-radius: 9px;
+  background: none; color: #dfe5ec;
+  font-size: 13.5px; text-align: left; cursor: pointer;
+  transition: background .14s;
+}
+#ai-chat .ai-mm-item:hover { background: rgba(255, 255, 255, .07); }
+#ai-chat .ai-mm-item.cur { background: rgba(0, 133, 161, .16); }
+#ai-chat .ai-mm-item.cur .ai-mm-label { color: #7fd3e6; }
+#ai-chat .ai-mm-label { flex: none; font-weight: 600; }
+#ai-chat .ai-mm-desc { flex: 1; font-size: 11.5px; color: #7b8492; }
+
 /* 未配置提示 */
 #ai-chat .ai-warn {
   display: none;
