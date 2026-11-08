@@ -1,5 +1,5 @@
 {% if site.ai_chat != false %}
-<link rel="stylesheet" href="{{ '/css/ai-chat.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}">
+<link rel="stylesheet" href="{{ '/css/ai-chat.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}">
 
 <div id="ai-chat" data-base="{{ site.baseurl }}"
      data-build="{{ site.time | date: '%s' }}"
@@ -149,5 +149,5 @@
   </div>
 </div>
 
-<script src="{{ '/js/ai-chat.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}" defer></script>
+<script src="{{ '/js/ai-chat.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 {% endif %}

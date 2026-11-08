@@ -653,15 +653,16 @@
     }
     var stick = nearBottom();
     node.innerHTML = html;
-    if (!done) {
-      /* 思考内容实时滚动到最新一行,否则一直停在第一行 */
+    /* 下一帧再滚,确保新内容已布局(思考框滚到最新一行;对话流默认跟随到底) */
+    requestAnimationFrame(function () {
       var rz = node.querySelector('.ai-reason');
-      if (rz) rz.scrollTop = rz.scrollHeight;
-      /* 流式期间默认跟随到底;只有用户手动上翻才暂停 */
-      if (!bodyPinned) toBottom();
-    } else if (stick) {
-      toBottom();
-    }
+      if (rz) { rz.scrollTop = rz.scrollHeight + 999; }
+      if (!done) {
+        if (!bodyPinned) bodyEl.scrollTop = bodyEl.scrollHeight + 999;
+      } else if (stick) {
+        bodyEl.scrollTop = bodyEl.scrollHeight + 999;
+      }
+    });
   }
 
   function renderError(node, msg, retryText) {
