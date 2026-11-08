@@ -163,7 +163,12 @@
   function nearBottom() {
     return bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight < 120;
   }
-  function toBottom() { bodyEl.scrollTop = bodyEl.scrollHeight + 999; }
+  /* 用户手动往上翻时暂停自动跟随,否则流式输出时一直强制到底 */
+  var bodyPinned = false;
+  bodyEl.addEventListener('scroll', function () {
+    bodyPinned = (bodyEl.scrollHeight - bodyEl.scrollTop - bodyEl.clientHeight) > 90;
+  }, { passive: true });
+  function toBottom() { bodyEl.scrollTop = bodyEl.scrollHeight + 999; bodyPinned = false; }
 
   /* ---------------- 索引 + 检索（BM25 + 标题加权） ---------------- */
   var IDX = null, CHUNKS = null, INV = null, AVGDL = 1, PTITLE = null, SEEN = {}, PCHUNKS = [], SECT = [];
@@ -652,8 +657,11 @@
       /* 思考内容实时滚动到最新一行,否则一直停在第一行 */
       var rz = node.querySelector('.ai-reason');
       if (rz) rz.scrollTop = rz.scrollHeight;
+      /* 流式期间默认跟随到底;只有用户手动上翻才暂停 */
+      if (!bodyPinned) toBottom();
+    } else if (stick) {
+      toBottom();
     }
-    if (stick) toBottom();
   }
 
   function renderError(node, msg, retryText) {
