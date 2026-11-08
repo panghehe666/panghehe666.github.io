@@ -790,19 +790,33 @@
         function ctxByPosts(idxs) {
           var parts = [], total = 0;
           var posts = (IDX && IDX.posts) || [];
-          /* 文章越多,每篇给得越精炼(排名/全站对比需要覆盖全部,而不是几篇完整正文) */
-          var perCap = idxs.length > 6 ? 2400 : (idxs.length > 3 ? 4000 : 9000);
-          var totalCap = 48000;
+          /* 文章多(>8 篇)时切"全站摘要模式":每篇 标题+小节标题+开头摘要,
+             保证 100 篇文章也能一次全部塞进上下文用于排名/全站对比 */
+          var condensed = idxs.length > 8;
+          var totalCap = 52000;
           for (var ci = 0; ci < idxs.length; ci++) {
             var cp = posts[idxs[ci]];
             if (!cp) continue;
-            var cb = cleanBody(cp.x);
-            if (!cb) continue;
-            if (cb.length > perCap) cb = cb.slice(0, perCap) + '…';
-            if (total + cb.length > totalCap) { cb = cb.slice(0, Math.max(0, totalCap - total)) + '…'; }
-            parts.push('### 《' + (cp.t || '') + '》 ' + (cp.d || '') + ' ' + (cp.u || '') + '\n' + cb);
-            total += cb.length;
-            if (total >= totalCap) break;
+            var raw = String(cp.x || '');
+            var line;
+            if (condensed) {
+              var heads = (raw.match(/([^\n@]{1,60})@H@/g) || []).slice(0, 6).map(function (h) {
+                return h.replace(/@H@$/, '').trim();
+              });
+              var snip = cleanBody(raw).replace(/\s+/g, ' ').slice(0, 280);
+              line = '### 《' + (cp.t || '') + '》 ' + (cp.d || '') + ' ' + (cp.u || '') +
+                '\n【小节】' + (heads.length ? heads.join(' / ') : '(无)') +
+                '\n【开头】' + snip;
+            } else {
+              var cb = cleanBody(raw);
+              if (!cb) continue;
+              var perCap = idxs.length > 6 ? 2400 : (idxs.length > 3 ? 4000 : 9000);
+              if (cb.length > perCap) cb = cb.slice(0, perCap) + '…';
+              line = '### 《' + (cp.t || '') + '》 ' + (cp.d || '') + ' ' + (cp.u || '') + '\n' + cb;
+            }
+            if (total + line.length > totalCap) { parts.push(line.slice(0, Math.max(0, totalCap - total))); break; }
+            parts.push(line);
+            total += line.length;
           }
           return parts.join('\n\n');
         }
@@ -872,6 +886,7 @@
                 for (var oj = 0; oj < order.length; oj++) {
                   if (idxs.indexOf(order[oj]) < 0) idxs.push(order[oj]);
                 }
+                node.innerHTML = '<div class="ai-dim">需要全站:一次给全部 ' + idxs.length + ' 篇(摘要)…</div>';
               }
               node.innerHTML = '<div class="ai-dim">不够顶配,再找一篇…(已选 ' + idxs.length + ' 篇)</div>';
               return grow(round + 1);
