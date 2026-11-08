@@ -567,6 +567,7 @@
       s.push('3. 你拿到的是【已选文章】的完整正文(从最相关的开始,不够会再补)。回答前先自评:只凭这些正文,我的回答能不能算「顶配」——把问题答透、有具体结论/步骤/数据、能直接拿去用?');
       s.push('3.1 够顶配:直接给最终回答。');
       s.push('3.2 不够顶配(缺关键细节、要跨文章对比、答案明显在别的文章):只输出 [[MORE]] 这一个标记,不要输出任何别的字;系统会再找几篇相关文章给你,你再自评,循环到够顶配或材料用尽为止。');
+      s.push('3.3 如果问题天然需要覆盖全站(给所有文章排名、全站对比、汇总、挑最好的几篇):不要只看手头两三篇就下结论,连续输出 [[MORE]] 把其余文章一篇篇要过来,拿到全部后再统一排名/对比。');
       s.push('3.5 强爽模式下允许你答得更展开,该列点列点、该给结论给结论,上限 12 句。');
     }
     s.push('4. 补了全文还找不到的部分,就说"这篇里那段我没拿到,你点进去看原文",并给出链接。');
@@ -784,21 +785,24 @@
         if (hits.length) lastP = hits[0].p;
 
         /* ---- 上下文组装 ---- */
-        var MAX_ADDS = 3;   /* 强爽:最多追加 3 轮文章 */
+        var MAX_ADDS = 12;  /* 强爽:最多追加 12 轮(足以覆盖全站,排名/对比类问题用) */
 
         function ctxByPosts(idxs) {
           var parts = [], total = 0;
           var posts = (IDX && IDX.posts) || [];
+          /* 文章越多,每篇给得越精炼(排名/全站对比需要覆盖全部,而不是几篇完整正文) */
+          var perCap = idxs.length > 6 ? 2400 : (idxs.length > 3 ? 4000 : 9000);
+          var totalCap = 48000;
           for (var ci = 0; ci < idxs.length; ci++) {
             var cp = posts[idxs[ci]];
             if (!cp) continue;
             var cb = cleanBody(cp.x);
             if (!cb) continue;
-            if (cb.length > 9000) cb = cb.slice(0, 9000) + '…';
-            if (total + cb.length > 34000) { cb = cb.slice(0, Math.max(0, 34000 - total)) + '…'; }
+            if (cb.length > perCap) cb = cb.slice(0, perCap) + '…';
+            if (total + cb.length > totalCap) { cb = cb.slice(0, Math.max(0, totalCap - total)) + '…'; }
             parts.push('### 《' + (cp.t || '') + '》 ' + (cp.d || '') + ' ' + (cp.u || '') + '\n' + cb);
             total += cb.length;
-            if (total >= 34000) break;
+            if (total >= totalCap) break;
           }
           return parts.join('\n\n');
         }
@@ -846,19 +850,29 @@
               return res;
             });
           }
+          /* 候选顺序:检索命中(按相关度)→ 其余全部文章(按日期,新的在前) */
+          var order = [];
+          hits.forEach(function (h) { if (order.indexOf(h.p) < 0) order.push(h.p); });
+          (IDX.posts || []).forEach(function (p, i) { if (order.indexOf(i) < 0) order.push(i); });
           var idxs = [];
-          if (hits.length) idxs.push(hits[0].p);
+          if (order.length) idxs.push(order[0]);
           function grow(round) {
-            var force = round >= MAX_ADDS || !hits.length;
+            var force = round >= MAX_ADDS || !order.length;
             return pass(0, force, idxs).then(function (res) {
               if (force) return res;
               if (String(res.acc || '').indexOf('[[MORE]]') < 0) return res;
               var next = -1;
-              for (var h = 0; h < hits.length; h++) {
-                if (idxs.indexOf(hits[h].p) < 0) { next = hits[h].p; break; }
+              for (var oi = 0; oi < order.length; oi++) {
+                if (idxs.indexOf(order[oi]) < 0) { next = order[oi]; break; }
               }
               if (next < 0) return pass(0, true, idxs);
               idxs.push(next);
+              /* 连续两次要材料 = 明显是"全站"类问题:一次性补齐剩余全部文章,避免磨十几轮 */
+              if (idxs.length >= 3) {
+                for (var oj = 0; oj < order.length; oj++) {
+                  if (idxs.indexOf(order[oj]) < 0) idxs.push(order[oj]);
+                }
+              }
               node.innerHTML = '<div class="ai-dim">不够顶配,再找一篇…(已选 ' + idxs.length + ' 篇)</div>';
               return grow(round + 1);
             });
