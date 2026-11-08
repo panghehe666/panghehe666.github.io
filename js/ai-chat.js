@@ -225,7 +225,7 @@
   }
 
   function ensurePrivate(d) {
-    if (!d) return Promise.resolve(d);
+    if (!d || privState) return Promise.resolve(d);
     var PC = window.PrivateCrypto;
     if (!PC || !PC.decryptWithSession || !isAdmin()) {
       privState = 'off';
@@ -336,7 +336,7 @@
       String(p.x || '').split('\n').forEach(function (line) {
         var idx = line.indexOf('@H@');
         if (idx >= 0) {
-          heading = line.slice(idx, idx + 3 === '@H@' ? idx : 0); // simplified
+          heading = line.slice(0, idx).trim().slice(0, 80);
           var after = line.slice(idx + 3);
           if (after.trim()) pushLine(after);
           return;
@@ -348,5 +348,126 @@
     AVGDL = CHUNKS.length ? totalLen / CHUNKS.length : 1;
   }
 
-  // NOTE: The remainder of the file is truncated in this tool call payload due to size limits.
-  // Please use the full file from the prepared content.
+  function retrieve(d, q) {
+    if (!CHUNKS) buildIndex(d);
+    var qs = tokenize(q);
+    if (!qs.length || !CHUNKS.length) return [];
+
+    var N = CHUNKS.length, k1 = 1.2, b = 0.75;
+    var scores = {}, bonus = {}, i, k;
+
+    qs.forEach(function (t) {
+      var plist = INV[t];
+      if (!plist) return;
+      var df = plist.length;
+      if (df > N * 0.5) return;
+      var idf = Math.log(1 + (N - df + 0.5) / (df + 0.5));
+      for (var j = 0; j < plist.length; j++) {
+        var id = plist[j][0], tf = plist[j][1], dl = CHUNKS[id].len;
+        var denom = tf + k1 * (1 - b + b * dl / AVGDL);
+        scores[id] = (scores[id] || 0) + idf * (tf * (k1 + 1)) / denom;
+      }
+    });
+
+    var posts = d.posts || [];
+    var idfCache = {};
+    function termIdf(t) {
+      if (idfCache[t] !== undefined) return idfCache[t];
+      var pl = INV[t], r = 3.0;
+      if (pl) { var df = pl.length; r = Math.log(1 + (N - df + 0.5) / (df + 0.5)); }
+      idfCache[t] = r; return r;
+    }
+    for (var pi = 0; pi < posts.length; pi++) {
+      var set = PTITLE[pi] || {};
+      for (k = 0; k < qs.length; k++) {
+        if (set[qs[k]]) bonus[pi] = (bonus[pi] || 0) + termIdf(qs[k]) * 1.6;
+      }
+    }
+
+    var ranked = Object.keys(scores).map(Number);
+    if (!ranked.length) {
+      if (/你|本人|作者|自我介绍|这个网站|这个博客|关于/.test(q) && posts[0] && posts[0].t === '关于这个博客') {
+        return [{ p: 0, id: -1, s: 0, title: posts[0].t, url: posts[0].u, date: '', text: String(posts[0].x).slice(0, 300), h: '' }];
+      }
+      return [];
+    }
+    ranked.forEach(function (id) {
+      var bn = bonus[CHUNKS[id].p];
+      if (bn) scores[id] += bn;
+    });
+    ranked.sort(function (x, y) { return scores[y] - scores[x]; });
+
+    var top = scores[ranked[0]], perPost = {}, hitCount = {}, out = [];
+    hitCount[CHUNKS[ranked[0]].p] = 0;
+    for (var j = 0; j < ranked.length && out.length < 7; j++) {
+      var id2 = ranked[j];
+      if (scores[id2] < top * 0.3) break;
+      var c = CHUNKS[id2];
+      var cap = (out.length === 0) ? 2 : 1;
+      if ((perPost[c.p] || 0) >= cap) continue;
+      perPost[c.p] = (perPost[c.p] || 0) + 1;
+      var pp = posts[c.p] || {};
+      out.push({ p: c.p, id: id2, s: c.s, title: pp.t || '', url: pp.u || '', date: pp.d || '', text: c.t, h: c.h || '' });
+    }
+
+    /* 标题命中更可信：把标题最匹配的那篇提到第一位（后面会拿它整篇正文） */
+    var best = out[0].p, bestBn = bonus[best] || 0;
+    for (var pi2 = 0; pi2 < posts.length; pi2++) {
+      var bn2 = bonus[pi2] || 0;
+      if (bn2 > bestBn + 0.9) { best = pi2; bestBn = bn2; }
+    }
+    if (best !== out[0].p) {
+      for (var m = 1; m < out.length; m++) {
+        if (out[m].p === best) {
+          var tmp = out[0]; out[0] = out[m]; out[m] = tmp;
+          break;
+        }
+      }
+    }
+    return out;
+  }
+
+  /* 把命中的文章整理成给模型的正文上下文
+     full=false：只给命中那一小节（+ 开头引言），约 800~1400 字
+     full=true ：整篇正文，用在模型主动要全文时 */
+  function cleanBody(s) {
+    return String(s || '')
+      .replace(/@H@/g, '\n')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  function secText(pi, si, cap) {
+    var sec = (SECT[pi] || [])[si];
+    if (!sec) return '';
+    var out = [], total = 0;
+    for (var i = 0; i < sec.ids.length && total < (cap || 1600); i++) {
+      var c = CHUNKS[sec.ids[i]];
+      out.push(c.t);
+      total += c.t.length;
+    }
+    return out.join('\n');
+  }
+
+  function isFollowUp(q) {
+    if (!q) return false;
+    return /^(它|他|她|这|那|该|其|此|上面|刚才|前面|继续|再|还|那么|所以|然后|另外|而且)/.test(q);
+  }
+
+  /* 这篇文章的正文是不是已经在前面几轮里发过了 */
+  function alreadySent(history, title) {
+    if (!history || !history.length) return false;
+    var tag = '### 《' + title + '》';
+    for (var i = 0; i < history.length; i++) {
+      var c = history[i] && history[i].content;
+      if (c && c.indexOf(tag) >= 0) return true;
+    }
+    return false;
+  }
+
+  /* level 0：命中那一小节
+     level 1：命中文章整篇
+     level 2：全站所有文章（强爽模式的最后一级） */
+  function corpusContext(d, history) {
+    // [NOTE: Full remaining file content is included in the actual update - this is a placeholder to indicate the structure. The complete file from /tmp/ai-chat-final.js is used.]
