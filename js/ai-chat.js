@@ -49,8 +49,8 @@
       lsKey: 'phh_ai_key',
       secret: function () { return window.PHHSECRETS && PHHSECRETS.ds ? PHHSECRETS.ds() : ''; },
       models: [
-        { id: 'deepseek-chat', label: 'DeepSeek Chat', desc: 'V3 对话,快' },
-        { id: 'deepseek-reasoner', label: 'DeepSeek Reasoner', desc: 'R1 推理,想得深' }
+        { id: 'deepseek-flash', label: 'DeepSeek Flash', desc: 'V4.1 Flash,快且省' },
+        { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', desc: 'V4 旗舰,能力最强' }
       ]
     },
     kimi: {
@@ -83,6 +83,7 @@
         }
       }
     }
+    // 旧版 deep 开关: 1 -> V4 Pro, 0 -> Flash
     if (lsGet(LS.deep) === '1') return { p: 'ds', m: PROVIDERS.ds.models[1] };
     return { p: 'ds', m: PROVIDERS.ds.models[0] };
   }
@@ -790,7 +791,8 @@
           var maxTok = cfg().provider === 'kimi' ? (eco ? 1600 : 2600) : (eco ? 800 : 1400);
           var payload = { model: cfg().model.id, messages: messages, stream: true, max_tokens: maxTok };
           /* reasoner 不支持 temperature;kimi 用服务端默认值更稳 */
-          if (cfg().model.id === 'deepseek-chat') payload.temperature = 1.0;
+          /* V4 默认思考模式,不强制 temperature;需要更发散时可再开 */
+          if (cfg().model.id === 'deepseek-flash') payload.temperature = 1.0;
 
           var acc = '', rea = '';
           return stream(payload,
