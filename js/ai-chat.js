@@ -564,7 +564,9 @@
     if (ecoMode()) {
       s.push('3. 如果正文明显不够答准(比如只剩半句话、或答案在别的小节),你就只输出 [[MORE]] 这个标记(不要输出任何别的字),系统会自动把整篇补给你。能答就不要用。');
     } else {
-      s.push('3. 你现在拿到的是整篇正文。如果需要跨文章对比、或答案明显在别的文章里,你就只输出 [[MORE]] 这个标记(不要输出任何别的字),系统会把全站文章都调给你。能答就不要用。');
+      s.push('3. 你拿到的是【已选文章】的完整正文(从最相关的开始,不够会再补)。回答前先自评:只凭这些正文,我的回答能不能算「顶配」——把问题答透、有具体结论/步骤/数据、能直接拿去用?');
+      s.push('3.1 够顶配:直接给最终回答。');
+      s.push('3.2 不够顶配(缺关键细节、要跨文章对比、答案明显在别的文章):只输出 [[MORE]] 这一个标记,不要输出任何别的字;系统会再找几篇相关文章给你,你再自评,循环到够顶配或材料用尽为止。');
       s.push('3.5 强爽模式下允许你答得更展开,该列点列点、该给结论给结论,上限 12 句。');
     }
     s.push('4. 补了全文还找不到的部分,就说"这篇里那段我没拿到,你点进去看原文",并给出链接。');
@@ -781,8 +783,37 @@
         }
         if (hits.length) lastP = hits[0].p;
 
-        function pass(level) {
-          var uc = userMsg(text, hits, level, history);
+        /* ---- 上下文组装 ---- */
+        var MAX_ADDS = 3;   /* 强爽:最多追加 3 轮文章 */
+
+        function ctxByPosts(idxs) {
+          var parts = [], total = 0;
+          var posts = (IDX && IDX.posts) || [];
+          for (var ci = 0; ci < idxs.length; ci++) {
+            var cp = posts[idxs[ci]];
+            if (!cp) continue;
+            var cb = cleanBody(cp.x);
+            if (!cb) continue;
+            if (cb.length > 9000) cb = cb.slice(0, 9000) + '…';
+            if (total + cb.length > 34000) { cb = cb.slice(0, Math.max(0, 34000 - total)) + '…'; }
+            parts.push('### 《' + (cp.t || '') + '》 ' + (cp.d || '') + ' ' + (cp.u || '') + '\n' + cb);
+            total += cb.length;
+            if (total >= 34000) break;
+          }
+          return parts.join('\n\n');
+        }
+
+        function pass(level, force, idxs) {
+          var uc;
+          if (idxs) {
+            var ctx = ctxByPosts(idxs);
+            uc = '【博客正文·已选 ' + idxs.length + ' 篇】\n' +
+              (ctx || '(这次没检索到相关正文,只能靠文章列表回答)') +
+              '\n\n【我的问题】\n' + text;
+          } else {
+            uc = userMsg(text, hits, level, history);
+          }
+          if (force) uc += '\n\n(材料已经给全了。请直接给出最终回答,不要输出 [[MORE]];确实不知道就用一两句话说明。)';
           var messages = [{ role: 'system', content: sysPrompt() }]
             .concat(history)
             .concat([{ role: 'user', content: uc }]);
@@ -790,8 +821,6 @@
           /* Kimi 是推理模型,思考过程也占 max_tokens,多给一些余量 */
           var maxTok = cfg().provider === 'kimi' ? (eco ? 1600 : 2600) : (eco ? 800 : 1400);
           var payload = { model: cfg().model.id, messages: messages, stream: true, max_tokens: maxTok };
-          /* reasoner 不支持 temperature;kimi 用服务端默认值更稳 */
-          /* V4 默认思考模式,不强制 temperature;需要更发散时可再开 */
           if (cfg().model.id === 'deepseek-flash') payload.temperature = 1.0;
 
           var acc = '', rea = '';
@@ -800,27 +829,65 @@
             function (r) { rea += r; render(node, acc.replace(MORE_RE, ''), rea, hits, false); },
             ctrl ? ctrl.signal : undefined
           ).then(function () {
-            /* 节选不够 → 整篇；整篇不够 → 全站。每问最多升级一次 */
-            if (level < maxLv && !escalated && acc.indexOf('[[MORE]]') >= 0) {
+            if (!force && !idxs && level < maxLv && !escalated && acc.indexOf('[[MORE]]') >= 0) {
               escalated = true;
-              node.innerHTML = '<div class="ai-dim">' +
-                (level === 0 ? '这一节不够,翻一下全文…' : '这篇不够,翻整个博客…') + '</div>';
-              return pass(level + 1);
+              node.innerHTML = '<div class="ai-dim">这一节不够,翻一下全文…</div>';
+              return pass(level + 1, false);
             }
-            return { acc: acc, rea: rea, uc: uc, lv: level };
+            return { acc: acc, rea: rea, uc: uc, lv: level, force: !!force, idxs: idxs || null };
           });
         }
 
-        return pass(startLv).then(function (res) {
+        /* ---- 问答:节能=节选→整篇;强爽=自评,不够顶配就继续找文章 ---- */
+        function run() {
+          if (eco) {
+            return pass(0, false).then(function (res) {
+              if (res.acc.indexOf('[[MORE]]') >= 0) return pass(1, false);
+              return res;
+            });
+          }
+          var idxs = [];
+          if (hits.length) idxs.push(hits[0].p);
+          function grow(round) {
+            var force = round >= MAX_ADDS || !hits.length;
+            return pass(0, force, idxs).then(function (res) {
+              if (force) return res;
+              if (String(res.acc || '').indexOf('[[MORE]]') < 0) return res;
+              var next = -1;
+              for (var h = 0; h < hits.length; h++) {
+                if (idxs.indexOf(hits[h].p) < 0) { next = hits[h].p; break; }
+              }
+              if (next < 0) return pass(0, true, idxs);
+              idxs.push(next);
+              node.innerHTML = '<div class="ai-dim">不够顶配,再找一篇…(已选 ' + idxs.length + ' 篇)</div>';
+              return grow(round + 1);
+            });
+          }
+          return grow(0);
+        }
+
+        return run().then(function (res) {
           var out = String(res.acc || '').replace(MORE_RE, '').trim();
-          if (!out && !res.rea) out = '(没有返回内容)';
+          if (out || res.force) return res;
+          /* 只回了 [[MORE]] 或空:强制再答一次,避免空气泡 */
+          node.innerHTML = '<div class="ai-dim">这次没答上来,再试一次…</div>';
+          return pass(0, true, res.idxs || (hits.length ? [hits[0].p] : null));
+        }).then(function (res) {
+          var out = String(res.acc || '').replace(MORE_RE, '').trim();
+          if (!out) out = res.rea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
           render(node, out, res.rea, hits, true);
           /* 存带上下文的完整消息：下一轮它就成了稳定前缀，命中缓存 */
           msgs.push({ role: 'user', content: res.uc });
           msgs.push({ role: 'assistant', content: out || '(空)' });
-          if (res.lv >= 1 && hits.length) {
-            if (res.lv >= 2) (d.posts || []).forEach(function (pp) { fullSent[pp.t] = 1; });
-            else fullSent[hits[0].title] = 1;
+          if (hits.length) {
+            if (res.idxs) {
+              res.idxs.forEach(function (ii) {
+                var p2 = (IDX.posts || [])[ii];
+                if (p2 && p2.t) fullSent[p2.t] = 1;
+              });
+            } else {
+              fullSent[hits[0].title] = 1;
+            }
           }
           saveTurn(text, out, res.uc);
         });
@@ -1157,7 +1224,7 @@
     if (tipEl) {
       tipEl.textContent = eco
         ? '节能模式：只带相关小节，够不够由它自己开口要'
-        : '强爽模式：先给整篇，不够再调全站，答案最全也最费 token';
+        : '强爽模式：AI 自评答案够不够顶配，不够就继续找文章，直到顶配';
     }
   }
 
