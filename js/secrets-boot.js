@@ -22,16 +22,24 @@
     p = new Promise(function (res) {
       if (!isAdmin()) return res(null);
       var m = mem();
-      if (m && (m.gh || m.ds || m.kimi)) return res(m);
+      // 缓存里若已有完整密钥(含 kimi)直接用;否则重新解密,兼容旧会话只有 gh/ds 的情况
+      if (m && (m.gh || m.ds) && m.kimi) return res(m);
       var cipher = (window.SITE_SECRETS_CIPHER || '').trim();
       var PC = window.PrivateCrypto;
-      if (!cipher || !PC || !PC.decryptWithSession || !PC.loadSessionKey || !PC.loadSessionKey()) return res(null);
+      if (!cipher || !PC || !PC.decryptWithSession || !PC.loadSessionKey || !PC.loadSessionKey()) {
+        return res(m || null);
+      }
       PC.decryptWithSession(cipher).then(function (text) {
         var o = null;
         try { o = JSON.parse(text); } catch (e) {}
-        if (o && (o.gh || o.ds || o.kimi)) { save(o); document.dispatchEvent(new CustomEvent('phh-secrets', { detail: o })); }
-        res(o);
-      }).catch(function () { res(null); });
+        if (o && (o.gh || o.ds || o.kimi)) {
+          save(o);
+          document.dispatchEvent(new CustomEvent('phh-secrets', { detail: o }));
+          res(o);
+        } else {
+          res(m || null);
+        }
+      }).catch(function () { res(m || null); });
     });
     return p;
   }
