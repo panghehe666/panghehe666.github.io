@@ -631,7 +631,10 @@
 
   function render(node, text, reason, hits, done) {
     var html = '';
-    if (reason) html += '<div class="ai-reason">' + md(reason) + '</div>';
+    if (reason) {
+      html += '<div class="ai-reason">' + md(reason) +
+        (!done && !text ? '<span class="ai-caret">▍</span>' : '') + '</div>';
+    }
     if (text) html += '<div class="ai-txt">' + md(text) + '</div>';
     else if (!reason) html = '<div class="ai-dots"><i></i><i></i><i></i></div>';
     if (done && hits && hits.length) {
@@ -645,6 +648,11 @@
     }
     var stick = nearBottom();
     node.innerHTML = html;
+    if (!done) {
+      /* 思考内容实时滚动到最新一行,否则一直停在第一行 */
+      var rz = node.querySelector('.ai-reason');
+      if (rz) rz.scrollTop = rz.scrollHeight;
+    }
     if (stick) toBottom();
   }
 
