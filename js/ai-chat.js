@@ -31,6 +31,7 @@
 
   var LS = {
     key: 'phh_ai_key',
+    mem: 'phh_ai_mem',
     keyKimi: 'phh_ai_key_kimi',
     proxy: 'phh_ai_proxy',
     deep: 'phh_ai_deep',
@@ -66,6 +67,49 @@
     }
   };
   var MORE_RE = /\[\[MORE\]\]/g;
+
+  /* ---------------- 长期记忆(强爽/节能共用,白嫖完全隔离) ---------------- */
+  function loadMem() {
+    try {
+      var a = JSON.parse(lsGet(LS.mem) || '[]');
+      if (!Array.isArray(a)) return [];
+      return a.filter(function (x) { return x && String(x).trim(); }).map(function (x) { return String(x).trim(); });
+    } catch (e) { return []; }
+  }
+  function saveMem(arr) {
+    var seen = {}, out = [];
+    arr.forEach(function (x) {
+      var s2 = String(x).trim().slice(0, 140);
+      if (s2 && !seen[s2]) { seen[s2] = 1; out.push(s2); }
+    });
+    out = out.slice(-40);
+    lsSet(LS.mem, JSON.stringify(out));
+    return out;
+  }
+  function addMem(items) { return saveMem(loadMem().concat(items)); }
+  function forgetMem(keys) {
+    var cur = loadMem();
+    var out = cur.filter(function (m) {
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i] && m.indexOf(keys[i]) >= 0) return false;
+      }
+      return true;
+    });
+    saveMem(out);
+    return out;
+  }
+  /* 从模型输出里提取 [[MEM:...]] 保存、[[FORGET:...]] 删除,并把标记从显示文本里去掉 */
+  function extractMem(text) {
+    var mems = [], fgs = [];
+    var clean = String(text || '');
+    clean = clean.replace(/\[\[MEM:\s*([^\]]*)\]\]/g, function (_, v) { if (v.trim()) mems.push(v.trim()); return ''; });
+    clean = clean.replace(/\[\[FORGET:\s*([^\]]*)\]\]/g, function (_, v) { if (v.trim()) fgs.push(v.trim()); return ''; });
+    clean = clean.replace(/\n{3,}/g, '\n\n').trim();
+    return { mems: mems, fgs: fgs, clean: clean };
+  }
+  function stripMarkers(s) {
+    return String(s || '').replace(/\[\[(MEM|FORGET):[^\]]*\]\]/g, '').replace(MORE_RE, '');
+  }
 
   /* ---------------- localStorage ---------------- */
   function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
@@ -575,17 +619,12 @@
     return out.join('\n\n');
   }
 
-  /* 白嫖模式专用 system:纯聊天,不涉及博客内容 */
+  /* 白嫖模式专用 system:完全隔离,不提博客、不带记忆、不带任何提升词 */
   function sysPromptFree() {
     var s = [];
-    s.push('你是「庞和合」本人的 AI 分身。');
-    s.push('身份:庞和合,网名 PHH,高三学生,喜欢折腾、热爱数码。');
-    s.push('说话方式:中文口语,第一人称,简洁直接,像在微信里聊天,不用客套话。');
-    s.push('');
-    s.push('规则:');
-    s.push('1. 现在是纯聊天模式,你手上没有任何博客文章内容,就按常识和你的知识正常聊。');
-    s.push('2. 不要假装查过博客,不要说"根据我的文章"这类话;被问到博客里写过什么,就说"这个得去博客翻"。');
-    s.push('3. 尽量 2~4 句答完;需要展开时不超过 8 句。不要说"作为 AI"。');
+    s.push('你是「庞和合」的 AI 分身(网名 PHH),中文口语,第一人称,简洁直接,像朋友聊天。');
+    s.push('这是纯聊天模式:你没有拿到任何文章、笔记或额外资料,就凭常识正常聊。');
+    s.push('尽量 2~4 句答完,需要展开不超过 8 句。');
     return s.join('\n');
   }
 
@@ -615,6 +654,16 @@
     s.push('6. 不要编造标题、日期、链接、数据。');
     s.push('7. 指向文章时用 markdown 链接:[文章标题](链接),链接只能来自下面出现的 URL。');
     s.push('8. 尽量 2~4 句答完;确实需要展开时不超过 8 句。不要说"作为 AI""根据提供的资料"。');
+    s.push('');
+    s.push('【记忆规则】');
+    s.push('9. 用户说"记住…""记一下…"时,回答里带上 [[MEM:概括成一句话的事实]] 这个标记(和正文连在一起即可),系统会自动保存。');
+    s.push('10. 用户说"忘了…""忘掉…"时,回答里带上 [[FORGET:要忘掉的关键词]] 这个标记,系统会自动删除匹配的记忆。');
+    var mem = loadMem();
+    if (mem.length) {
+      s.push('');
+      s.push('【你对用户的长期记忆(之前对话记住的事,跨对话有效,回答时优先尊重)】');
+      mem.forEach(function (m) { s.push('- ' + m); });
+    }
 
     if (IDX && IDX.posts && IDX.posts.length) {
       var hasPriv = false;
@@ -933,8 +982,8 @@
 
           var acc = '', rea = '';
           return stream(payload,
-            function (delta) { acc += delta; render(node, acc.replace(MORE_RE, ''), rea, hits, false); },
-            function (r) { rea += r; render(node, acc.replace(MORE_RE, ''), rea, hits, false); },
+            function (delta) { acc += delta; render(node, stripMarkers(acc), rea, hits, false); },
+            function (r) { rea += r; render(node, stripMarkers(acc), rea, hits, false); },
             ctrl ? ctrl.signal : undefined
           ).then(function () {
             if (!force && !idxs && level < maxLv && !escalated && acc.indexOf('[[MORE]]') >= 0) {
@@ -978,14 +1027,24 @@
         }
 
         return run().then(function (res) {
-          var out = String(res.acc || '').replace(MORE_RE, '').trim();
-          if (out || res.force) return res;
+          var raw = String(res.acc || '');
+          var out = raw.replace(MORE_RE, '').trim();
+          var hasMarker = /\[\[(MEM|FORGET):/.test(raw);
+          if (out || res.force || hasMarker) return res;
           /* 只回了 [[MORE]] 或空:强制再答一次,避免空气泡 */
           node.innerHTML = '<div class="ai-dim">这次没答上来,再试一次…</div>';
           return pass(0, true, res.idxs || (hits.length ? [hits[0].p] : null));
         }).then(function (res) {
-          var out = String(res.acc || '').replace(MORE_RE, '').trim();
-          if (!out) out = res.rea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
+          var raw2 = String(res.acc || '');
+          var out = raw2.replace(MORE_RE, '').trim();
+          /* 记忆:提取 [[MEM:...]] 保存 / [[FORGET:...]] 删除 */
+          var mm = extractMem(raw2);
+          if (mm.mems.length) addMem(mm.mems);
+          if (mm.fgs.length) forgetMem(mm.fgs);
+          out = mm.clean.replace(MORE_RE, '').trim();
+          if (!out) out = (mm.mems.length || mm.fgs.length)
+            ? '已记住 ✅ 之后对话我会记得'
+            : (res.rea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)');
           render(node, out, res.rea, hits, true);
           /* 存带上下文的完整消息：下一轮它就成了稳定前缀，命中缓存 */
           msgs.push({ role: 'user', content: res.uc });
