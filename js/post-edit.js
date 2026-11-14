@@ -1,5 +1,5 @@
 /* ============================================================
-   PHH Blog · 编辑页逻辑(基于 Vditor IR 即时渲染)
+   PHH Blog · 编辑页逻辑(基于 ByteMD 编辑器)
    - 读:GitHub Contents API 拉取 markdown
    - 写:保存/删除走 Contents API,带状态提示与撤销
    - 图片:粘贴/拖入/上传自动进仓库 img/in-post/
@@ -38,7 +38,7 @@
     file: params.get('p') || '',
     sha: null, fm: null, url: null, busy: false
   };
-  var vd = null, dirty = false, lastOp = null, undoBusy = false;
+  var dirty = false, lastOp = null, undoBusy = false;
 
   /* ---------------- 基础 ---------------- */
   function token() {
@@ -155,9 +155,35 @@
       fr.readAsDataURL(file);
     });
   }
-  function uploadFiles(files) {
+  /* ---------------- ByteMD(所见即所得编辑 + 实时预览) ---------------- */
+  var taEl = null, bmView = null, bmLib = null, bmPlugins = null, bmLocale = null;
+
+  function loadBytemdAssets() {
+    function getJSON(url) {
+      return fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    }
+    return getJSON((window.BASEURL || '') + '/bytemd/locales/zh_Hans.json').then(function (loc) {
+      bmLocale = loc || {};
+    });
+  }
+
+  function buildPlugins() {
+    if (bmPlugins) return bmPlugins;
+    bmPlugins = [];
+    try {
+      if (typeof bytemdPluginGfm === 'function') bmPlugins.push(bytemdPluginGfm());
+    } catch (e) {}
+    try {
+      if (typeof bytemdPluginHighlight === 'function') {
+        bmPlugins.push(bytemdPluginHighlight({ en: {}, zh: {} }));
+      }
+    } catch (e) {}
+    return bmPlugins;
+  }
+
+  function bytemdUpload(files) {
     var list = Array.prototype.slice.call(files || []);
-    if (!list.length) return Promise.resolve();
+    if (!list.length) return Promise.resolve([]);
     var slug = (st.url && st.file ? st.file.slice(11, -3) : slugify(titleIn.value || 'post'));
     var errFiles = [];
     setStatus('正在上传 ' + list.length + ' 个文件…' + spin(), 'busy');
@@ -165,7 +191,6 @@
       return readAsDataURL(f).then(function (dataUrl) {
         var b64 = String(dataUrl).split(',')[1] || '';
         var name = Date.now() + '-' + String(f.name || 'image.png').replace(/[^\w.\u4e00-\u9fff-]/g, '_');
-        /* 图片进 img/,其余文件(文档/压缩包/音视频等)进 files/ */
         var isImg = /^image\//.test(f.type || '') || /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(f.name || '');
         var path = (isImg ? 'img/in-post/' : 'files/in-post/') + slug + '/' + name;
         return apiPutRawB64(path, b64, 'upload file: ' + path).then(function () {
@@ -176,67 +201,60 @@
         return null;
       });
     })).then(function (results) {
-      var uploaded = results.filter(Boolean);
-      /* Vditor 自定义 handler 不会处理 succMap,上传成功后必须主动写入正文 */
-      if (uploaded.length && vd && typeof vd.insertMD === 'function') {
-        var markdown = uploaded.map(function (item) {
-          var label = String(item.name).replace(/[\[\]]/g, '');
-          return (item.isImg ? '!' : '') + '[' + label + '](' + item.url + ')';
-        }).join('\n\n');
-        vd.insertMD(markdown + '\n\n');
-        markDirty();
-      }
-      if (errFiles.length) {
-        setStatus('部分文件上传失败:' + esc(errFiles.join(', ')), 'err');
-        return '上传失败:' + errFiles.join(', ');
-      }
-      setStatus('已上传并插入 ' + uploaded.length + ' 个文件 ✅', 'ok');
+      var ok = results.filter(Boolean);
+      if (errFiles.length) setStatus('部分文件上传失败:' + esc(errFiles.join(', ')), 'err');
+      else setStatus('已上传 ' + ok.length + ' 个文件 ✅', 'ok');
+      return ok;
     });
   }
 
-  /* ---------------- Vditor(IR 即时渲染) ---------------- */
-  var taEl = null;
   function initEditor(value) {
-    if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
     taEl = null;
     st.fallback = false;
     st.origValue = value || '';
     var box = $('pe-editor');
-    /* 占位文本会被 Vditor 当成初始内容吸入正文:容器必须清空,加载提示改用 CSS 伪元素(pe-booting) */
     box.innerHTML = '';
     box.classList.add('pe-booting');
-    if (typeof Vditor === 'undefined') { initPlain(value); return; }
-    var h = Math.max(420, window.innerHeight - 250);
-    vd = new Vditor('pe-editor', {
-      mode: 'ir',
-      lang: 'zh_CN',
-      value: value || '',
-      cdn: '/vditor',
-      height: h,
-      cache: { enable: false },
-      toolbar: [
-        'upload', 'undo', 'redo', '|',
-        'headings', 'bold', 'italic', 'strike', 'link', '|',
-        'list', 'ordered-list', 'check', 'quote', 'line', 'code', 'inline-code', '|',
-        'table', '|',
-        'edit-mode', 'preview', 'fullscreen'
-      ],
-      upload: {
-        handler: uploadFiles,
-        accept: 'image/*,video/*,audio/*,.pdf,.txt,.md,.markdown,.zip,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.apk',
-        multiple: true
-      },
-      preview: {
-        hljs: { style: 'github' },
-        markdown: { toc: true }
-      },
-      after: function () { $('pe-editor').classList.remove('pe-booting'); removeLoading(); },
-      input: function () { markDirty(); }
-    });
+
+    function boot() {
+      if (typeof bytemd === 'undefined') {
+        setStatus('编辑器加载失败,已切到纯文本模式', 'err');
+        initPlain(value);
+        return;
+      }
+      bmLib = bytemd;
+      var h = Math.max(440, window.innerHeight - 240);
+      box.innerHTML = '';
+      box.classList.remove('pe-booting');
+      bmView = new bmLib.Editor({
+        target: box,
+        props: {
+          value: value || '',
+          plugins: buildPlugins(),
+          locale: bmLocale || {},
+          mode: 'split',          /* 左写右预览,手机窄屏用 split 也清晰 */
+          placeholder: '开始写 Markdown…',
+          editorUrl: (window.BASEURL || '') + '/bytemd',
+          uploadImages: bytemdUpload,
+          height: h + 'px'
+        }
+      });
+      box.style.setProperty('--pe-editor-h', h + 'px');
+      /* 内容变化 -> 标记未保存 */
+      var onChange = function () { markDirty(); };
+      box.addEventListener('keyup', onChange);
+      box.addEventListener('input', onChange);
+      removeLoading();
+    }
+
+    if (bmLocale) { boot(); return; }
+    /* 先取中文语言包再初始化(失败也能用默认英文) */
+    loadBytemdAssets().then(boot, boot);
   }
-  /* 纯文本降级模式(私密文章/Vditor 加载失败时用) */
+
+  /* 纯文本模式(私密文章用,不加载编辑器) */
   function initPlain(value) {
-    if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
+    bmView = null;
     st.fallback = true;
     st.origValue = value || '';
     var box = $('pe-editor');
@@ -254,16 +272,22 @@
   }
   function getBody() {
     if (st.fallback && taEl) return String(taEl.value || '');
-    return String((vd && vd.getValue && vd.getValue()) || '');
+    if (bmView) {
+      try { return String(bmView.$capture_state().value || ''); } catch (e) {}
+    }
+    return '';
   }
-  /* 只在宽度变化(转屏)时调整编辑器;软键盘/地址栏引起的高度抖动直接忽略,避免边打字边重排 */
+  /* 只在宽度变化(转屏)时调整编辑区高度;软键盘/地址栏抖动忽略 */
   var lastW = window.innerWidth, rzTimer = null;
   window.addEventListener('resize', function () {
-    if (!vd || window.innerWidth === lastW) return;
+    if (window.innerWidth === lastW) return;
     lastW = window.innerWidth;
     if (rzTimer) clearTimeout(rzTimer);
     rzTimer = setTimeout(function () {
-      try { if (typeof vd.resize === 'function') vd.resize(); } catch (e) {}
+      var h = Math.max(440, window.innerHeight - 240);
+      $('pe-editor').style.setProperty('--pe-editor-h', h + 'px');
+      var el = $('pe-editor').querySelector('.CodeMirror');
+      if (el) el.style.height = h + 'px';
     }, 260);
   });
 
@@ -322,7 +346,7 @@
     el.appendChild(b);
   }
   function save() {
-    if (st.busy || (!vd && !st.fallback)) return;
+    if (st.busy || (!bmView && !st.fallback)) return;
     if (!token()) { setStatus('还没有配置 GitHub Token,<a href="/admin/">去管理员页</a>填一次。', 'err'); return; }
     var body = getBody().replace(/[\s\n]+$/, '');
     var title = titleIn.value.trim() || '未命名';
@@ -428,7 +452,7 @@
   });
   titleIn.addEventListener('input', markDirty);
   tagsIn.addEventListener('input', markDirty);
-  /* Vditor 的 input 回调在部分版本/场景下不触发,容器事件委托兜底,保证「未保存」标记可靠 */
+  /* 事件委托兜底:保证「未保存」标记可靠 */
   $('pe-editor').addEventListener('input', markDirty);
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
