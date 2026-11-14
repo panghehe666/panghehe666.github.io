@@ -56,9 +56,13 @@
       </svg>
     </a>
     {% endif %}
+    {% if page.layout == 'post' %}
+    <script>window.__POST_FILE = '{{ page.path | split: '/' | last }}'; window.__POST_URL = '{{ page.url | prepend: site.baseurl }}';</script>
+    {% endif %}
     <div class="pa-toast" id="pa-toast"></div>
     <link rel="stylesheet" href="{{ '/css/post-admin.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}">
     <script src="{{ '/js/post-admin.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
+    <script src="{{ '/js/local-preview.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 {% endif %}
 
     {% include footer.html %}

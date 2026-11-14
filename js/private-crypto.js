@@ -385,5 +385,6 @@
     encryptWithSession: encryptWithSession,
     loadSessionKey: loadSessionKey,
     tryRevealEncryptedPosts: tryRevealEncryptedPosts,
+    markdownToHtml: markdownToHtml,
   };
 })(window);

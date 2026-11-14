@@ -51,3 +51,18 @@ html.is-admin .adm-post-tools { display: flex; }
 @media (max-width: 640px) {
   .pa-del { top: 74px; left: 10px; }
 }
+
+/* 本地即时预览徽标 */
+.local-badge {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 12px; margin: 0 0 16px;
+  background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 8px;
+  font-size: 13px; color: #8a6d1f;
+}
+.local-badge-t { font-weight: 700; }
+.local-badge-s { color: #a58a3c; font-size: 12px; }
+.local-badge-x {
+  margin-left: auto; border: none; background: none; color: #8a6d1f;
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px;
+}
+.local-badge-x:hover { color: #5f4a10; }

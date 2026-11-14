@@ -321,6 +321,22 @@
     b.addEventListener('click', doUndo);
     el.appendChild(b);
   }
+  /* 保存成功后把最新内容缓存到本机:文章页立即显示最新版,不等 Pages 发布 */
+  function cacheLocalPreview(file, url, body) {
+    try {
+      var render = (typeof Vditor !== 'undefined' && Vditor.md2html)
+        ? Vditor.md2html(body, { mode: 'ir', cdn: '/vditor' }).catch(function () { return ''; })
+        : Promise.resolve('');
+      render.then(function (h) {
+        try {
+          var store = JSON.parse(localStorage.getItem('phh_local_posts') || '{}');
+          store[file] = { ts: Date.now(), html: h || '', md: body, url: url || '' };
+          localStorage.setItem('phh_local_posts', JSON.stringify(store));
+        } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
   function save() {
     if (st.busy || (!vd && !st.fallback)) return;
     if (!token()) { setStatus('还没有配置 GitHub Token,<a href="/admin/">去管理员页</a>填一次。', 'err'); return; }
@@ -339,7 +355,8 @@
         nameEl.textContent = file;
         clearDirty();
         lastOp = { kind: 'add', path: '_posts/' + file, newSha: d.content && d.content.sha };
-        var el = setStatus('已添加 ✅ <b>' + esc(file) + '</b> · Pages 约 30–60 秒后上线', 'ok');
+        cacheLocalPreview(file, fileUrl(file), body);
+        var el = setStatus('已添加 ✅ <b>' + esc(file) + '</b> · 本机已缓存,文章页立即显示;Pages 30–60 秒后全网生效', 'ok');
         addUndoBtn(el);
       }).catch(function (e) { st.busy = false; setStatus('添加失败:' + esc(e.message), 'err'); });
     } else {
@@ -368,7 +385,8 @@
         st.busy = false;
         clearDirty();
         lastOp = { kind: 'edit', path: '_posts/' + st.file, prevContent: r.prev, newSha: st.sha };
-        var el = setStatus('已修改 ✅ <b>' + esc(st.file) + '</b> · Pages 约 30–60 秒后上线', 'ok');
+        cacheLocalPreview(st.file, st.url, body);
+        var el = setStatus('已修改 ✅ <b>' + esc(st.file) + '</b> · 本机已缓存,文章页立即显示;Pages 30–60 秒后全网生效', 'ok');
         addUndoBtn(el);
       }).catch(function (e) { st.busy = false; setStatus('修改失败:' + esc(e.message), 'err'); });
     }
