@@ -32,6 +32,7 @@
   var LS = {
     key: 'phh_ai_key',
     mem: 'phh_ai_mem',
+    memOn: 'phh_ai_mem_on',
     keyKimi: 'phh_ai_key_kimi',
     proxy: 'phh_ai_proxy',
     deep: 'phh_ai_deep',
@@ -87,6 +88,8 @@
     return out;
   }
   function addMem(items) { return saveMem(loadMem().concat(items)); }
+  /* 记忆开关:关闭只暂停(不写不读),不删除已存条目 */
+  function memOn() { return lsGet(LS.memOn) !== '0'; }
   function forgetMem(keys) {
     var cur = loadMem();
     var out = cur.filter(function (m) {
@@ -155,7 +158,8 @@
       modelName = $('ai-model-name'), modeBtn = $('ai-mode'), modeName = $('ai-mode-name'),
       tipEl = $('ai-tip'), micBtn = $('ai-mic'),
       warn = $('ai-warn'), warnBtn = $('ai-warn-btn'),
-      sheetSet = $('ai-sheet-set'), sheetHist = $('ai-sheet-hist'),
+      sheetSet = $('ai-sheet-set'), sheetHist = $('ai-sheet-hist'), sheetMem = $('ai-sheet-mem'),
+      memListEl = $('ai-mem-list'), memToggle = $('ai-mem-toggle'),
       histList = $('ai-hist-list'), keyIn = $('ai-key'), keyKimiIn = $('ai-key-kimi'),
       proxyIn = $('ai-proxy'), modelMenu = $('ai-model-menu');
   var helloNode = hello;  /* 保存引用:新建会话时把欢迎语再插回来 */
@@ -655,14 +659,20 @@
     s.push('7. 指向文章时用 markdown 链接:[文章标题](链接),链接只能来自下面出现的 URL。');
     s.push('8. 尽量 2~4 句答完;确实需要展开时不超过 8 句。不要说"作为 AI""根据提供的资料"。');
     s.push('');
-    s.push('【记忆规则】');
-    s.push('9. 用户说"记住…""记一下…"时,回答里带上 [[MEM:概括成一句话的事实]] 这个标记(和正文连在一起即可),系统会自动保存。');
-    s.push('10. 用户说"忘了…""忘掉…"时,回答里带上 [[FORGET:要忘掉的关键词]] 这个标记,系统会自动删除匹配的记忆。');
-    var mem = loadMem();
-    if (mem.length) {
-      s.push('');
-      s.push('【你对用户的长期记忆(之前对话记住的事,跨对话有效,回答时优先尊重)】');
-      mem.forEach(function (m) { s.push('- ' + m); });
+    if (memOn()) {
+      s.push('【记忆规则】');
+      s.push('9. 用户说"记住…""记一下…"时,回答里带上 [[MEM:概括成一句话的事实]] 这个标记(和正文连在一起即可),系统会自动保存。');
+      s.push('9.1 用户在对话中反复提到稳定的偏好/背景(职业、习惯、常用工具、禁忌等)时,可以主动用 [[MEM:...]] 存一条(每轮最多 1 条;临时信息、闲聊不要存)。');
+      s.push('10. 用户说"忘了…""忘掉…"时,回答里带上 [[FORGET:要忘掉的关键词]] 这个标记,系统会自动删除匹配的记忆。');
+      s.push('10.1 用户问"你记住了我什么"时,直接用下面的记忆列表回答(不要输出标记)。');
+      var mem = loadMem();
+      if (mem.length) {
+        s.push('');
+        s.push('【你对用户的长期记忆(之前对话记住的事,跨对话有效,回答时优先尊重)】');
+        mem.forEach(function (m) { s.push('- ' + m); });
+      }
+    } else {
+      s.push('【记忆功能已关闭】不要输出 [[MEM:]] 或 [[FORGET:]];用户让你记住时,只回一句"记忆功能关着,可在设置→记忆里打开"。');
     }
 
     if (IDX && IDX.posts && IDX.posts.length) {
@@ -1039,8 +1049,10 @@
           var out = raw2.replace(MORE_RE, '').trim();
           /* 记忆:提取 [[MEM:...]] 保存 / [[FORGET:...]] 删除 */
           var mm = extractMem(raw2);
-          if (mm.mems.length) addMem(mm.mems);
-          if (mm.fgs.length) forgetMem(mm.fgs);
+          if (memOn()) {
+            if (mm.mems.length) addMem(mm.mems);
+            if (mm.fgs.length) forgetMem(mm.fgs);
+          }
           out = mm.clean.replace(MORE_RE, '').trim();
           if (!out) out = (mm.mems.length || mm.fgs.length)
             ? '已记住 ✅ 之后对话我会记得'
@@ -1266,7 +1278,8 @@
     try { input.blur(); } catch (e) {}
   }
   function openSheet(el) {
-    [sheetSet, sheetHist].forEach(function (s) { s.classList.toggle('on', s === el); });
+    [sheetSet, sheetHist, sheetMem].forEach(function (s) { s.classList.toggle('on', s === el); });
+    if (el === sheetMem) renderMemList();
     if (el === sheetSet) {
       keyIn.value = lsGet(LS.key);
       keyKimiIn.value = lsGet(LS.keyKimi);
@@ -1275,7 +1288,7 @@
     if (el === sheetHist) renderSessions();
   }
   function closeSheets() {
-    [sheetSet, sheetHist].forEach(function (s) { s.classList.remove('on'); });
+    [sheetSet, sheetHist, sheetMem].forEach(function (s) { s.classList.remove('on'); });
   }
 
   /* ---------------- 快捷提问 ---------------- */
@@ -1308,7 +1321,7 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && ROOT.classList.contains('open')) {
-      if (sheetSet.classList.contains('on') || sheetHist.classList.contains('on')) closeSheets();
+      if (sheetSet.classList.contains('on') || sheetHist.classList.contains('on') || (sheetMem && sheetMem.classList.contains('on'))) closeSheets();
       else close();
     }
   });
@@ -1401,6 +1414,42 @@
           : '强爽模式：每轮读全站（全文/摘要），不够顶配再补相关文章全文');
     }
   }
+
+  /* 记忆管理 */
+  function renderMemList() {
+    if (!memListEl) return;
+    var mem = loadMem();
+    if (!mem.length) {
+      memListEl.innerHTML = '<div class="ai-empty">还没有记忆。对 AI 说「记住:我不吃辣」试试。</div>';
+      return;
+    }
+    var html = '';
+    mem.forEach(function (m, i) {
+      html += '<div class="ai-mem-item"><span class="ai-mem-t">' + esc(m) + '</span>' +
+        '<button type="button" class="ai-mem-del" data-i="' + i + '" title="删除这条" aria-label="删除这条">×</button></div>';
+    });
+    memListEl.innerHTML = html;
+    Array.prototype.forEach.call(memListEl.querySelectorAll('.ai-mem-del'), function (b) {
+      b.addEventListener('click', function () {
+        var idx = parseInt(b.getAttribute('data-i'), 10);
+        var cur = loadMem();
+        cur.splice(idx, 1);
+        saveMem(cur);
+        renderMemList();
+      });
+    });
+  }
+  if (memToggle) {
+    memToggle.checked = memOn();
+    memToggle.addEventListener('change', function () {
+      lsSet(LS.memOn, memToggle.checked ? '1' : '0');
+    });
+  }
+  if ($('ai-mem-open')) $('ai-mem-open').addEventListener('click', function () { openSheet(sheetMem); });
+  if ($('ai-mem-clear')) $('ai-mem-clear').addEventListener('click', function () {
+    saveMem([]);
+    renderMemList();
+  });
 
   /* 设置 */
   $('ai-save').addEventListener('click', function () {

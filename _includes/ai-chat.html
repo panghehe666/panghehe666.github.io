@@ -127,10 +127,40 @@
           <button id="ai-save" class="ai-btn primary" type="button">保存</button>
           <button id="ai-clear" class="ai-btn" type="button">清除</button>
         </div>
+        <div class="ai-mem-row">
+          <div class="ai-mem-info">
+            <b>记忆</b>
+            <span>跨对话记住你的偏好与背景(对 AI 说「记住…」即可)</span>
+          </div>
+          <label class="ai-switch">
+            <input type="checkbox" id="ai-mem-toggle">
+            <span class="ai-switch-t"></span>
+          </label>
+        </div>
+        <button id="ai-mem-open" class="ai-btn" type="button" style="margin-top:10px;width:100%">查看 / 管理记忆</button>
         <div class="ai-note">
           直连模式下,回答内容会带上你博客里相关文章的摘录作为上下文。代理模式的 Worker 代码见仓库
           <code>_tools/deepseek-proxy.js</code>。
         </div>
+      </div>
+    </div>
+
+    <!-- 记忆页 -->
+    <div class="ai-sheet" id="ai-sheet-mem">
+      <div class="ai-sheet-hd">
+        <h4>记忆</h4>
+        <div class="ai-head-a">
+          <button id="ai-mem-clear" class="ai-ico-btn" type="button" title="清空全部记忆" aria-label="清空全部记忆">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5.2c0-.7.6-1.2 1.2-1.2h3.6c.7 0 1.2.5 1.2 1.2V7M6.5 7l.8 12.1c0 .8.7 1.4 1.5 1.4h6.4c.8 0 1.5-.6 1.5-1.4L17.5 7"/></svg>
+          </button>
+          <button class="ai-ico-btn ai-sheet-close" type="button" aria-label="返回">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ai-sheet-bd">
+        <div id="ai-mem-list"></div>
+        <div class="ai-note">关闭记忆开关只会暂停(不再记录、也不再引用),已保存的条目不会删除。对 AI 说「请忘记 X」也能删单条。</div>
       </div>
     </div>
 
