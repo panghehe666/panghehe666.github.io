@@ -602,3 +602,56 @@
 #ai-chat.light .ai-mem-btn { color: #98a1ab; }
 #ai-chat.light .ai-mem-btn:hover { background: #eef1f4; color: #333a42; }
 #ai-chat.light .ai-mem-edit { background: #fff; border-color: rgba(0, 133, 161, .5); color: #333a42; }
+
+/* ============================================================
+   用量统计页
+   ============================================================ */
+#ai-chat .ai-st-balance { display: flex; gap: 10px; margin-bottom: 12px; }
+#ai-chat .ai-st-bal {
+  flex: 1; padding: 10px 12px; border-radius: 12px;
+  background: rgba(0, 133, 161, .10);
+  border: 1px solid rgba(0, 133, 161, .28);
+}
+#ai-chat .ai-st-bal b { display: block; font-size: 16px; color: #7fd3e6; line-height: 1.3; }
+#ai-chat .ai-st-bal span { display: block; font-size: 11px; color: #7b8492; margin-top: 2px; }
+
+#ai-chat .ai-st-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+#ai-chat .ai-st-box {
+  padding: 9px 8px; border-radius: 10px; text-align: center;
+  background: rgba(255, 255, 255, .04); border: 1px solid rgba(255, 255, 255, .07);
+}
+#ai-chat .ai-st-box b { display: block; font-size: 13px; color: #e7ecf3; line-height: 1.4; }
+#ai-chat .ai-st-box span { font-size: 10.5px; color: #7b8492; }
+
+#ai-chat .ai-stats-sec { margin-bottom: 18px; }
+#ai-chat .ai-stats-sec h5 {
+  margin: 0 0 8px; font-size: 12.5px; font-weight: 500; color: #98a2ae; letter-spacing: .04em;
+}
+#ai-chat .ai-stats-sec canvas { display: block; width: 100%; }
+#ai-chat .ai-st-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; }
+#ai-chat .ai-st-lg { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: #98a2ae; }
+#ai-chat .ai-st-lg i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+#ai-chat .ai-st-table { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .07); }
+#ai-chat .ai-st-tr {
+  display: grid; grid-template-columns: 1.6fr .8fr .8fr .9fr; gap: 4px;
+  padding: 8px 10px; font-size: 11.5px; color: #c8d2de;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+#ai-chat .ai-st-tr:last-child { border-bottom: none; }
+#ai-chat .ai-st-th { color: #7b8492; font-size: 11px; background: rgba(255, 255, 255, .03); }
+#ai-chat .ai-st-total { font-weight: 600; color: #e7ecf3; background: rgba(0, 133, 161, .09); }
+
+/* 浅色 */
+#ai-chat.light .ai-st-bal { background: #f0f8fa; border-color: #d5ebf0; }
+#ai-chat.light .ai-st-bal b { color: #00728a; }
+#ai-chat.light .ai-st-bal span { color: #7a828c; }
+#ai-chat.light .ai-st-box { background: #f6f8fa; border-color: #e7ebef; }
+#ai-chat.light .ai-st-box b { color: #24292f; }
+#ai-chat.light .ai-st-box span { color: #7a828c; }
+#ai-chat.light .ai-stats-sec h5 { color: #6a737d; }
+#ai-chat.light .ai-st-lg { color: #6a737d; }
+#ai-chat.light .ai-st-table { border-color: #e7ebef; }
+#ai-chat.light .ai-st-tr { color: #333a42; border-bottom-color: #eef1f4; }
+#ai-chat.light .ai-st-th { color: #7a828c; background: #f6f8fa; }
+#ai-chat.light .ai-st-total { color: #11181f; background: #eef7f9; }

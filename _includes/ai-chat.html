@@ -138,10 +138,33 @@
           </label>
         </div>
         <button id="ai-mem-open" class="ai-btn" type="button" style="margin-top:10px;width:100%">查看 / 管理记忆</button>
+        <button id="ai-stats-open" class="ai-btn" type="button" style="margin-top:10px;width:100%">用量统计</button>
         <div class="ai-note">
           直连模式下,回答内容会带上你博客里相关文章的摘录作为上下文。代理模式的 Worker 代码见仓库
           <code>_tools/deepseek-proxy.js</code>。
         </div>
+      </div>
+    </div>
+
+    <!-- 用量统计页 -->
+    <div class="ai-sheet" id="ai-sheet-stats">
+      <div class="ai-sheet-hd">
+        <h4>用量统计</h4>
+        <button class="ai-ico-btn ai-sheet-close" type="button" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div class="ai-sheet-bd">
+        <div class="ai-st-balance" id="ai-stats-balance"></div>
+        <div class="ai-st-sum" id="ai-stats-sum"></div>
+
+        <div class="ai-stats-sec"><h5>每日 token 趋势(近 14 天)</h5><canvas id="ai-st-line"></canvas></div>
+        <div class="ai-stats-sec"><h5>模型用量</h5><canvas id="ai-st-model"></canvas><div class="ai-st-legend" id="ai-st-model-legend"></div></div>
+        <div class="ai-stats-sec"><h5>供应商用量</h5><canvas id="ai-st-prov"></canvas><div class="ai-st-legend" id="ai-st-prov-legend"></div></div>
+        <div class="ai-stats-sec"><h5>活跃热力图(近 17 周)</h5><canvas id="ai-st-heat"></canvas></div>
+        <div class="ai-stats-sec"><h5>各模型花销(估算)</h5><div id="ai-st-cost"></div></div>
+        <button id="ai-stats-clear" class="ai-btn" type="button" style="margin-top:14px;width:100%">清空统计</button>
+        <div class="ai-note">数据只存本机浏览器;花销按公开价格估算,余额来自 DeepSeek / Kimi 官方接口(需配置 Key)。</div>
       </div>
     </div>
 
@@ -198,5 +221,6 @@
 </div>
 
 <script src="{{ '/js/ai-memory.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
+<script src="{{ '/js/ai-stats.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 <script src="{{ '/js/ai-chat.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 {% endif %}

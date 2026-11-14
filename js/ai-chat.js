@@ -153,6 +153,7 @@
       tipEl = $('ai-tip'), micBtn = $('ai-mic'),
       warn = $('ai-warn'), warnBtn = $('ai-warn-btn'),
       sheetSet = $('ai-sheet-set'), sheetHist = $('ai-sheet-hist'), sheetMem = $('ai-sheet-mem'),
+      sheetStats = $('ai-sheet-stats'),
       memListEl = $('ai-mem-list'), memToggle = $('ai-mem-toggle'),
       histList = $('ai-hist-list'), keyIn = $('ai-key'), keyKimiIn = $('ai-key-kimi'),
       proxyIn = $('ai-proxy'), modelMenu = $('ai-model-menu');
@@ -768,7 +769,11 @@
     return h;
   }
 
+  var lastUsage = null;   /* 最近一次请求的 usage(流式末尾块里) */
   function stream(payload, onDelta, onReason, signal) {
+    if (payload && payload.stream) {
+      payload.stream_options = payload.stream_options || { include_usage: true };
+    }
     return fetch(endpoint(), {
       method: 'POST',
       headers: headers(),
@@ -786,6 +791,7 @@
       var ct = (res.headers.get('content-type') || '');
       if (ct.indexOf('text/event-stream') < 0) {
         return res.json().then(function (j) {
+          if (j.usage) lastUsage = j.usage;
           var ch = j.choices && j.choices[0];
           if (!ch) throw new Error((j.error && j.error.message) || '接口返回异常');
           var m = ch.message || {};
@@ -810,6 +816,7 @@
               if (!d || d === '[DONE]') continue;
               var o;
               try { o = JSON.parse(d); } catch (e) { continue; }
+              if (o.usage) lastUsage = o.usage;
               if (o.error) throw new Error(o.error.message || '接口报错');
               var ch = o.choices && o.choices[0];
               if (!ch) continue;
@@ -911,6 +918,10 @@
         }
         if (!fout) fout = frea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
         render(node, fout, frea, [], true);
+        if (window.PHHAISTATS) {
+          try { PHHAISTATS.record(cfg().provider, cfg().model.id, lastUsage, (furi || '').length + 200, fout.length); } catch (e) {}
+        }
+        lastUsage = null;
         msgs.push({ role: 'user', content: furi });
         msgs.push({ role: 'assistant', content: fout || '(空)' });
         saveTurn(text, fout, furi);
@@ -1078,6 +1089,10 @@
             ? '已记住 ✅ 之后对话我会记得'
             : (res.rea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)');
           render(node, out, res.rea, hits, true);
+          if (window.PHHAISTATS) {
+            try { PHHAISTATS.record(cfg().provider, cfg().model.id, lastUsage, (res.uc || '').length, out.length); } catch (e) {}
+          }
+          lastUsage = null;
           /* 存带上下文的完整消息：下一轮它就成了稳定前缀，命中缓存 */
           msgs.push({ role: 'user', content: res.uc });
           msgs.push({ role: 'assistant', content: out || '(空)' });
@@ -1299,7 +1314,8 @@
     try { input.blur(); } catch (e) {}
   }
   function openSheet(el) {
-    [sheetSet, sheetHist, sheetMem].forEach(function (s) { s.classList.toggle('on', s === el); });
+    [sheetSet, sheetHist, sheetMem, sheetStats].forEach(function (s) { s.classList.toggle('on', s === el); });
+    if (el === sheetStats && window.PHHAISTATS) { try { PHHAISTATS.renderPage(); } catch (e) {} }
     if (el === sheetMem) { renderMemList(); syncMemBadge(); }
     if (el === sheetSet) {
       keyIn.value = lsGet(LS.key);
@@ -1309,7 +1325,7 @@
     if (el === sheetHist) renderSessions();
   }
   function closeSheets() {
-    [sheetSet, sheetHist, sheetMem].forEach(function (s) { s.classList.remove('on'); });
+    [sheetSet, sheetHist, sheetMem, sheetStats].forEach(function (s) { s.classList.remove('on'); });
   }
 
   /* ---------------- 快捷提问 ---------------- */
@@ -1342,7 +1358,8 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && ROOT.classList.contains('open')) {
-      if (sheetSet.classList.contains('on') || sheetHist.classList.contains('on') || (sheetMem && sheetMem.classList.contains('on'))) closeSheets();
+      if (sheetSet.classList.contains('on') || sheetHist.classList.contains('on') ||
+          (sheetMem && sheetMem.classList.contains('on')) || (sheetStats && sheetStats.classList.contains('on'))) closeSheets();
       else close();
     }
   });
@@ -1456,6 +1473,10 @@
     });
   }
   if ($('ai-mem-open')) $('ai-mem-open').addEventListener('click', function () { openSheet(sheetMem); });
+  if ($('ai-stats-open')) $('ai-stats-open').addEventListener('click', function () { openSheet(sheetStats); });
+  if ($('ai-stats-clear')) $('ai-stats-clear').addEventListener('click', function () {
+    if (window.PHHAISTATS) { try { PHHAISTATS.clear(); } catch (e) {} }
+  });
   if ($('ai-mem-clear')) $('ai-mem-clear').addEventListener('click', function () {
     if (MEM) MEM.clear();
     renderMemList();
