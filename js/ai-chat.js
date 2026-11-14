@@ -116,6 +116,25 @@
       proxyIn = $('ai-proxy'), modelMenu = $('ai-model-menu');
   var helloNode = hello;  /* 保存引用:新建会话时把欢迎语再插回来 */
 
+  /* ---------------- 明暗主题 ---------------- */
+  var THEME_LS = 'phh_ai_theme';
+  var themeBtn = $('ai-theme');
+  function applyTheme(t) {
+    ROOT.classList.toggle('light', t === 'light');
+    if (themeBtn) {
+      themeBtn.setAttribute('title', t === 'light' ? '切到深色' : '切到浅色');
+      themeBtn.setAttribute('aria-label', t === 'light' ? '切到深色' : '切到浅色');
+    }
+  }
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function () {
+      var t = lsGet(THEME_LS) === 'light' ? 'dark' : 'light';
+      lsSet(THEME_LS, t);
+      applyTheme(t);
+    });
+  }
+  applyTheme(lsGet(THEME_LS) === 'light' ? 'light' : 'dark');
+
   /* ---------------- 状态 ---------------- */
   var msgs = [];          // {role, content}
   var lastP = -1;         // 上一轮聊的是哪篇文章

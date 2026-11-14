@@ -375,3 +375,107 @@
   border-color: rgba(160, 170, 185, .34);
   color: #c8d2de;
 }
+
+/* ============================================================
+   明暗主题:浅色模式
+   ============================================================ */
+#ai-chat #ai-theme .ic-sun { display: none; }
+#ai-chat.light #ai-theme .ic-sun { display: block; }
+#ai-chat.light #ai-theme .ic-moon { display: none; }
+
+#ai-chat.light #ai-panel {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, .08);
+  box-shadow: 0 30px 80px rgba(20, 40, 60, .18), 0 2px 0 rgba(255, 255, 255, .6) inset;
+}
+#ai-chat.light .ai-head { border-bottom-color: #eceff2; }
+#ai-chat.light .ai-head-t { color: #24292f; }
+#ai-chat.light .ai-head-t svg { color: #0085a1; }
+#ai-chat.light .ai-ico-btn { color: #6a737d; }
+#ai-chat.light .ai-ico-btn:hover { background: #f0f3f5; color: #24292f; }
+#ai-chat.light .ai-tag { color: #00728a; background: rgba(0, 133, 161, .08); border-color: rgba(0, 133, 161, .28); }
+
+#ai-chat.light .ai-body { scrollbar-color: rgba(0, 0, 0, .16) transparent; }
+#ai-chat.light .ai-body::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, .14); }
+
+#ai-chat.light .ai-hi1 { color: #24292f; }
+#ai-chat.light .ai-hi2 { color: #6a737d; }
+#ai-chat.light .ai-chip { background: #f6f8fa; border-color: #e7ebef; color: #3a4450; }
+#ai-chat.light .ai-chip:hover { background: #eef2f5; border-color: rgba(0, 133, 161, .45); color: #11181f; }
+
+#ai-chat.light .ai-a { color: #333a42; }
+#ai-chat.light .ai-a strong { color: #11181f; }
+#ai-chat.light .ai-a a { color: #00728a; border-bottom-color: rgba(0, 114, 138, .3); }
+#ai-chat.light .ai-a a:hover { color: #0085a1; }
+#ai-chat.light .ai-a code { background: #eef1f4; }
+#ai-chat.light .ai-a pre { background: #f6f8fa; border-color: #e7ebef; }
+#ai-chat.light .ai-reason { color: #6a737d; border-left-color: rgba(0, 133, 161, .45); }
+#ai-chat.light .ai-src { color: #7a828c; }
+#ai-chat.light .ai-src a { color: #00728a; }
+#ai-chat.light .ai-err { color: #c22f44; }
+#ai-chat.light .ai-dim { color: #7a828c; }
+#ai-chat.light .ai-act button { color: #00728a; border-color: rgba(0, 133, 161, .4); background: rgba(0, 133, 161, .08); }
+#ai-chat.light .ai-act button:hover { background: rgba(0, 133, 161, .16); }
+#ai-chat.light .ai-dots i { background: #a6adb6; }
+
+#ai-chat.light .ai-inputwrap { background: #f6f8fa; border-color: #e3e7eb; }
+#ai-chat.light #ai-input { color: #24292f; }
+#ai-chat.light #ai-input::placeholder { color: #98a1ab; }
+#ai-chat.light .ai-pill { color: #5b6672; background: #eef1f4; border-color: #e3e7eb; }
+#ai-chat.light .ai-pill:hover { color: #24292f; background: #e6eaee; }
+#ai-chat.light .ai-pill.on { color: #00728a; border-color: rgba(0, 133, 161, .5); background: rgba(0, 133, 161, .1); }
+#ai-chat.light .ai-send { background: #e3e7eb; color: #7a828c; }
+#ai-chat.light .ai-send.ready { background: linear-gradient(160deg, #0fa0be, #0085a1); color: #fff; }
+#ai-chat.light .ai-send.stop { background: rgba(194, 47, 68, .12); color: #c22f44; }
+#ai-chat.light .ai-tip { color: #98a1ab; }
+#ai-chat.light .ai-mic { color: #7a828c; }
+
+#ai-chat.light .ai-model-menu { background: #ffffff; border-color: #e3e7eb; box-shadow: 0 10px 34px rgba(20, 40, 60, .18); }
+#ai-chat.light .ai-mm-group { color: #98a1ab; }
+#ai-chat.light .ai-mm-item { color: #333a42; }
+#ai-chat.light .ai-mm-item:hover { background: #f0f3f5; }
+#ai-chat.light .ai-mm-item.cur { background: rgba(0, 133, 161, .1); }
+#ai-chat.light .ai-mm-item.cur .ai-mm-label { color: #00728a; }
+#ai-chat.light .ai-mm-desc { color: #7a828c; }
+
+#ai-chat.light .ai-warn { color: #8a6d1f; background: #fff8e6; border-color: #f0d9a0; }
+#ai-chat.light .ai-warn b { color: #8a6d1f; }
+
+#ai-chat.light .ai-sheet { background: #fafbfc; }
+#ai-chat.light .ai-sheet-hd { background: #fafbfc; border-bottom-color: #eceff2; }
+#ai-chat.light .ai-sheet h4 { color: #24292f; }
+#ai-chat.light .ai-field label { color: #6a737d; }
+#ai-chat.light .ai-field input { background: #ffffff; border-color: #e3e7eb; color: #24292f; }
+#ai-chat.light .ai-field .hint { color: #98a1ab; }
+#ai-chat.light .ai-field .hint a { color: #00728a; }
+#ai-chat.light .ai-btn { color: #333a42; background: #eef1f4; border-color: #e3e7eb; }
+#ai-chat.light .ai-btn:hover { background: #e6eaee; }
+#ai-chat.light .ai-btn.primary { background: linear-gradient(160deg, #0fa0be, #0085a1); color: #fff; }
+#ai-chat.light .ai-note { color: #98a1ab; }
+#ai-chat.light .ai-note code { background: #eef1f4; }
+
+#ai-chat.light .ai-hist-item { background: #ffffff; border-color: #e7ebef; }
+#ai-chat.light .ai-hist-item:hover { background: #f0f3f5; }
+#ai-chat.light .ai-hist-item .q { color: #333a42; }
+#ai-chat.light .ai-hist-item .t { color: #98a1ab; }
+#ai-chat.light .ai-sess { background: #ffffff; border-color: #e7ebef; }
+#ai-chat.light .ai-sess:hover { background: #f0f3f5; }
+#ai-chat.light .ai-sess.cur { border-color: rgba(0,133,161,.5); background: rgba(0,133,161,.06); }
+#ai-chat.light .ai-sess-main .q { color: #333a42; }
+#ai-chat.light .ai-sess-main .t { color: #98a1ab; }
+#ai-chat.light .ai-sess-del { color: #98a1ab; }
+#ai-chat.light .ai-empty { color: #98a1ab; }
+
+#ai-chat.light #ai-mode.free { background: rgba(120, 130, 145, .1); border-color: rgba(120, 130, 145, .3); color: #5b6672; }
+
+/* 移动端遮罩 */
+#ai-chat.light #ai-scrim { background: rgba(10, 20, 30, .35); }
+
+/* 用户气泡:浅色下保持青绿渐变,白字可读 */
+#ai-chat.light .ai-u { color: #e6f1f4; }
+
+/* 切换过渡 */
+#ai-chat #ai-panel, #ai-chat .ai-sheet, #ai-chat .ai-sheet-hd {
+  transition-property: background, border-color, opacity, transform;
+  transition-duration: .25s;
+}
