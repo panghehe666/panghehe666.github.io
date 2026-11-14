@@ -368,3 +368,10 @@
   #ai-chat .ai-hi1 { font-size: 14.5px; }
   #ai-chat .ai-chip { font-size: 13px; }
 }
+
+/* 白嫖模式:药丸换色区分(冷静灰蓝,一眼看出没在读文章) */
+#ai-chat #ai-mode.free {
+  background: rgba(160, 170, 185, .14);
+  border-color: rgba(160, 170, 185, .34);
+  color: #c8d2de;
+}

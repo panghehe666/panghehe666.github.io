@@ -129,6 +129,8 @@
 
   /* 节能 = 只给相关小节；强爽 = 先给整篇，不够再给全站 */
   function ecoMode() { return lsGet(LS.mode) !== 'max'; }
+  /* 白嫖模式:纯聊天,完全不读博客文章(不检索、不带正文、不带文章列表) */
+  function freeMode() { return lsGet(LS.mode) === 'free'; }
 
   /* ---------------- 工具 ---------------- */
   function esc(s) {
@@ -554,6 +556,20 @@
     return out.join('\n\n');
   }
 
+  /* 白嫖模式专用 system:纯聊天,不涉及博客内容 */
+  function sysPromptFree() {
+    var s = [];
+    s.push('你是「庞和合」本人的 AI 分身。');
+    s.push('身份:庞和合,网名 PHH,高三学生,喜欢折腾、热爱数码。');
+    s.push('说话方式:中文口语,第一人称,简洁直接,像在微信里聊天,不用客套话。');
+    s.push('');
+    s.push('规则:');
+    s.push('1. 现在是纯聊天模式,你手上没有任何博客文章内容,就按常识和你的知识正常聊。');
+    s.push('2. 不要假装查过博客,不要说"根据我的文章"这类话;被问到博客里写过什么,就说"这个得去博客翻"。');
+    s.push('3. 尽量 2~4 句答完;需要展开时不超过 8 句。不要说"作为 AI"。');
+    return s.join('\n');
+  }
+
   /* system 内容保持逐字不变，Good for DeepSeek 的前缀缓存 */
   function sysPrompt() {
     var s = [];
@@ -781,6 +797,38 @@
     var eco = ecoMode();
     var startLv = eco ? 0 : 1;
     var maxLv = eco ? 1 : 2;
+
+    if (freeMode()) {
+      /* 白嫖模式:不加载索引、不检索,直接把问题发给模型 */
+      var furi = '【我的问题】\n' + text;
+      var fmessages = [{ role: 'system', content: sysPromptFree() }]
+        .concat(history)
+        .concat([{ role: 'user', content: furi }]);
+      var fmaxTok = cfg().provider === 'kimi' ? 1600 : 900;
+      var fpayload = { model: cfg().model.id, messages: fmessages, stream: true, max_tokens: fmaxTok };
+      if (cfg().model.id === 'deepseek-flash') fpayload.temperature = 1.0;
+      var facc = '', frea = '';
+      return stream(fpayload,
+        function (delta) { facc += delta; render(node, facc.replace(MORE_RE, ''), frea, [], false); },
+        function (r) { frea += r; render(node, facc.replace(MORE_RE, ''), frea, [], false); },
+        ctrl ? ctrl.signal : undefined
+      ).then(function () {
+        var fout = String(facc || '').replace(MORE_RE, '').trim();
+        if (!fout) fout = frea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
+        render(node, fout, frea, [], true);
+        msgs.push({ role: 'user', content: furi });
+        msgs.push({ role: 'assistant', content: fout || '(空)' });
+        saveTurn(text, fout, furi);
+      }).catch(function (e) {
+        var m = errText(e);
+        if (m) renderError(node, m, text);
+        else render(node, '', '', [], true);
+      }).then(function () {
+        busy = false;
+        ctrl = null;
+        updateSend();
+      });
+    }
 
     loadIndex().then(function (d) { return d; }, function () { return null; })
       .then(function (d) {
@@ -1257,18 +1305,22 @@
         !modelMenu.contains(e.target) && e.target !== modelBtn) closeModelMenu();
   });
   modeBtn.addEventListener('click', function () {
-    lsSet(LS.mode, ecoMode() ? 'max' : 'eco');
+    var cur = lsGet(LS.mode);
+    lsSet(LS.mode, cur === 'max' ? 'free' : (cur === 'free' ? 'eco' : 'max'));
     syncModel();
   });
   function syncModel() {
-    var cur = selModel(), eco = ecoMode();
+    var cur = selModel(), eco = ecoMode(), free = freeMode();
     modelName.textContent = cur.m.label;
-    modeName.textContent = eco ? '节能' : '强爽';
+    modeName.textContent = free ? '白嫖' : (eco ? '节能' : '强爽');
     modeBtn.classList.toggle('on', !eco);
+    modeBtn.classList.toggle('free', free);
     if (tipEl) {
-      tipEl.textContent = eco
-        ? '节能模式：只带相关小节，够不够由它自己开口要'
-        : '强爽模式：每轮读全站（全文/摘要），不够顶配再补相关文章全文';
+      tipEl.textContent = free
+        ? '白嫖模式：纯聊天，完全不读博客文章（最省 token）'
+        : (eco
+          ? '节能模式：只带相关小节，够不够由它自己开口要'
+          : '强爽模式：每轮读全站（全文/摘要），不够顶配再补相关文章全文');
     }
   }
 
