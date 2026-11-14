@@ -82,17 +82,17 @@
   function forgetMem(keys) { if (MEM) { try { MEM.forget(keys); } catch (e) {} } }
   /* 每轮按相关度挑几条注入,不再全量塞 system */
   function memBlock(text) {
-    if (!MEM || !memOn() || freeMode()) return '';
+    if (!MEM || !memOn()) return '';
     try { return MEM.block(text); } catch (e) { return ''; }
   }
   /* 本地零 token 处理「你记得我什么」「忘掉 X 的记忆」 */
   function memLocal(text) {
-    if (!MEM || !memOn() || freeMode()) return null;
+    if (!MEM || !memOn()) return null;
     try { return MEM.handleLocal(text); } catch (e) { return null; }
   }
   /* 显式声明(我叫 X / 我住在 X / 记住:X)本地直接存,不等模型 */
   function memCapture(text) {
-    if (!MEM || !memOn() || freeMode()) return [];
+    if (!MEM || !memOn()) return [];
     try { return MEM.quickCapture(text); } catch (e) { return []; }
   }
   /* 从模型输出里提取 [[MEM:分类|键|值]] 保存、[[FORGET:...]] 删除,并去掉标记 */
@@ -617,12 +617,12 @@
     return out.join('\n\n');
   }
 
-  /* 白嫖模式专用 system:完全隔离,不提博客、不带记忆、不带任何提升词 */
+  /* 白嫖模式 system:隔离环境(无博客内容),无分身身份、无长度限定;记忆走用户消息注入 */
   function sysPromptFree() {
     var s = [];
-    s.push('你是「庞和合」的 AI 分身(网名 PHH),中文口语,第一人称,简洁直接,像朋友聊天。');
-    s.push('这是纯聊天模式:你没有拿到任何文章、笔记或额外资料,就凭常识正常聊。');
-    s.push('尽量 2~4 句答完,需要展开不超过 8 句。');
+    s.push('你是一个通用 AI 助手,如实、完整地回答用户的问题。');
+    s.push('当前是隔离模式:你手上没有任何文章、笔记或额外资料,只凭常识和已有知识回答;不要假装查过任何资料。');
+    s.push('用户消息里如果附带【长期记忆·关于用户】,那是你以前对话记住的偏好,回答时自然照顾到,但不要逐条复述,也不要因此改变自己的回答方式。');
     return s.join('\n');
   }
 
@@ -886,21 +886,29 @@
     var maxLv = eco ? 1 : 2;
 
     if (freeMode()) {
-      /* 白嫖模式:不加载索引、不检索,直接把问题发给模型 */
-      var furi = '【我的问题】\n' + text;
+      /* 白嫖模式:不加载索引、不检索;问题原样发送,不加任何包装 */
+      var furi = text + (memCtx ? '\n\n' + memCtx : '');
       var fmessages = [{ role: 'system', content: sysPromptFree() }]
         .concat(history)
         .concat([{ role: 'user', content: furi }]);
-      var fmaxTok = cfg().provider === 'kimi' ? 1600 : 900;
+      var fmaxTok = cfg().provider === 'kimi' ? 4000 : 2600;
       var fpayload = { model: cfg().model.id, messages: fmessages, stream: true, max_tokens: fmaxTok };
       if (cfg().model.id === 'deepseek-flash') fpayload.temperature = 1.0;
       var facc = '', frea = '';
       return stream(fpayload,
-        function (delta) { facc += delta; render(node, facc.replace(MORE_RE, ''), frea, [], false); },
-        function (r) { frea += r; render(node, facc.replace(MORE_RE, ''), frea, [], false); },
+        function (delta) { facc += delta; render(node, stripMarkers(facc), frea, [], false); },
+        function (r) { frea += r; render(node, stripMarkers(facc), frea, [], false); },
         ctrl ? ctrl.signal : undefined
       ).then(function () {
-        var fout = String(facc || '').replace(MORE_RE, '').trim();
+        var fraw = String(facc || '');
+        var fout = fraw.replace(MORE_RE, '').trim();
+        /* 记忆:与强爽/节能共用同一份(开关关闭时不写) */
+        if (memOn()) {
+          var fmm = extractMem(fraw);
+          if (fmm.mems.length) addMem(fmm.mems);
+          if (fmm.fgs.length) forgetMem(fmm.fgs);
+          fout = fmm.clean.replace(MORE_RE, '').trim();
+        }
         if (!fout) fout = frea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
         render(node, fout, frea, [], true);
         msgs.push({ role: 'user', content: furi });
@@ -1421,7 +1429,7 @@
     modeBtn.classList.toggle('free', free);
     if (tipEl) {
       tipEl.textContent = free
-        ? '白嫖模式：纯聊天，完全不读博客文章（最省 token）'
+        ? '白嫖模式：隔离聊天（只带你的偏好记忆，不读博客内容）'
         : (eco
           ? '节能模式：只带相关小节，够不够由它自己开口要'
           : '强爽模式：每轮读全站（全文/摘要），不够顶配再补相关文章全文');
