@@ -36,11 +36,7 @@ nav-style: invert
   <div class="pe-status" id="pe-status"></div>
 </div>
 
-<link rel="stylesheet" href="{{ '/bytemd/bytemd.css' | prepend: site.baseurl }}">
-<link rel="stylesheet" href="{{ '/bytemd/bytemd-override.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}">
+<link rel="stylesheet" href="{{ '/vditor/dist/index.css' | prepend: site.baseurl }}">
 <link rel="stylesheet" href="{{ '/css/post-edit.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}">
-<script>window.BASEURL = '{{ site.baseurl }}';</script>
-<script src="{{ '/bytemd/bytemd.umd.js' | prepend: site.baseurl }}" defer></script>
-<script src="{{ '/bytemd/gfm/plugin-gfm.umd.js' | prepend: site.baseurl }}" defer></script>
-<script src="{{ '/bytemd/hl/plugin-highlight.umd.js' | prepend: site.baseurl }}" defer></script>
+<script src="{{ '/vditor/dist/index.min.js' | prepend: site.baseurl }}" defer></script>
 <script src="{{ '/js/post-edit.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
