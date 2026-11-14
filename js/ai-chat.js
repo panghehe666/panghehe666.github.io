@@ -69,42 +69,36 @@
   };
   var MORE_RE = /\[\[MORE\]\]/g;
 
-  /* ---------------- 长期记忆(强爽/节能共用,白嫖完全隔离) ---------------- */
-  function loadMem() {
-    try {
-      var a = JSON.parse(lsGet(LS.mem) || '[]');
-      if (!Array.isArray(a)) return [];
-      return a.filter(function (x) { return x && String(x).trim(); }).map(function (x) { return String(x).trim(); });
-    } catch (e) { return []; }
-  }
-  function saveMem(arr) {
-    var seen = {}, out = [];
-    arr.forEach(function (x) {
-      var s2 = String(x).trim().slice(0, 140);
-      if (s2 && !seen[s2]) { seen[s2] = 1; out.push(s2); }
-    });
-    out = out.slice(-40);
-    lsSet(LS.mem, JSON.stringify(out));
-    return out;
-  }
-  function addMem(items) { return saveMem(loadMem().concat(items)); }
+  /* ---------------- 长期记忆(实现在 js/ai-memory.js,仿豆包) ----------------
+     结构化条目 + 冲突合并 + 按相关度注入;白嫖模式不读不写。 */
+  var MEM = window.PHHMEM || null;
+
   /* 记忆开关:关闭只暂停(不写不读),不删除已存条目 */
-  function memOn() { return lsGet(LS.memOn) !== '0'; }
-  function forgetMem(keys) {
-    var cur = loadMem();
-    var out = cur.filter(function (m) {
-      for (var i = 0; i < keys.length; i++) {
-        if (keys[i] && m.indexOf(keys[i]) >= 0) return false;
-      }
-      return true;
-    });
-    saveMem(out);
-    return out;
+  function memOn() { return MEM ? MEM.enabled() : lsGet(LS.memOn) !== '0'; }
+  function addMem(items, src) {
+    if (!MEM) return null;
+    try { return MEM.add(items, { src: src || 'ai' }); } catch (e) { return null; }
   }
-  /* 从模型输出里提取 [[MEM:...]] 保存、[[FORGET:...]] 删除,并把标记从显示文本里去掉 */
+  function forgetMem(keys) { if (MEM) { try { MEM.forget(keys); } catch (e) {} } }
+  /* 每轮按相关度挑几条注入,不再全量塞 system */
+  function memBlock(text) {
+    if (!MEM || !memOn() || freeMode()) return '';
+    try { return MEM.block(text); } catch (e) { return ''; }
+  }
+  /* 本地零 token 处理「你记得我什么」「忘掉 X 的记忆」 */
+  function memLocal(text) {
+    if (!MEM || !memOn() || freeMode()) return null;
+    try { return MEM.handleLocal(text); } catch (e) { return null; }
+  }
+  /* 显式声明(我叫 X / 我住在 X / 记住:X)本地直接存,不等模型 */
+  function memCapture(text) {
+    if (!MEM || !memOn() || freeMode()) return [];
+    try { return MEM.quickCapture(text); } catch (e) { return []; }
+  }
+  /* 从模型输出里提取 [[MEM:分类|键|值]] 保存、[[FORGET:...]] 删除,并去掉标记 */
   function extractMem(text) {
-    var mems = [], fgs = [];
-    var clean = String(text || '');
+    if (MEM) { try { return MEM.extract(text); } catch (e) {} }
+    var mems = [], fgs = [], clean = String(text || '');
     clean = clean.replace(/\[\[MEM:\s*([^\]]*)\]\]/g, function (_, v) { if (v.trim()) mems.push(v.trim()); return ''; });
     clean = clean.replace(/\[\[FORGET:\s*([^\]]*)\]\]/g, function (_, v) { if (v.trim()) fgs.push(v.trim()); return ''; });
     clean = clean.replace(/\n{3,}/g, '\n\n').trim();
@@ -661,16 +655,10 @@
     s.push('');
     if (memOn()) {
       s.push('【记忆规则】');
-      s.push('9. 用户说"记住…""记一下…"时,回答里带上 [[MEM:概括成一句话的事实]] 这个标记(和正文连在一起即可),系统会自动保存。');
-      s.push('9.1 用户在对话中反复提到稳定的偏好/背景(职业、习惯、常用工具、禁忌等)时,可以主动用 [[MEM:...]] 存一条(每轮最多 1 条;临时信息、闲聊不要存)。');
-      s.push('10. 用户说"忘了…""忘掉…"时,回答里带上 [[FORGET:要忘掉的关键词]] 这个标记,系统会自动删除匹配的记忆。');
-      s.push('10.1 用户问"你记住了我什么"时,直接用下面的记忆列表回答(不要输出标记)。');
-      var mem = loadMem();
-      if (mem.length) {
-        s.push('');
-        s.push('【你对用户的长期记忆(之前对话记住的事,跨对话有效,回答时优先尊重)】');
-        mem.forEach(function (m) { s.push('- ' + m); });
-      }
+      s.push('9. 用户说"记住…""记一下…"时,在回答末尾加 [[MEM:一句话的事实]];写成结构化 [[MEM:分类|属性|内容]] 更好,分类可用 身份/偏好/习惯/目标/关系/经历/其他。');
+      s.push('9.1 用户提到稳定的偏好、背景、禁忌、长期目标时,每轮最多主动存 1 条;临时信息、闲聊、一次性的安排不要存。');
+      s.push('10. 用户说"忘了…""忘掉…"时,输出 [[FORGET:要忘掉的关键词]]。');
+      s.push('10.1 不要主动罗列记忆,也不要声称记住了没记录过的事;用户问起时按系统给出的记忆条目答。');
     } else {
       s.push('【记忆功能已关闭】不要输出 [[MEM:]] 或 [[FORGET:]];用户让你记住时,只回一句"记忆功能关着,可在设置→记忆里打开"。');
     }
@@ -862,6 +850,27 @@
       return;
     }
 
+    /* 记忆类问题本地直接答,不发请求(零 token、零等待) */
+    var localReply = memLocal(text);
+    if (localReply) {
+      hideHello();
+      addUser(text);
+      var ln = addAssistant();
+      render(ln, localReply, '', [], true);
+      msgs.push({ role: 'user', content: '【我的问题】\n' + text });
+      msgs.push({ role: 'assistant', content: localReply });
+      saveTurn(text, localReply, '【我的问题】\n' + text);
+      return;
+    }
+
+    /* 用户自己说"我叫 X""我住在 X""记住:X"→ 本地先存,当轮就能用到 */
+    var caps = memCapture(text);
+    if (caps && caps.length) {
+      var cr = addMem(caps, 'user');
+      if (cr && (cr.added || cr.updated || cr.merged)) syncMemBadge();
+    }
+    var memCtx = memBlock(text);
+
     hideHello();
     addUser(text);
     var node = addAssistant();
@@ -980,6 +989,7 @@
           } else {
             uc = userMsg(text, hits, level, history);
           }
+          if (memCtx) uc += '\n\n' + memCtx;
           if (force) uc += '\n\n(材料已经给全了。请直接给出最终回答,不要输出 [[MORE]];确实不知道就用一两句话说明。)';
           var messages = [{ role: 'system', content: sysPrompt() }]
             .concat(history)
@@ -1050,8 +1060,10 @@
           /* 记忆:提取 [[MEM:...]] 保存 / [[FORGET:...]] 删除 */
           var mm = extractMem(raw2);
           if (memOn()) {
-            if (mm.mems.length) addMem(mm.mems);
+            var wrote = null;
+            if (mm.mems.length) wrote = addMem(mm.mems, 'ai');
             if (mm.fgs.length) forgetMem(mm.fgs);
+            if (wrote && (wrote.added || wrote.updated || wrote.merged)) syncMemBadge();
           }
           out = mm.clean.replace(MORE_RE, '').trim();
           if (!out) out = (mm.mems.length || mm.fgs.length)
@@ -1072,6 +1084,7 @@
             }
           }
           saveTurn(text, out, res.uc);
+          maybeConsolidate();
         });
       })
       .catch(function (e) {
@@ -1279,7 +1292,7 @@
   }
   function openSheet(el) {
     [sheetSet, sheetHist, sheetMem].forEach(function (s) { s.classList.toggle('on', s === el); });
-    if (el === sheetMem) renderMemList();
+    if (el === sheetMem) { renderMemList(); syncMemBadge(); }
     if (el === sheetSet) {
       keyIn.value = lsGet(LS.key);
       keyKimiIn.value = lsGet(LS.keyKimi);
@@ -1415,41 +1428,76 @@
     }
   }
 
-  /* 记忆管理 */
+  /* 记忆管理(列表/编辑/置顶/导入导出都在 js/ai-memory.js 里) */
   function renderMemList() {
-    if (!memListEl) return;
-    var mem = loadMem();
-    if (!mem.length) {
-      memListEl.innerHTML = '<div class="ai-empty">还没有记忆。对 AI 说「记住:我不吃辣」试试。</div>';
-      return;
-    }
-    var html = '';
-    mem.forEach(function (m, i) {
-      html += '<div class="ai-mem-item"><span class="ai-mem-t">' + esc(m) + '</span>' +
-        '<button type="button" class="ai-mem-del" data-i="' + i + '" title="删除这条" aria-label="删除这条">×</button></div>';
-    });
-    memListEl.innerHTML = html;
-    Array.prototype.forEach.call(memListEl.querySelectorAll('.ai-mem-del'), function (b) {
-      b.addEventListener('click', function () {
-        var idx = parseInt(b.getAttribute('data-i'), 10);
-        var cur = loadMem();
-        cur.splice(idx, 1);
-        saveMem(cur);
-        renderMemList();
-      });
-    });
+    if (MEM) { try { MEM.renderPanel(); } catch (e) {} return; }
+    if (memListEl) memListEl.innerHTML = '<div class="ai-empty">记忆模块没加载上,检查 js/ai-memory.js</div>';
+  }
+  function syncMemBadge() {
+    var b = $('ai-mem-open');
+    if (!b) return;
+    var n = MEM ? MEM.all().length : 0;
+    b.textContent = '查看 / 管理记忆' + (n ? '(' + n + ')' : '');
   }
   if (memToggle) {
     memToggle.checked = memOn();
     memToggle.addEventListener('change', function () {
-      lsSet(LS.memOn, memToggle.checked ? '1' : '0');
+      if (MEM) MEM.setEnabled(memToggle.checked); else lsSet(LS.memOn, memToggle.checked ? '1' : '0');
+      syncMemBadge();
+      renderMemList();
     });
   }
   if ($('ai-mem-open')) $('ai-mem-open').addEventListener('click', function () { openSheet(sheetMem); });
   if ($('ai-mem-clear')) $('ai-mem-clear').addEventListener('click', function () {
-    saveMem([]);
+    if (MEM) MEM.clear();
     renderMemList();
+    syncMemBadge();
   });
+
+  /* ---- 记忆自动整理:每 6 轮用一次小请求,把最近对话压成结构化记忆 ---- */
+  var memBusy = false;
+  function parseMemJSON(t) {
+    var m = String(t || '').match(/\[[\s\S]*\]/);
+    if (!m) return null;
+    try { var a = JSON.parse(m[0]); return Array.isArray(a) ? a : null; } catch (e) { return null; }
+  }
+  function maybeConsolidate() {
+    if (!MEM || memBusy || !memOn() || freeMode() || !MEM.autoOn() || !ready()) return;
+    try { MEM.countTurn(); } catch (e) { return; }
+    if (!MEM.shouldConsolidate(6)) return;
+    var ss = curSession();
+    var log = (ss && ss.log ? ss.log : []).slice(-4);
+    if (log.length < 2) return;
+    var pairs = log.map(function (x, i) {
+      return '第' + (i + 1) + '轮\n用户:' + String(x.q || '').slice(0, 120) +
+        '\nAI:' + String(x.a || '').slice(0, 180);
+    }).join('\n');
+    var sys = '你是记忆整理器。只抽取关于用户本人的长期稳定信息:称呼/身份/所在地/职业或学业、长期偏好与禁忌、习惯、长期目标、重要关系、重要经历。' +
+      '输出 JSON 数组,元素 {"cat":"profile|pref|habit|plan|rel|event|other","key":"简短属性名,可为空","val":"一句话","w":1到5的整数}。' +
+      '没有值得长期记的就输出 []。只输出 JSON,不要解释;已有记忆不要重复输出。';
+    var usr = '【已有记忆】\n' + (MEM.compactForPrompt(16) || '(空)') + '\n\n【最近对话】\n' + pairs;
+    var payload = {
+      model: cfg().model.id,
+      messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }],
+      stream: false,
+      max_tokens: 320,
+      temperature: 0.2
+    };
+    var acc = '';
+    memBusy = true;
+    stream(payload, function (d) { acc += d; }).then(function () {
+      var items = parseMemJSON(acc);
+      memBusy = false;
+      try { MEM.markConsolidated(); } catch (e) {}
+      if (items && items.length) {
+        var r = addMem(items, 'ai');
+        if (r && (r.added || r.updated || r.merged)) syncMemBadge();
+      }
+    }, function () {
+      memBusy = false;
+      try { MEM.markConsolidated(); } catch (e) {}
+    });
+  }
 
   /* 设置 */
   $('ai-save').addEventListener('click', function () {
@@ -1505,6 +1553,7 @@
 
   /* 初始化 */
   if (isAdmin()) { var ap = $('ai-admin-tag'); if (ap) ap.classList.add('on'); }
+  syncMemBadge();
   if (document.querySelector('.cal-fab')) ROOT.classList.add('has-cal');
   loadSessions();
   buildModelMenu();

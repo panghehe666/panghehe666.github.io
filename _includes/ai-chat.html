@@ -130,7 +130,7 @@
         <div class="ai-mem-row">
           <div class="ai-mem-info">
             <b>记忆</b>
-            <span>跨对话记住你的偏好与背景(对 AI 说「记住…」即可)</span>
+            <span>自动记住你的偏好、身份和长期目标,只在相关时才带上(可逐条查看、修改、删除)</span>
           </div>
           <label class="ai-switch">
             <input type="checkbox" id="ai-mem-toggle">
@@ -159,8 +159,22 @@
         </div>
       </div>
       <div class="ai-sheet-bd">
+        <div class="ai-mem-top">
+          <div class="ai-mem-stat"><b id="ai-mem-count">0</b> 条记忆<span id="ai-mem-inj" class="ai-mem-inj">本轮注入 0 条</span></div>
+          <label class="ai-mem-auto"><input type="checkbox" id="ai-mem-auto"><span>自动整理</span></label>
+        </div>
+        <input id="ai-mem-q" class="ai-mem-q" type="text" placeholder="搜索记忆…" autocomplete="off" spellcheck="false">
+        <div id="ai-mem-cats" class="ai-mem-cats"></div>
         <div id="ai-mem-list"></div>
-        <div class="ai-note">关闭记忆开关只会暂停(不再记录、也不再引用),已保存的条目不会删除。对 AI 说「请忘记 X」也能删单条。</div>
+        <div class="ai-btn-row ai-mem-acts">
+          <button id="ai-mem-export" class="ai-btn" type="button">导出</button>
+          <button id="ai-mem-import" class="ai-btn" type="button">导入</button>
+          <input id="ai-mem-file" type="file" accept=".json,application/json" hidden>
+        </div>
+        <div class="ai-note">
+          记忆只存在这台设备的浏览器里,关掉开关就暂停记录和引用(条目不删)。点条目右边的笔可改,星号置顶会每轮必带。
+          「自动整理」每 6 轮用一次很小的请求,把最近的对话压成条目,关掉就只按你明说的「记住…」来记。
+        </div>
       </div>
     </div>
 
@@ -183,5 +197,6 @@
   </div>
 </div>
 
+<script src="{{ '/js/ai-memory.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 <script src="{{ '/js/ai-chat.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 {% endif %}
