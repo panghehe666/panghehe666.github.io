@@ -79,8 +79,9 @@
       include: ['web_search_call.action.sources'],
       stream: true,
       reasoning: { effort: 'low' },       /* 提速:高推理 30s+ → 低推理 ~13s */
-      max_output_tokens: 1200,
-      instructions: '根据搜索到的实时信息直接给出最终中文回答。不要输出任何工具调用语法,不要再调用工具。'
+      max_output_tokens: 2000,
+      /* 这里只要「素材」:关键事实要点,最终回答交给主流程(保留深度思考与完整长度) */
+      instructions: '先联网搜索,再把与问题直接相关的关键事实用中文列成要点:每条一句,尽量具体(时间、数字、名称、结论)。不要寒暄,不要输出任何工具调用语法,不要再调用工具。'
     };
     var attempt = function (i) {
       return fetch(BASES[i] + '/responses', {

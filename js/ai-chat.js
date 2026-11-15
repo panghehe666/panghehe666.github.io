@@ -639,7 +639,7 @@
   function sysPromptFree() {
     var s = [];
     s.push('你是一个通用 AI 助手,如实、完整地回答用户的问题。');
-    s.push('当前是隔离模式:你手上没有任何文章、笔记或额外资料,只凭常识和已有知识回答;不要假装查过任何资料。');
+    s.push('当前是隔离模式:你手上没有博客文章或笔记。若用户消息里附带【实时联网资料】,那是刚联网搜到的真实信息,优先采用,并可在回答里引用其中的链接;没有资料时就凭常识作答,不要假装查过。');
     s.push('用户消息里如果附带【长期记忆·关于用户】,那是你以前对话记住的偏好,回答时自然照顾到,但不要逐条复述,也不要因此改变自己的回答方式。');
     s.push('如果提供了工具(如 web_search),需要实时信息时直接调用它,不要自称"不能联网"。');
     s.push('用过联网搜索的话,在回答末尾单独列出参考来源,每行一个:[[SRC:标题|网址]](3~6 条,网址必须来自搜索结果)。');
@@ -670,6 +670,7 @@
     s.push('4. 补了全文还找不到的部分,就说"这篇里那段我没拿到,你点进去看原文",并给出链接。');
     s.push('5. 整篇博客都没写过的,先直说"这个我博客里没写过",再用一两句常识补充,并说明那不是博客内容。');
     s.push('6. 不要编造标题、日期、链接、数据。');
+    s.push('6.1 如果用户消息里还带【实时联网资料】,那是刚联网搜到的实时信息:涉及新闻、最新进展、价格、时间点的问题优先用它回答,可以直接引用其中的标题/链接;此时不受第 5 条「博客里没写过」的限制。');
     s.push('7. 指向文章时用 markdown 链接:[文章标题](链接),链接只能来自下面出现的 URL。');
     s.push('8. 尽量 2~4 句答完;确实需要展开时不超过 8 句。不要说"作为 AI""根据提供的资料"。');
     s.push('');
@@ -980,8 +981,11 @@
     var sid0 = curId;
     var tMsgs = msgs;
 
-    /* 联网开关开:直接联网搜一次(不检索博客、不走工具往返,快) */
+    /* 联网开关开:先搜一轮拿实时资料【只当素材】,再走正常回答流程
+       —— 这样深度思考/完整长度/记忆/模式都保留,只有素材多了联网内容 */
     if (webOn() && window.PHAITOOLS && window.PHAITOOLS.webSearch) {
+      /* 记忆类问题不需要联网,直接走本地答案,省一次搜索 */
+      if (memLocal(text)) return runAsk(text, sid0, tMsgs, '', null);
       if (window.PHAITOOLS.resetSources) { try { window.PHAITOOLS.resetSources(); } catch (e) {} }
       hideHello();
       addUser(text);
@@ -989,34 +993,40 @@
       lastAsk = text;
       busy = true;
       updateSend();
-      var wacc = '';
-      return PHAITOOLS.webSearch(text, function (acc) {
-        wacc = acc;
-        render(wnode, acc, '', [], false);
-      }).then(function (r) {
-        var out = String(r.text || '').replace(MORE_RE, '').trim();
-        if (!out) out = '(搜索完成,但没拿到可读内容,再试一次)';
-        render(wnode, out, '', [], true);
-        try { renderSources(wnode, r.sources); } catch (e) {}
-        if (window.PHHAISTATS) {
-          try { PHHAISTATS.record('kimi', 'kimi-k3', null, text.length + 60, out.length); } catch (e) {}
+      render(wnode, '', '正在联网搜索…', [], false);
+      return PHAITOOLS.webSearch(text).then(function (r) {
+        var txt = String((r && r.text) || '').trim();
+        var block = '';
+        var src = (r && r.sources) || [];
+        if (txt) {
+          block = src.length
+            ? '\n\n【实时联网资料(刚搜到的真实信息,涉及实时/新闻/价格类问题优先采用;与资料冲突时以资料为准)】\n' + txt
+            : '\n\n【联网检索:本次没拿到网页来源,下面是模型的整理(可能不是最新),回答实时类问题时要说明这一点】\n' + txt;
+          if (src.length) {
+            block += '\n\n来源:\n' + src.slice(0, 8).map(function (s, i) {
+              return (i + 1) + '. ' + (s.title || '') + ' ' + (s.url || '');
+            }).join('\n');
+          }
         }
-        tMsgs.push({ role: 'user', content: text });
-        tMsgs.push({ role: 'assistant', content: out });
-        saveTurnTo(sid0, text, out, text);
-      }).catch(function (e) {
-        var m = (e && e.message) || '联网搜索失败';
-        renderError(wnode, m, text);
-        tMsgs.push({ role: 'user', content: text });
-        tMsgs.push({ role: 'assistant', content: m });
-        saveTurnTo(sid0, text, m, text);
-      }).then(function () {
+        if (window.PHHAISTATS) {
+          try { PHHAISTATS.record('kimi', 'kimi-k3', null, text.length + 60, txt.length); } catch (e) {}
+        }
         busy = false;
-        ctrl = null;
         updateSend();
+        return runAsk(text, sid0, tMsgs, block, wnode);
+      }, function (e) {
+        /* 搜索失败也别卡住:退回普通回答 */
+        busy = false;
+        updateSend();
+        return runAsk(text, sid0, tMsgs, '', wnode);
       });
     }
 
+    return runAsk(text, sid0, tMsgs, '', null);
+  }
+
+  /* 正常回答流程:webBlock = 联网资料(可空),preNode = 复用已建气泡(可空) */
+  function runAsk(text, sid0, tMsgs, webBlock, preNode) {
     /* 记忆类问题本地直接答,不发请求(零 token、零等待) */
     var localReply = memLocal(text);
     if (localReply) {
@@ -1038,13 +1048,16 @@
     }
     var memCtx = memBlock(text);
 
-    if (window.PHAITOOLS && window.PHAITOOLS.resetSources) {
+    if (!webBlock && window.PHAITOOLS && window.PHAITOOLS.resetSources) {
       try { window.PHAITOOLS.resetSources(); } catch (e) {}
     }
 
-    hideHello();
-    addUser(text);
-    var node = addAssistant();
+    var node = preNode;
+    if (!node) {
+      hideHello();
+      addUser(text);
+      node = addAssistant();
+    }
     lastAsk = text;
     busy = true;
     updateSend();
@@ -1058,7 +1071,7 @@
 
     if (freeMode()) {
       /* 白嫖模式:不加载索引、不检索;问题原样发送;只挂「联网类」工具,博客工具仍隔离 */
-      var furi = text + (memCtx ? '\n\n' + memCtx : '');
+      var furi = text + (webBlock || '') + (memCtx ? '\n\n' + memCtx : '');
       var freeToolMsgs = [];
       var freeDepth = 0;
       var freeToolsOff = false;
@@ -1223,6 +1236,7 @@
           } else {
             uc = userMsg(text, hits, level, history);
           }
+          if (webBlock) uc += webBlock;
           if (memCtx) uc += '\n\n' + memCtx;
           if (force) uc += '\n\n(材料已经给全了。请直接给出最终回答,不要输出 [[MORE]];确实不知道就用一两句话说明。)';
           var messages = [{ role: 'system', content: sysPrompt() }]
