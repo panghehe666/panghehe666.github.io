@@ -115,6 +115,9 @@
       if (/^https?:\/\//i.test(url)) out.push({ title: title || url, url: url });
       return '';
     });
+    if (out.length) {
+      clean = clean.replace(/(^|\n)\s*(参考)?来源\s*[:：]?\s*$/g, '').trim();
+    }
     clean = clean.replace(/\n{3,}/g, '\n\n').trim();
     return { list: out, clean: clean };
   }
@@ -122,6 +125,7 @@
     return String(s || '')
       .replace(/\[\[(MEM|FORGET):[^\]]*\]\]/g, '')
       .replace(/\[\[SRC:[^\]]*\]\]/g, '')
+      .replace(/\[\[SRC:[^\]]*$/, '')
       .replace(MORE_RE, '');
   }
 
