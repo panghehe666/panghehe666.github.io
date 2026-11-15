@@ -109,7 +109,9 @@
       model: 'kimi-k3',
       input: q,
       tools: [{ type: 'web_search' }],
-      include: ['web_search_call.action.sources']
+      include: ['web_search_call.action.sources'],
+      /* 关键:要求直接给最终回答,否则模型会把工具调用语法当正文吐出来 */
+      instructions: '你负责根据搜索到的实时信息直接给出最终中文回答。不要输出任何工具调用语法(不要出现 <|open|>、<|sep|> 之类标记),也不要再调用工具。'
     }).then(function (d) {
       var answer = '', srcs = [];
       (d.output || []).forEach(function (it) {
@@ -119,14 +121,21 @@
           });
         }
         if (it.type === 'web_search_call') {
-          var act = it.action || {};
-          if (act.query) answer = answer; /* 搜索词可忽略 */
-          srcs = srcs.concat(act.sources || []);
+          srcs = srcs.concat(((it.action || {}).sources) || []);
         }
       });
+      /* 清洗:万一模型仍输出工具语法,去掉 */
+      answer = String(answer || '')
+        .replace(/<\|open\|>[\s\S]*?<\|close\|>[\s\S]*?<\|close\|>/g, '')
+        .replace(/<\|(open|sep|close)\|>/g, '')
+        .trim();
       addSources(srcs);
-      if (!answer) answer = '(搜索完成,但没有返回可读内容)';
-      return answer;
+      /* 附上来源清单,方便外层模型引用 */
+      var srcLines = srcs.slice(0, 8).map(function (s, i) {
+        return (i + 1) + '. ' + (s.title || '') + ' ' + (s.url || '');
+      }).join('\n');
+      if (!answer) answer = '(搜索完成,但没拿到可读内容)';
+      return answer + (srcLines ? '\n\n【搜索结果来源】\n' + srcLines : '');
     });
   }, { free: true });
 
