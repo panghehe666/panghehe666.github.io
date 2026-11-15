@@ -104,8 +104,22 @@
     clean = clean.replace(/\n{3,}/g, '\n\n').trim();
     return { mems: mems, fgs: fgs, clean: clean };
   }
+  /* [[SRC:标题|链接]] 来源标记 */
+  var SRC_RE = /\[\[SRC:\s*([^\]|]*?)\s*\|\s*([^\]]*?)\s*\]\]/g;
+  function extractSources(text) {
+    var out = [], clean = String(text || '');
+    clean = clean.replace(SRC_RE, function (_, title, url) {
+      if (/^https?:\/\//i.test(url)) out.push({ title: title || url, url: url });
+      return '';
+    });
+    clean = clean.replace(/\n{3,}/g, '\n\n').trim();
+    return { list: out, clean: clean };
+  }
   function stripMarkers(s) {
-    return String(s || '').replace(/\[\[(MEM|FORGET):[^\]]*\]\]/g, '').replace(MORE_RE, '');
+    return String(s || '')
+      .replace(/\[\[(MEM|FORGET):[^\]]*\]\]/g, '')
+      .replace(/\[\[SRC:[^\]]*\]\]/g, '')
+      .replace(MORE_RE, '');
   }
 
   /* ---------------- localStorage ---------------- */
@@ -625,6 +639,7 @@
     s.push('当前是隔离模式:你手上没有任何文章、笔记或额外资料,只凭常识和已有知识回答;不要假装查过任何资料。');
     s.push('用户消息里如果附带【长期记忆·关于用户】,那是你以前对话记住的偏好,回答时自然照顾到,但不要逐条复述,也不要因此改变自己的回答方式。');
     s.push('如果提供了工具(如 web_search),需要实时信息时直接调用它,不要自称"不能联网"。');
+    s.push('用过联网搜索的话,在回答末尾单独列出参考来源,每行一个:[[SRC:标题|网址]](3~6 条,网址必须来自搜索结果)。');
     return s.join('\n');
   }
 
@@ -656,6 +671,7 @@
     s.push('8. 尽量 2~4 句答完;确实需要展开时不超过 8 句。不要说"作为 AI""根据提供的资料"。');
     s.push('');
     if (memOn()) {
+      s.push('8.5 如果本轮调用了联网搜索,回答末尾单独列出参考来源,每行一个:[[SRC:标题|网址]](3~6 条,网址必须来自搜索结果)。');
       s.push('【记忆规则】');
       s.push('9. 用户说"记住…""记一下…"时,在回答末尾加 [[MEM:一句话的事实]];写成结构化 [[MEM:分类|属性|内容]] 更好,分类可用 身份/偏好/习惯/目标/关系/经历/其他。');
       s.push('9.1 用户提到稳定的偏好、背景、禁忌、长期目标时,每轮最多主动存 1 条;临时信息、闲聊、一次性的安排不要存。');
@@ -749,11 +765,10 @@
     });
   }
 
-  /* 工具搜到的网页来源:折叠列表,挂在回答下方 */
-  function renderSources(node) {
-    if (!window.PHAITOOLS || !window.PHAITOOLS.sources) return;
-    var src = [];
-    try { src = window.PHAITOOLS.sources(); } catch (e) { return; }
+  /* 本轮来源(取自模型输出 [[SRC:标题|链接]]) */
+  var curSources = [];
+  function renderSources(node, srcArg) {
+    var src = srcArg || curSources || [];
     if (!src.length) return;
     var old = node.querySelector('.ai-srcbox');
     if (old) old.parentNode.removeChild(old);
@@ -1054,7 +1069,9 @@
       return freePass().then(function (fr) {
         var facc = fr.acc, frea = fr.rea;
         var fraw = String(facc || '');
-        var fout = fraw.replace(MORE_RE, '').trim();
+        var fsrc = extractSources(fraw);
+        if (fsrc.list.length) curSources = fsrc.list;
+        var fout = fsrc.clean.replace(MORE_RE, '').trim();
         /* 记忆:与强爽/节能共用同一份(开关关闭时不写) */
         if (memOn()) {
           var fmm = extractMem(fraw);
@@ -1064,7 +1081,7 @@
         }
         if (!fout) fout = frea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
         render(node, fout, frea, [], true);
-        try { renderSources(node); } catch (e) {}
+        try { renderSources(node, curSources); } catch (e) {}
         if (window.PHHAISTATS) {
           try { PHHAISTATS.record(cfg().provider, cfg().model.id, lastUsage, (furi || '').length + 200, fout.length); } catch (e) {}
         }
@@ -1267,6 +1284,7 @@
           var raw2 = String(res.acc || '');
           var out = raw2.replace(MORE_RE, '').trim();
           /* 记忆:提取 [[MEM:...]] 保存 / [[FORGET:...]] 删除 */
+          curSources = extractSources(raw2).list;
           var mm = extractMem(raw2);
           if (memOn()) {
             var wrote = null;
@@ -1274,12 +1292,12 @@
             if (mm.fgs.length) forgetMem(mm.fgs);
             if (wrote && (wrote.added || wrote.updated || wrote.merged)) syncMemBadge();
           }
-          out = mm.clean.replace(MORE_RE, '').trim();
+          out = mm.clean.replace(MORE_RE, '').replace(SRC_RE, '').trim();
           if (!out) out = (mm.mems.length || mm.fgs.length)
             ? '已记住 ✅ 之后对话我会记得'
             : (res.rea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)');
           render(node, out, res.rea, hits, true);
-          try { renderSources(node); } catch (e) {}
+          try { renderSources(node, curSources); } catch (e) {}
           if (window.PHHAISTATS) {
             try { PHHAISTATS.record(cfg().provider, cfg().model.id, lastUsage, (res.uc || '').length, out.length); } catch (e) {}
           }
