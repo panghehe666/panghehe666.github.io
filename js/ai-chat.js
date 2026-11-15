@@ -768,8 +768,14 @@
   /* 本轮来源(取自模型输出 [[SRC:标题|链接]]) */
   var curSources = [];
   function renderSources(node, srcArg) {
-    var src = srcArg || curSources || [];
+    var src = [];
+    try { if (window.PHAITOOLS && window.PHAITOOLS.sources) src = window.PHAITOOLS.sources(); } catch (e) {}
+    if (srcArg && srcArg.length) src = srcArg.concat(src);
     if (!src.length) return;
+    /* 去重 */
+    var seen = {}, uniq = [];
+    src.forEach(function (s) { if (s && s.url && !seen[s.url]) { seen[s.url] = 1; uniq.push(s); } });
+    src = uniq;
     var old = node.querySelector('.ai-srcbox');
     if (old) old.parentNode.removeChild(old);
     var box = document.createElement('div');
