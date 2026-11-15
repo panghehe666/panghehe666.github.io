@@ -62,11 +62,15 @@
     var key = kimiKey();
     if (!key) return Promise.reject(new Error('没配置 Kimi API Key'));
     var attempt = function (i) {
+      var ctl = window.AbortController ? new AbortController() : null;
+      var timer = setTimeout(function () { try { ctl && ctl.abort(); } catch (e) {} }, 100000);
       return fetch(BASES[i] + path, {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: ctl ? ctl.signal : undefined
       }).then(function (r) {
+        clearTimeout(timer);
         return r.text().then(function (t) {
           var d = {};
           try { d = t ? JSON.parse(t) : {}; } catch (e) {}
@@ -79,6 +83,8 @@
           return d;
         });
       }).catch(function (e) {
+        clearTimeout(timer);
+        if (e && e.name === 'AbortError') throw new Error('搜索超时(100 秒),稍后再试');
         if (i + 1 < BASES.length && !e.status) return attempt(i + 1);
         throw e;
       });
