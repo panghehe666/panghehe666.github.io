@@ -9,17 +9,18 @@ function log(s) { out.textContent += '\n' + s; }
 setTimeout(function () {
   var key = '';
   try { var s = JSON.parse(sessionStorage.getItem('phh_secrets') || '{}'); key = s.kimi || ''; } catch (e) {}
-  log('Kimi key: ' + (key ? key.slice(0, 8) + '...' : '(无)'));
+  log('sessionStorage kimi: ' + (key ? key.slice(0, 8) + '...' : '(无)'));
+  if (key) { try { localStorage.setItem('phh_ai_key_kimi', key); } catch (e) {} }
   if (!window.PHAITOOLS) { log('ai-tools.js 未加载'); return; }
   log('工具列表: ' + PHAITOOLS.names().join(', '));
   var t0 = Date.now();
   PHAITOOLS.run('web_search', { query: '今天有什么科技新闻?一句话概括三条' })
     .then(function (r) {
       log('耗时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's');
-      log('结果:\n' + r.slice(0, 600));
+      log('结果:\n' + r.slice(0, 500));
       var src = PHAITOOLS.sources();
       log('来源数: ' + src.length);
-      src.slice(0, 5).forEach(function (s) { log('  - ' + s.title + ' | ' + s.url); });
+      src.slice(0, 5).forEach(function (x) { log('  - ' + x.title + ' | ' + x.url); });
     })
     .catch(function (e) { log('失败: ' + e.message); });
 }, 1500);
