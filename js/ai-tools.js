@@ -1,41 +1,38 @@
 /* ============================================================
    PHH Blog · AI 工具注册表(动态加载)
    ------------------------------------------------------------
-   1) 本地工具:任何脚本都能在运行时注册
-        PHAITOOLS.register('name', '描述', {JSON Schema}, function (args) {
-          return '结果';                    // 或返回 Promise
-        });
-   2) Kimi 官方工具(Formula API):联网搜索 / 单位换算 / 日期 / Base64 / 网页抓取
-        自动拉取官方工具声明 → 注册 → 模型调用时装到 /formulas/.../fibers 执行
-        需要 Kimi API Key;web-search 按次计费,可在设置里关闭。
+   1) 通用注册:任何脚本运行时都能加工具
+        PHAITOOLS.register('name', '描述', {JSON Schema}, handler, { free: true });
+      opts.free = true 表示「白嫖模式也能用」(不涉及博客内容)
+   2) 内置 Kimi 联网工具(走 Moonshot REST,返回结构化结果 → 可显示来源)
+        web_search  : POST /v1/tools/search_pro
+        fetch_url   : POST /v1/tools/fetch
    ============================================================ */
 (function () {
   'use strict';
   var reg = {};
-  var kimiState = { loaded: false, loading: false, uris: {} };
+  var sources = [];          /* 本轮工具搜到的网页来源 */
+  var BASES = ['https://api.moonshot.cn/v1', 'https://api.moonshot.ai/v1'];
 
-  var KIMI_BASES = ['https://api.moonshot.cn/v1', 'https://api.moonshot.ai/v1'];
-  var KIMI_FORMULAS = [
-    'moonshot/web-search:latest',
-    'moonshot/convert:latest',
-    'moonshot/date:latest',
-    'moonshot/base64:latest',
-    'moonshot/fetch:latest'
-  ];
-
-  function register(name, description, parameters, handler) {
+  function register(name, description, parameters, handler, opts) {
     if (!name || typeof handler !== 'function') return false;
     reg[name] = {
       name: String(name),
       description: String(description || ''),
       parameters: parameters || { type: 'object', properties: {} },
-      handler: handler
+      handler: handler,
+      free: !!(opts && opts.free)
     };
     return true;
   }
   function unregister(name) { delete reg[name]; }
-  function list() {
-    return Object.keys(reg).map(function (k) {
+
+  /* filter: {free:true} 只返回白嫖模式可用的工具 */
+  function list(filter) {
+    return Object.keys(reg).filter(function (k) {
+      if (filter && filter.free) return reg[k].free;
+      return true;
+    }).map(function (k) {
       return {
         type: 'function',
         function: {
@@ -61,7 +58,7 @@
     } catch (e) { return Promise.reject(e); }
   }
 
-  /* ---------------- Kimi 官方工具 ---------------- */
+  /* ---------------- Kimi 联网 ---------------- */
   function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function kimiKey() {
     var k = '';
@@ -70,73 +67,87 @@
     return k;
   }
   function kimiToolsEnabled() { return lsGet('phh_ai_kimi_tools') !== '0'; }
-
-  function chooseBase(key) {
-    /* 先用国内域名,失败再换国际域名 */
-    return fetch(KIMI_BASES[0] + '/formulas/moonshot/date:latest/tools', {
-      headers: { 'Authorization': 'Bearer ' + key }
-    }).then(function (r) {
-      return r.ok ? KIMI_BASES[0] : KIMI_BASES[1];
-    }).catch(function () { return KIMI_BASES[1]; });
-  }
-
-  function registerFormula(base, key, uri, tools) {
-    (tools || []).forEach(function (t) {
-      var fn = t && t.function;
-      if (!fn || !fn.name) return;
-      var name = fn.name;
-      kimiState.uris[name] = uri;
-      register(name, (fn.description || name) + '(Kimi 官方工具)', fn.parameters, function (args) {
-        return fetch(base + '/formulas/' + uri + '/fibers', {
-          method: 'POST',
-          headers: {
-            'Authorization': 'Bearer ' + key,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ name: name, arguments: JSON.stringify(args || {}) })
-        }).then(function (r) {
-          return r.text().then(function (txt) {
-            var d = {};
-            try { d = txt ? JSON.parse(txt) : {}; } catch (e) {}
-            if (!r.ok) throw new Error((d.error && d.error.message) || ('HTTP ' + r.status));
-            var ctx = d.context || {};
-            /* web-search 返回加密输出,必须原样回传给模型 */
-            return String(ctx.output || ctx.encrypted_output || '');
-          });
-        });
-      });
-    });
-  }
-
-  function loadKimiOfficialTools() {
-    if (kimiState.loaded || kimiState.loading) return Promise.resolve(kimiState.loaded);
-    if (!kimiToolsEnabled()) {
-      /* 关闭时移除已注册的 Kimi 工具 */
-      Object.keys(kimiState.uris).forEach(function (n) { unregister(n); });
-      kimiState.uris = {};
-      return Promise.resolve(false);
-    }
+  function kimiPost(path, body) {
     var key = kimiKey();
-    if (!key) return Promise.resolve(false);
-    kimiState.loading = true;
-    return chooseBase(key).then(function (base) {
-      return Promise.all(KIMI_FORMULAS.map(function (uri) {
-        return fetch(base + '/formulas/' + uri + '/tools', {
-          headers: { 'Authorization': 'Bearer ' + key }
-        }).then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (j) {
-            if (j && j.tools && j.tools.length) registerFormula(base, key, uri, j.tools);
-          }).catch(function () {});
-      })).then(function () {
-        kimiState.loading = false;
-        kimiState.loaded = Object.keys(kimiState.uris).length > 0;
-        return kimiState.loaded;
+    if (!key) return Promise.reject(new Error('没配置 Kimi API Key'));
+    var attempt = function (i) {
+      return fetch(BASES[i] + path, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).then(function (r) {
+        return r.text().then(function (t) {
+          var d = {};
+          try { d = t ? JSON.parse(t) : {}; } catch (e) {}
+          if (!r.ok) {
+            var msg = (d.error && d.error.message) || ('HTTP ' + r.status);
+            var e = new Error(msg);
+            e.status = r.status;
+            throw e;
+          }
+          return d;
+        });
+      }).catch(function (e) {
+        /* 网络层失败(常见于域名不可达/CORS)换国际域名重试一次 */
+        if (i + 1 < BASES.length && !e.status) return attempt(i + 1);
+        throw e;
       });
-    }).catch(function () {
-      kimiState.loading = false;
-      return false;
+    };
+    return attempt(0);
+  }
+
+  function addSources(list) {
+    (list || []).forEach(function (s) {
+      if (!s || !s.url) return;
+      for (var i = 0; i < sources.length; i++) if (sources[i].url === s.url) return;
+      sources.push({ title: s.title || s.url, url: s.url, site: s.site_name || '' });
     });
   }
+
+  if (window.PHAITOOLS === undefined) { /* 兼容下面统一导出 */ }
+
+  register('web_search', '联网搜索实时信息。需要最新资讯、新闻、价格、事件进展时调用;返回若干网页的正文摘录。', {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: '搜索关键词,尽量具体(实体+时间+限定词)' }
+    },
+    required: ['query']
+  }, function (a) {
+    var q = String(a.query || '').trim();
+    if (!q) return Promise.reject(new Error('缺少 query'));
+    if (!kimiToolsEnabled()) return Promise.reject(new Error('Kimi 官方工具开关是关闭的'));
+    return kimiPost('/tools/search_pro', { text_query: q, limit: 5, timeout_seconds: 30 }).then(function (d) {
+      var rs = d.search_results || [];
+      if (!rs.length) return '没有搜到结果。';
+      var out = [];
+      rs.forEach(function (r, i) {
+        var pass = (r.chunks || []).map(function (c) { return c.text; }).join('\n');
+        if (!pass) pass = r.snippet || '';
+        out.push('[' + (i + 1) + '] 《' + (r.title || '') + '》 ' + (r.url || '') +
+          (r.date ? ' (' + r.date + ')' : '') + '\n' + String(pass).slice(0, 900));
+      });
+      addSources(rs);
+      return out.join('\n\n');
+    });
+  }, { free: true });
+
+  register('fetch_url', '抓取指定网页的正文(Markdown),用于读某条链接的详细内容。', {
+    type: 'object',
+    properties: {
+      url: { type: 'string', description: '要抓取的网页地址' }
+    },
+    required: ['url']
+  }, function (a) {
+    var u = String(a.url || '').trim();
+    if (!/^https?:\/\//i.test(u)) return Promise.reject(new Error('url 需要 http(s) 开头'));
+    if (!kimiToolsEnabled()) return Promise.reject(new Error('Kimi 官方工具开关是关闭的'));
+    return kimiPost('/tools/fetch', { url: u }).then(function (d) {
+      var body = d.content || d.markdown || d.text || '';
+      if (!body && d.data) body = d.data.content || '';
+      addSources([{ title: d.title || u, url: u, site_name: d.site_name || '' }]);
+      return '《' + (d.title || u) + '》 ' + u + '\n' + String(body).slice(0, 6000);
+    });
+  }, { free: true });
 
   window.PHAITOOLS = {
     register: register,
@@ -144,7 +155,9 @@
     list: list,
     names: names,
     run: run,
-    loadKimiOfficialTools: loadKimiOfficialTools,
+    sources: function () { return sources.slice(); },
+    resetSources: function () { sources = []; },
+    addSources: addSources,
     kimiToolsEnabled: kimiToolsEnabled
   };
 })();

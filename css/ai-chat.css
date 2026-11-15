@@ -655,3 +655,32 @@
 #ai-chat.light .ai-st-tr { color: #333a42; border-bottom-color: #eef1f4; }
 #ai-chat.light .ai-st-th { color: #7a828c; background: #f6f8fa; }
 #ai-chat.light .ai-st-total { color: #11181f; background: #eef7f9; }
+
+/* ---------- 联网来源(仿 DeepSeek 的「N 个网页」) ---------- */
+#ai-chat .ai-srcbox { margin-top: 10px; }
+#ai-chat .ai-srcchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px; border-radius: 999px;
+  font-size: 11.5px; color: #9fb3c0;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .1);
+  cursor: pointer;
+}
+#ai-chat .ai-srcchip:hover { color: #cfe6ef; border-color: rgba(0, 133, 161, .45); }
+#ai-chat .ai-srclist { display: none; margin-top: 8px; }
+#ai-chat .ai-srclist.on { display: block; }
+#ai-chat .ai-srclist a {
+  display: block; padding: 7px 10px; margin-bottom: 6px;
+  border-radius: 9px; font-size: 12px; line-height: 1.55;
+  color: #9fd3e0; text-decoration: none;
+  background: rgba(255, 255, 255, .03);
+  border-left: 2px solid rgba(0, 133, 161, .5);
+  word-break: break-all;
+}
+#ai-chat .ai-srclist a:hover { background: rgba(0, 133, 161, .1); }
+#ai-chat .ai-srcsite { color: #6f7885; font-size: 11px; margin-left: 6px; }
+
+#ai-chat.light .ai-srcchip { color: #5b6672; background: #f6f8fa; border-color: #e3e7eb; }
+#ai-chat.light .ai-srcchip:hover { color: #00728a; border-color: rgba(0, 133, 161, .45); }
+#ai-chat.light .ai-srclist a { color: #00728a; background: #f6f8fa; }
+#ai-chat.light .ai-srcsite { color: #98a1ab; }

@@ -624,6 +624,7 @@
     s.push('你是一个通用 AI 助手,如实、完整地回答用户的问题。');
     s.push('当前是隔离模式:你手上没有任何文章、笔记或额外资料,只凭常识和已有知识回答;不要假装查过任何资料。');
     s.push('用户消息里如果附带【长期记忆·关于用户】,那是你以前对话记住的偏好,回答时自然照顾到,但不要逐条复述,也不要因此改变自己的回答方式。');
+    s.push('如果提供了工具(如 web_search),需要实时信息时直接调用它,不要自称"不能联网"。');
     return s.join('\n');
   }
 
@@ -746,6 +747,34 @@
         bodyEl.scrollTop = bodyEl.scrollHeight + 999;
       }
     });
+  }
+
+  /* 工具搜到的网页来源:折叠列表,挂在回答下方 */
+  function renderSources(node) {
+    if (!window.PHAITOOLS || !window.PHAITOOLS.sources) return;
+    var src = [];
+    try { src = window.PHAITOOLS.sources(); } catch (e) { return; }
+    if (!src.length) return;
+    var old = node.querySelector('.ai-srcbox');
+    if (old) old.parentNode.removeChild(old);
+    var box = document.createElement('div');
+    box.className = 'ai-srcbox';
+    var head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'ai-srcchip';
+    head.innerHTML = '🔗 来源 · ' + src.length + ' 个网页';
+    var list = document.createElement('div');
+    list.className = 'ai-srclist';
+    list.innerHTML = src.map(function (s) {
+      return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">' +
+        esc(s.title) + (s.site ? '<span class="ai-srcsite">' + esc(s.site) + '</span>' : '') + '</a>';
+    }).join('');
+    head.addEventListener('click', function () {
+      list.classList.toggle('on');
+    });
+    box.appendChild(head);
+    box.appendChild(list);
+    node.appendChild(box);
   }
 
   function renderError(node, msg, retryText) {
@@ -944,6 +973,10 @@
     }
     var memCtx = memBlock(text);
 
+    if (window.PHAITOOLS && window.PHAITOOLS.resetSources) {
+      try { window.PHAITOOLS.resetSources(); } catch (e) {}
+    }
+
     hideHello();
     addUser(text);
     var node = addAssistant();
@@ -984,6 +1017,7 @@
         }
         if (!fout) fout = frea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
         render(node, fout, frea, [], true);
+        try { renderSources(node); } catch (e) {}
         if (window.PHHAISTATS) {
           try { PHHAISTATS.record(cfg().provider, cfg().model.id, lastUsage, (furi || '').length + 200, fout.length); } catch (e) {}
         }
@@ -1087,9 +1121,10 @@
           var payload = { model: cfg().model.id, messages: messages, stream: true, max_tokens: maxTok };
           if (cfg().model.id === 'deepseek-flash') payload.temperature = 1.0;
           /* 动态工具:注册表里有什么就给模型什么(白嫖模式不挂工具,保持隔离) */
-          if (!toolsOff && !freeMode() && toolDepth < 3 && window.PHAITOOLS && window.PHAITOOLS.list) {
+          if (!toolsOff && toolDepth < 3 && window.PHAITOOLS && window.PHAITOOLS.list) {
             try {
-              var tl = window.PHAITOOLS.list();
+              /* 白嫖模式只挂「不涉及博客内容」的工具(联网搜索/抓网页) */
+              var tl = freeMode() ? window.PHAITOOLS.list({ free: true }) : window.PHAITOOLS.list();
               if (tl.length) payload.tools = tl;
             } catch (e) {}
           }
@@ -1197,6 +1232,7 @@
             ? '已记住 ✅ 之后对话我会记得'
             : (res.rea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)');
           render(node, out, res.rea, hits, true);
+          try { renderSources(node); } catch (e) {}
           if (window.PHHAISTATS) {
             try { PHHAISTATS.record(cfg().provider, cfg().model.id, lastUsage, (res.uc || '').length, out.length); } catch (e) {}
           }
