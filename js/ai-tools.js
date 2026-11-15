@@ -101,7 +101,98 @@
   }
 
   /* ---------------- 联网搜索(Responses API,服务端执行) ---------------- */
-  register('web_search', '联网搜索实时信息。需要今天的新闻、最新进展、价格、事件、政策等实时信息时调用本工具;它返回搜索后的整理答案和来源网页。', {
+  /* 流式联网搜索:Responses API(stream) —— output_text.delta 拿正文,completed 事件拿来源 */
+  function kimiSearchStream(q) {
+    var key = kimiKey();
+    if (!key) return Promise.reject(new Error('没配置 Kimi API Key'));
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { try { ctl && ctl.abort(); } catch (e) {} }, 100000);
+    var body = {
+      model: 'kimi-k3',
+      input: q,
+      tools: [{ type: 'web_search' }],
+      include: ['web_search_call.action.sources'],
+      stream: true,
+      instructions: '根据搜索到的实时信息直接给出最终中文回答。不要输出任何工具调用语法,不要再调用工具。'
+    };
+    return fetch(BASES[0] + '/responses', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctl ? ctl.signal : undefined
+    }).then(function (r) {
+      if (!r.ok) {
+        return r.text().then(function (tx) {
+          var e = new Error('HTTP ' + r.status);
+          e.status = r.status;
+          e.body = tx;
+          throw e;
+        });
+      }
+      /* 不支持流式则退化解析 */
+      if (!r.body || !r.body.getReader) {
+        return r.json().then(function (d) { return parseFull(d); });
+      }
+      var reader = r.body.getReader(), dec = new TextDecoder(), buf = '', text = '', srcs = [];
+      function pump() {
+        return reader.read().then(function (res) {
+          if (res.done) return { text: text, sources: srcs };
+          buf += dec.decode(res.value, { stream: true });
+          var parts = buf.split('\n\n');
+          buf = parts.pop();
+          parts.forEach(function (part) {
+            var ev = '', data = '';
+            part.split('\n').forEach(function (line) {
+              if (line.indexOf('event:') === 0) ev = line.slice(6).trim();
+              else if (line.indexOf('data:') === 0) data += line.slice(5).trim();
+            });
+            if (!data) return;
+            var d = null;
+            try { d = JSON.parse(data); } catch (e) { return; }
+            if (ev === 'response.output_text.delta' && d.delta) text += d.delta;
+            if (ev === 'response.completed' && d.response) {
+              var rr = parseFull(d.response);
+              if (rr.sources.length) srcs = srcs.concat(rr.sources);
+            }
+          });
+          return pump();
+        });
+      }
+      return pump();
+    }).then(function (out) {
+      clearTimeout(timer);
+      var text = String(out.text || '').trim();
+      var srcs = out.sources || [];
+      text = text.replace(/<\|(open|sep|close)\|>/g, '').trim();
+      addSources(srcs);
+      var srcLines = srcs.slice(0, 8).map(function (s, i) {
+        return (i + 1) + '. ' + (s.title || '') + ' ' + (s.url || '');
+      }).join('\n');
+      if (!text) text = '(搜索完成,但模型没有给出可读内容,请再试一次)';
+      return text + (srcLines ? '\n\n【搜索结果来源】\n' + srcLines : '');
+    }).catch(function (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') throw new Error('搜索超时(100 秒),稍后再试');
+      throw e;
+    });
+  }
+
+  function parseFull(d) {
+    var text = '', srcs = [];
+    (d.output || []).forEach(function (it) {
+      if (it.type === 'message') {
+        (it.content || []).forEach(function (c) {
+          if (c.type === 'output_text' && c.text) text += c.text;
+        });
+      }
+      if (it.type === 'web_search_call') {
+        srcs = srcs.concat(((it.action || {}).sources) || []);
+      }
+    });
+    return { text: text, sources: srcs };
+  }
+
+  register('web_search', '联网搜索实时信息。需要今天的新闻、最新进展、价格、事件、政策等实时信息时调用本工具;返回搜索后的整理答案和来源网页。', {
     type: 'object',
     properties: {
       query: { type: 'string', description: '要搜索的问题或关键词(可包含实体、时间、限定词)' }
@@ -111,38 +202,7 @@
     var q = String(a.query || '').trim();
     if (!q) return Promise.reject(new Error('缺少 query'));
     if (!kimiToolsEnabled()) return Promise.reject(new Error('Kimi 官方工具开关是关闭的'));
-    return kimiPost('/responses', {
-      model: 'kimi-k3',
-      input: q,
-      tools: [{ type: 'web_search' }],
-      include: ['web_search_call.action.sources'],
-      /* 关键:要求直接给最终回答,否则模型会把工具调用语法当正文吐出来 */
-      instructions: '你负责根据搜索到的实时信息直接给出最终中文回答。不要输出任何工具调用语法(不要出现 <|open|>、<|sep|> 之类标记),也不要再调用工具。'
-    }).then(function (d) {
-      var answer = '', srcs = [];
-      (d.output || []).forEach(function (it) {
-        if (it.type === 'message') {
-          (it.content || []).forEach(function (c) {
-            if (c.type === 'output_text' && c.text) answer += c.text;
-          });
-        }
-        if (it.type === 'web_search_call') {
-          srcs = srcs.concat(((it.action || {}).sources) || []);
-        }
-      });
-      /* 清洗:万一模型仍输出工具语法,去掉 */
-      answer = String(answer || '')
-        .replace(/<\|open\|>[\s\S]*?<\|close\|>[\s\S]*?<\|close\|>/g, '')
-        .replace(/<\|(open|sep|close)\|>/g, '')
-        .trim();
-      addSources(srcs);
-      /* 附上来源清单,方便外层模型引用 */
-      var srcLines = srcs.slice(0, 8).map(function (s, i) {
-        return (i + 1) + '. ' + (s.title || '') + ' ' + (s.url || '');
-      }).join('\n');
-      if (!answer) answer = '(搜索完成,但没拿到可读内容)';
-      return answer + (srcLines ? '\n\n【搜索结果来源】\n' + srcLines : '');
-    });
+    return kimiSearchStream(q);
   }, { free: true });
 
   window.PHAITOOLS = {
