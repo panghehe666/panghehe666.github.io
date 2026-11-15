@@ -770,7 +770,10 @@
   }
 
   var lastUsage = null;   /* 最近一次请求的 usage(流式末尾块里) */
+  var lastToolCalls = []; /* 最近一次请求的 tool_calls(流式分片累积) */
   function stream(payload, onDelta, onReason, signal) {
+    lastUsage = null;
+    lastToolCalls = [];
     if (payload && payload.stream) {
       payload.stream_options = payload.stream_options || { include_usage: true };
     }
@@ -795,6 +798,11 @@
           var ch = j.choices && j.choices[0];
           if (!ch) throw new Error((j.error && j.error.message) || '接口返回异常');
           var m = ch.message || {};
+          if (m.tool_calls) {
+            m.tool_calls.forEach(function (tc, i) {
+              lastToolCalls[i] = { id: tc.id || ('call_' + i), name: (tc.function && tc.function.name) || '', args: (tc.function && tc.function.arguments) || '{}' };
+            });
+          }
           if (m.reasoning_content && onReason) onReason(m.reasoning_content);
           if (m.content) onDelta(m.content);
         });
@@ -823,6 +831,17 @@
               var dl = ch.delta || {};
               if (dl.reasoning_content && onReason) onReason(dl.reasoning_content);
               if (dl.content) onDelta(dl.content);
+              if (dl.tool_calls) {
+                dl.tool_calls.forEach(function (tc) {
+                  var i = typeof tc.index === 'number' ? tc.index : lastToolCalls.length;
+                  var cur = lastToolCalls[i] || (lastToolCalls[i] = { id: '', name: '', args: '' });
+                  if (tc.id) cur.id = tc.id;
+                  if (tc.function) {
+                    if (tc.function.name) cur.name = (cur.name || '') + tc.function.name;
+                    if (tc.function.arguments) cur.args = (cur.args || '') + tc.function.arguments;
+                  }
+                });
+              }
             }
           }
           return pump();
@@ -844,6 +863,53 @@
     if (e.status >= 500) return pname + ' 那边打嗝了(HTTP ' + e.status + '),等会儿再试。';
     if (/Failed to fetch|NetworkError|Load failed|network/i.test(e.message || '')) return '网络不通。检查网络,或确认代理地址可用。';
     return '出错了:' + (e.message || e);
+  }
+
+  /* ---------------- 内置工具:博客检索(动态注册) ---------------- */
+  function registerBlogTools() {
+    if (!window.PHAITOOLS || !window.PHAITOOLS.register) return;
+    if (window.PHAITOOLS.names && window.PHAITOOLS.names().indexOf('search_posts') >= 0) return;
+    PHAITOOLS.register('search_posts', '在博客文章里按关键词搜索,返回最相关的几篇(标题/链接/片段)', {
+      type: 'object',
+      properties: { query: { type: 'string', description: '搜索关键词' } },
+      required: ['query']
+    }, function (a) {
+      return loadIndex().then(function (d) {
+        if (!CHUNKS) buildIndex(d);
+        var hs = retrieve(d, String(a.query || ''));
+        if (!hs.length) return '没有找到相关文章。';
+        return hs.slice(0, 5).map(function (h) {
+          return '《' + h.title + '》 ' + h.url + '\n' + (h.h ? '【' + h.h + '】' : '') + String(h.t || '').slice(0, 300);
+        }).join('\n\n');
+      });
+    });
+    PHAITOOLS.register('read_post', '按文章标题(可部分匹配)或链接读取全文', {
+      type: 'object',
+      properties: { title: { type: 'string', description: '文章标题或 URL' } },
+      required: ['title']
+    }, function (a) {
+      return loadIndex().then(function (d) {
+        var q = String(a.title || '').trim();
+        var posts = (d && d.posts) || [];
+        var hit = null;
+        for (var i = 0; i < posts.length; i++) {
+          var p = posts[i];
+          if ((p.u && p.u === q) || (p.t && p.t.indexOf(q) >= 0)) { hit = p; break; }
+        }
+        if (!hit) return '没有找到标题匹配的文章:' + q;
+        return '《' + hit.t + '》 ' + hit.u + '\n' + cleanBody(hit.x).slice(0, 8000);
+      });
+    });
+    PHAITOOLS.register('list_posts', '列出博客全部文章的标题/日期/链接/标签', {
+      type: 'object',
+      properties: {}
+    }, function () {
+      return loadIndex().then(function (d) {
+        return ((d && d.posts) || []).map(function (p) {
+          return '- 《' + p.t + '》 ' + (p.d || '') + ' ' + (p.u || '') + ' ' + (p.g || '');
+        }).join('\n');
+      });
+    });
   }
 
   /* ---------------- 主流程 ---------------- */
@@ -998,7 +1064,8 @@
           return parts.join('\n\n');
         }
 
-        function pass(level, force, idxs, fullSet) {
+        var toolDepth = 0, toolsOff = false;
+        function pass(level, force, idxs, fullSet, toolMsgs) {
           var uc;
           if (idxs) {
             var ctx = ctxByPosts(idxs, fullSet);
@@ -1012,19 +1079,60 @@
           if (force) uc += '\n\n(材料已经给全了。请直接给出最终回答,不要输出 [[MORE]];确实不知道就用一两句话说明。)';
           var messages = [{ role: 'system', content: sysPrompt() }]
             .concat(history)
+            .concat(toolMsgs || [])
             .concat([{ role: 'user', content: uc }]);
 
           /* Kimi 是推理模型,思考过程也占 max_tokens,多给一些余量 */
           var maxTok = cfg().provider === 'kimi' ? (eco ? 1600 : 2600) : (eco ? 800 : 1400);
           var payload = { model: cfg().model.id, messages: messages, stream: true, max_tokens: maxTok };
           if (cfg().model.id === 'deepseek-flash') payload.temperature = 1.0;
+          /* 动态工具:注册表里有什么就给模型什么(白嫖模式不挂工具,保持隔离) */
+          if (!toolsOff && !freeMode() && toolDepth < 3 && window.PHAITOOLS && window.PHAITOOLS.list) {
+            try {
+              var tl = window.PHAITOOLS.list();
+              if (tl.length) payload.tools = tl;
+            } catch (e) {}
+          }
 
           var acc = '', rea = '';
-          return stream(payload,
-            function (delta) { acc += delta; render(node, stripMarkers(acc), rea, hits, false); },
-            function (r) { rea += r; render(node, stripMarkers(acc), rea, hits, false); },
-            ctrl ? ctrl.signal : undefined
-          ).then(function () {
+          var onD = function (delta) { acc += delta; render(node, stripMarkers(acc), rea, hits, false); };
+          var onR = function (r) { rea += r; render(node, stripMarkers(acc), rea, hits, false); };
+          return stream(payload, onD, onR, ctrl ? ctrl.signal : undefined).catch(function (e) {
+            /* 模型不支持 tools 时自动降级:去掉工具重试一次 */
+            if (payload.tools && /tool|function/i.test((e.message || '') + (e.body || ''))) {
+              toolsOff = true;
+              delete payload.tools;
+              return stream(payload, onD, onR, ctrl ? ctrl.signal : undefined);
+            }
+            throw e;
+          }).then(function () {
+            /* 模型要求调用工具 → 执行后带结果重新请求(最多 3 轮) */
+            if (lastToolCalls.length && window.PHAITOOLS && toolDepth < 3) {
+              var calls = lastToolCalls.slice();
+              lastToolCalls = [];
+              toolDepth++;
+              node.innerHTML = '<div class="ai-dim">🔧 调用工具:' +
+                esc(calls.map(function (c) { return c.name; }).join('、')) + '…</div>';
+              return Promise.all(calls.map(function (c) {
+                return window.PHAITOOLS.run(c.name, c.args).then(
+                  function (out) { return { c: c, out: out }; },
+                  function (e) { return { c: c, out: '工具出错:' + String((e && e.message) || e) }; }
+                );
+              })).then(function (results) {
+                var extra = [];
+                extra.push({
+                  role: 'assistant',
+                  content: null,
+                  tool_calls: calls.map(function (c) {
+                    return { id: c.id, type: 'function', function: { name: c.name, arguments: c.args || '{}' } };
+                  })
+                });
+                results.forEach(function (r) {
+                  extra.push({ role: 'tool', tool_call_id: r.c.id, content: String(r.out).slice(0, 6000) });
+                });
+                return pass(level, force, idxs, fullSet, (toolMsgs || []).concat(extra));
+              });
+            }
             if (!force && !idxs && level < maxLv && !escalated && acc.indexOf('[[MORE]]') >= 0) {
               escalated = true;
               node.innerHTML = '<div class="ai-dim">这一节不够,翻一下全文…</div>';
@@ -1453,6 +1561,18 @@
     }
   }
 
+  /* Kimi 官方工具开关 */
+  var kimiToolsToggle = $('ai-kimi-tools');
+  if (kimiToolsToggle) {
+    kimiToolsToggle.checked = lsGet('phh_ai_kimi_tools') !== '0';
+    kimiToolsToggle.addEventListener('change', function () {
+      lsSet('phh_ai_kimi_tools', kimiToolsToggle.checked ? '1' : '0');
+      if (window.PHAITOOLS && kimiToolsToggle.checked && PHAITOOLS.loadKimiOfficialTools) {
+        try { PHAITOOLS.loadKimiOfficialTools(); } catch (e) {}
+      }
+    });
+  }
+
   /* 记忆管理(列表/编辑/置顶/导入导出都在 js/ai-memory.js 里) */
   function renderMemList() {
     if (MEM) { try { MEM.renderPanel(); } catch (e) {} return; }
@@ -1589,4 +1709,10 @@
   syncModel();
   updateSend();
   warn.classList.toggle('on', !ready());
+
+  /* 动态工具:注册内置博客工具 + 拉取 Kimi 官方工具声明 */
+  try { registerBlogTools(); } catch (e) {}
+  if (window.PHAITOOLS && window.PHAITOOLS.loadKimiOfficialTools) {
+    try { window.PHAITOOLS.loadKimiOfficialTools(); } catch (e) {}
+  }
 })();

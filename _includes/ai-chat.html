@@ -139,6 +139,16 @@
         </div>
         <button id="ai-mem-open" class="ai-btn" type="button" style="margin-top:10px;width:100%">查看 / 管理记忆</button>
         <button id="ai-stats-open" class="ai-btn" type="button" style="margin-top:10px;width:100%">用量统计</button>
+        <div class="ai-mem-row">
+          <div class="ai-mem-info">
+            <b>Kimi 官方工具</b>
+            <span>联网搜索 / 单位换算 / 日期 / Base64 / 网页抓取(自动加载;搜索按次计费)</span>
+          </div>
+          <label class="ai-switch">
+            <input type="checkbox" id="ai-kimi-tools">
+            <span class="ai-switch-t"></span>
+          </label>
+        </div>
         <div class="ai-note">
           直连模式下,回答内容会带上你博客里相关文章的摘录作为上下文。代理模式的 Worker 代码见仓库
           <code>_tools/deepseek-proxy.js</code>。
@@ -220,6 +230,7 @@
   </div>
 </div>
 
+<script src="{{ '/js/ai-tools.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 <script src="{{ '/js/ai-memory.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 <script src="{{ '/js/ai-stats.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
 <script src="{{ '/js/ai-chat.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
