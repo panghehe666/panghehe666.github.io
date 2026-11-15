@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>AI 工具自检</title>
+<style>body{font-family:monospace;padding:12px;font-size:13px;white-space:pre-wrap}</style></head>
+<body><div id="out">running…</div>
+<script>
+var out = document.getElementById('out');
+function log(s) { out.textContent += '\n' + s; }
+(function () {
+  var key = '';
+  try { var s = JSON.parse(sessionStorage.getItem('phh_secrets') || '{}'); key = s.kimi || ''; } catch (e) {}
+  if (!key) { try { key = localStorage.getItem('phh_ai_key_kimi') || ''; } catch (e) {} }
+  log('Kimi key: ' + (key ? key.slice(0, 8) + '...' : '(无)'));
+  if (!key) return;
+  var BASE = 'https://api.moonshot.cn/v1';
+  var H = { 'Authorization': 'Bearer ' + key };
+  var toolDecl = null, t0 = Date.now();
+  fetch(BASE + '/formulas/moonshot/web-search:latest/tools', { headers: H })
+    .then(function (r) { log('tools HTTP ' + r.status); return r.json(); })
+    .then(function (j) {
+      toolDecl = (j.tools || [])[0];
+      log('工具声明: ' + JSON.stringify(toolDecl));
+      if (!toolDecl) throw new Error('无声明');
+      return fetch(BASE + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'kimi-k3.1-pro',
+          messages: [{ role: 'user', content: '今天有什么科技新闻?一句话概括三条,并给出来源链接' }],
+          tools: [toolDecl]
+        })
+      });
+    })
+    .then(function (r) { log('chat HTTP ' + r.status); return r.json(); })
+    .then(function (j) {
+      var msg = j.choices && j.choices[0] && j.choices[0].message;
+      log('回复 finish: ' + (j.choices && j.choices[0].finish_reason));
+      var tcs = (msg && msg.tool_calls) || [];
+      log('tool_calls: ' + tcs.length + ' ' + JSON.stringify(tcs).slice(0, 300));
+      if (!tcs.length) { log('内容: ' + String(msg && msg.content || '').slice(0, 300)); return; }
+      var tc = tcs[0];
+      return fetch(BASE + '/formulas/moonshot/web-search:latest/fibers', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: tc.function.name, arguments: tc.function.arguments })
+      }).then(function (r) { log('fibers HTTP ' + r.status); return r.json(); })
+      .then(function (fj) {
+        var ctx = fj.context || {};
+        var res = ctx.output || ctx.encrypted_output || '';
+        log('fiber 结果长度: ' + res.length + ' 开头: ' + res.slice(0, 60));
+        var messages = [
+          { role: 'user', content: '今天有什么科技新闻?一句话概括三条,并给出来源链接' },
+          { role: 'assistant', content: null, tool_calls: [tc] },
+          { role: 'tool', tool_call_id: tc.id, content: res }
+        ];
+        return fetch(BASE + '/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: 'kimi-k3.1-pro', messages: messages, tools: [toolDecl] })
+        });
+      }).then(function (r) { return r.json(); })
+      .then(function (j2) {
+        var m2 = j2.choices && j2.choices[0] && j2.choices[0].message;
+        log('最终回答(' + ((Date.now() - t0) / 1000).toFixed(1) + 's):');
+        log(String(m2 && m2.content || JSON.stringify(j2).slice(0, 400)));
+      });
+    })
+    .catch(function (e) { log('失败: ' + e.message); });
+})();
+</script></body></html>
