@@ -1144,7 +1144,7 @@
           var fmm = extractMem(fraw);
           if (fmm.mems.length) addMem(fmm.mems);
           if (fmm.fgs.length) forgetMem(fmm.fgs);
-          fout = fmm.clean.replace(MORE_RE, '').trim();
+          fout = fmm.clean.replace(MORE_RE, '').replace(SRC_RE, '').trim();
         }
         if (!fout) fout = frea ? '(模型只给了思考过程,没有正文输出,再问一次试试)' : '(这次模型没有返回内容,再问一次试试)';
         render(node, fout, frea, [], true);
