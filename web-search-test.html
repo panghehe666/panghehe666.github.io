@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>联网自检</title>
+<style>body{font-family:monospace;padding:12px;font-size:13px;white-space:pre-wrap}</style></head>
+<body><div id="o">running…</div>
+<script>
+var o=document.getElementById('o');function lg(s){o.textContent+='\n'+s;}
+var s=document.createElement('script');s.src='/js/ai-tools.js?v='+Date.now();
+s.onload=function(){setTimeout(start,600)};
+document.head.appendChild(s);
+function start(){
+  var k='';try{var st=JSON.parse(sessionStorage.getItem('phh_secrets')||'{}');k=st.kimi||'';}catch(e){}
+  if(k){try{localStorage.setItem('phh_ai_key_kimi',k)}catch(e){}}
+  lg('kimi:'+(k?k.slice(0,6)+'…':'(无)'));
+  if(!window.PHAITOOLS||!PHAITOOLS.webSearch){lg('webSearch 不存在');return;}
+  var t0=Date.now(),deltas=0;
+  PHAITOOLS.webSearch('今天有什么科技新闻?一句话概括三条',function(){deltas++;})
+    .then(function(r){
+      lg('耗时 '+(Date.now()-t0)+'ms | 流式增量 '+deltas+' 次');
+      lg('结果:\n'+(r.text||'').slice(0,300));
+      lg('来源数: '+(r.sources||[]).length);
+      (r.sources||[]).slice(0,3).forEach(function(x){lg('  - '+x.title+' | '+x.url)});
+    })
+    .catch(function(e){lg('失败: '+e.message)});
+}
+</script></body></html>
