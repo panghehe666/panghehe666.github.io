@@ -643,7 +643,7 @@
   function sysPromptFree() {
     var s = [];
     s.push('你是一个通用 AI 助手,如实、完整地回答用户的问题。');
-    s.push('当前是隔离模式:你手上没有博客文章或笔记。若用户消息里附带【实时联网资料】,那是刚联网搜到的真实信息,优先采用,并可在回答里引用其中的链接;没有资料时就凭常识作答,不要假装查过。');
+    s.push('当前是隔离模式:你手上没有博客文章或笔记。若用户消息里附带【联网检索资料】,那是刚联网搜到的网页摘要,任何问题都优先采用,可用 [n] 标注出处或引用链接;没有资料时就凭常识作答,不要假装查过。');
     s.push('用户消息里如果附带【长期记忆·关于用户】,那是你以前对话记住的偏好,回答时自然照顾到,但不要逐条复述,也不要因此改变自己的回答方式。');
     s.push('如果提供了工具(如 web_search),需要实时信息时直接调用它,不要自称"不能联网"。');
     s.push('用过联网搜索的话,在回答末尾单独列出参考来源,每行一个:[[SRC:标题|网址]](3~6 条,网址必须来自搜索结果)。');
@@ -674,7 +674,7 @@
     s.push('4. 补了全文还找不到的部分,就说"这篇里那段我没拿到,你点进去看原文",并给出链接。');
     s.push('5. 整篇博客都没写过的,先直说"这个我博客里没写过",再用一两句常识补充,并说明那不是博客内容。');
     s.push('6. 不要编造标题、日期、链接、数据。');
-    s.push('6.1 如果用户消息里还带【实时联网资料】,那是刚联网搜到的实时信息:涉及新闻、最新进展、价格、时间点的问题优先用它回答,可以直接引用其中的标题/链接;此时不受第 5 条「博客里没写过」的限制。');
+    s.push('6.1 如果用户消息里还带【联网检索资料】,那是刚联网搜到的网页摘要:优先用它回答(任何类型的问题都可以用),可用 [n] 标注出处,也可以在末尾给出链接;此时不受第 5 条「博客里没写过」的限制。');
     s.push('7. 指向文章时用 markdown 链接:[文章标题](链接),链接只能来自下面出现的 URL。');
     s.push('8. 尽量 2~4 句答完;确实需要展开时不超过 8 句。不要说"作为 AI""根据提供的资料"。');
     s.push('');
@@ -997,21 +997,35 @@
       lastAsk = text;
       busy = true;
       updateSend();
-      render(wnode, '', '正在联网搜索…', [], false);
+      render(wnode, '', '🔍 正在联网搜索…', [], false);
       return PHAITOOLS.webSearch(text).then(function (r) {
         var txt = String((r && r.text) || '').trim();
-        var block = '';
         var src = (r && r.sources) || [];
-        if (txt) {
-          block = src.length
-            ? '\n\n【实时联网资料(刚搜到的真实信息,涉及实时/新闻/价格类问题优先采用;与资料冲突时以资料为准)】\n' + txt
-            : '\n\n【联网检索:本次没拿到网页来源,下面是模型的整理(可能不是最新),回答实时类问题时要说明这一点】\n' + txt;
-          if (src.length) {
-            block += '\n\n来源:\n' + src.slice(0, 8).map(function (s, i) {
+        var block = '';
+        if (src.length) {
+          /* 资料块:通用表述,不限定新闻类问题;要求引用来编号 */
+          var head = '\n\n【联网检索资料(刚搜到的网页内容摘要;回答时优先采用,与你的旧知识冲突时以资料为准,可用 [n] 标注出处)】\n';
+          if (txt) {
+            block = head + txt;
+          } else {
+            /* 摘要为空但搜到了网页:至少把标题/链接给模型参考 */
+            block = head + src.slice(0, 10).map(function (s, i) {
               return (i + 1) + '. ' + (s.title || '') + ' ' + (s.url || '');
-            }).join('\n');
+            }).join('\n') + '\n(本次没拿到正文摘要,只能按标题和链接回答,回答里说明这一点)';
           }
+          block += '\n\n来源清单:\n' + src.slice(0, 10).map(function (s, i) {
+            return '[' + (i + 1) + '] ' + (s.title || '') + ' ' + (s.url || '');
+          }).join('\n');
         }
+        /* 搜索统计:像 DeepSeek 那样常驻显示「搜索到 N 个网页」 */
+        try {
+          if (src.length && wnode && wnode.parentNode) {
+            var note = document.createElement('div');
+            note.className = 'ai-search-note';
+            note.textContent = '🔍 搜索到 ' + src.length + ' 个网页';
+            wnode.parentNode.insertBefore(note, wnode.nextSibling);
+          }
+        } catch (e) {}
         if (window.PHHAISTATS) {
           try { PHHAISTATS.record('kimi', 'kimi-k3', null, text.length + 60, txt.length); } catch (e) {}
         }
