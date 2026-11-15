@@ -992,20 +992,67 @@
     var maxLv = eco ? 1 : 2;
 
     if (freeMode()) {
-      /* 白嫖模式:不加载索引、不检索;问题原样发送,不加任何包装 */
+      /* 白嫖模式:不加载索引、不检索;问题原样发送;只挂「联网类」工具,博客工具仍隔离 */
       var furi = text + (memCtx ? '\n\n' + memCtx : '');
-      var fmessages = [{ role: 'system', content: sysPromptFree() }]
-        .concat(history)
-        .concat([{ role: 'user', content: furi }]);
-      var fmaxTok = cfg().provider === 'kimi' ? 4000 : 2600;
-      var fpayload = { model: cfg().model.id, messages: fmessages, stream: true, max_tokens: fmaxTok };
-      if (cfg().model.id === 'deepseek-flash') fpayload.temperature = 1.0;
-      var facc = '', frea = '';
-      return stream(fpayload,
-        function (delta) { facc += delta; render(node, stripMarkers(facc), frea, [], false); },
-        function (r) { frea += r; render(node, stripMarkers(facc), frea, [], false); },
-        ctrl ? ctrl.signal : undefined
-      ).then(function () {
+      var freeToolMsgs = [];
+      var freeDepth = 0;
+      var freeToolsOff = false;
+      function freePass() {
+        var fmessages = [{ role: 'system', content: sysPromptFree() }]
+          .concat(history)
+          .concat(freeToolMsgs)
+          .concat([{ role: 'user', content: furi }]);
+        var fmaxTok = cfg().provider === 'kimi' ? 4000 : 2600;
+        var fpayload = { model: cfg().model.id, messages: fmessages, stream: true, max_tokens: fmaxTok };
+        if (cfg().model.id === 'deepseek-flash') fpayload.temperature = 1.0;
+        if (!freeToolsOff && freeDepth < 3 && window.PHAITOOLS && window.PHAITOOLS.list) {
+          try {
+            var ftl = window.PHAITOOLS.list({ free: true });
+            if (ftl.length) fpayload.tools = ftl;
+          } catch (e) {}
+        }
+        var facc = '', frea = '';
+        var foD = function (delta) { facc += delta; render(node, stripMarkers(facc), frea, [], false); };
+        var foR = function (r) { frea += r; render(node, stripMarkers(facc), frea, [], false); };
+        return stream(fpayload, foD, foR, ctrl ? ctrl.signal : undefined).catch(function (e) {
+          if (fpayload.tools && /tool|function/i.test((e.message || '') + (e.body || ''))) {
+            freeToolsOff = true;
+            delete fpayload.tools;
+            return stream(fpayload, foD, foR, ctrl ? ctrl.signal : undefined);
+          }
+          throw e;
+        }).then(function () {
+          /* 工具调用:执行后带结果重新请求 */
+          if (lastToolCalls.length && window.PHAITOOLS && freeDepth < 3) {
+            var fcs = lastToolCalls.slice();
+            lastToolCalls = [];
+            freeDepth++;
+            node.innerHTML = '<div class="ai-dim">🔧 调用工具:' +
+              esc(fcs.map(function (c) { return c.name; }).join('、')) + '…</div>';
+            return Promise.all(fcs.map(function (c) {
+              return window.PHAITOOLS.run(c.name, c.args).then(
+                function (out) { return { c: c, out: out }; },
+                function (e) { return { c: c, out: '工具出错:' + String((e && e.message) || e) }; }
+              );
+            })).then(function (results) {
+              freeToolMsgs.push({
+                role: 'assistant',
+                content: null,
+                tool_calls: fcs.map(function (c) {
+                  return { id: c.id, type: 'function', function: { name: c.name, arguments: c.args || '{}' } };
+                })
+              });
+              results.forEach(function (r) {
+                freeToolMsgs.push({ role: 'tool', tool_call_id: r.c.id, content: String(r.out).slice(0, 6000) });
+              });
+              return freePass();
+            });
+          }
+          return { acc: facc, rea: frea };
+        });
+      }
+      return freePass().then(function (fr) {
+        var facc = fr.acc, frea = fr.rea;
         var fraw = String(facc || '');
         var fout = fraw.replace(MORE_RE, '').trim();
         /* 记忆:与强爽/节能共用同一份(开关关闭时不写) */
