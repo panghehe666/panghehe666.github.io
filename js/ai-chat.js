@@ -38,6 +38,7 @@
     deep: 'phh_ai_deep',
     model: 'phh_ai_model',
     mode: 'phh_ai_mode',
+    web: 'phh_ai_web',
     hist: 'phh_ai_hist',
     sessions: 'phh_ai_sessions',
     cur: 'phh_ai_cur'
@@ -75,6 +76,8 @@
 
   /* 记忆开关:关闭只暂停(不写不读),不删除已存条目 */
   function memOn() { return MEM ? MEM.enabled() : lsGet(LS.memOn) !== '0'; }
+  /* 联网搜索手动开关(仿 DeepSeek):开=本轮走联网直搜,关=正常对话 */
+  function webOn() { return lsGet(LS.web) === '1'; }
   function addMem(items, src) {
     if (!MEM) return null;
     try { return MEM.add(items, { src: src || 'ai' }); } catch (e) { return null; }
@@ -973,6 +976,47 @@
       return;
     }
 
+    /* 会话快照:即使中途切换会话,本轮也存回发起时的会话 */
+    var sid0 = curId;
+    var tMsgs = msgs;
+
+    /* 联网开关开:直接联网搜一次(不检索博客、不走工具往返,快) */
+    if (webOn() && window.PHAITOOLS && window.PHAITOOLS.webSearch) {
+      if (window.PHAITOOLS.resetSources) { try { window.PHAITOOLS.resetSources(); } catch (e) {} }
+      hideHello();
+      addUser(text);
+      var wnode = addAssistant();
+      lastAsk = text;
+      busy = true;
+      updateSend();
+      var wacc = '';
+      return PHAITOOLS.webSearch(text, function (acc) {
+        wacc = acc;
+        render(wnode, acc, '', [], false);
+      }).then(function (r) {
+        var out = String(r.text || '').replace(MORE_RE, '').trim();
+        if (!out) out = '(搜索完成,但没拿到可读内容,再试一次)';
+        render(wnode, out, '', [], true);
+        try { renderSources(wnode, r.sources); } catch (e) {}
+        if (window.PHHAISTATS) {
+          try { PHHAISTATS.record('kimi', 'kimi-k3', null, text.length + 60, out.length); } catch (e) {}
+        }
+        tMsgs.push({ role: 'user', content: text });
+        tMsgs.push({ role: 'assistant', content: out });
+        saveTurnTo(sid0, text, out, text);
+      }).catch(function (e) {
+        var m = (e && e.message) || '联网搜索失败';
+        renderError(wnode, m, text);
+        tMsgs.push({ role: 'user', content: text });
+        tMsgs.push({ role: 'assistant', content: m });
+        saveTurnTo(sid0, text, m, text);
+      }).then(function () {
+        busy = false;
+        ctrl = null;
+        updateSend();
+      });
+    }
+
     /* 记忆类问题本地直接答,不发请求(零 token、零等待) */
     var localReply = memLocal(text);
     if (localReply) {
@@ -980,9 +1024,9 @@
       addUser(text);
       var ln = addAssistant();
       render(ln, localReply, '', [], true);
-      msgs.push({ role: 'user', content: '【我的问题】\n' + text });
-      msgs.push({ role: 'assistant', content: localReply });
-      saveTurn(text, localReply, '【我的问题】\n' + text);
+      tMsgs.push({ role: 'user', content: '【我的问题】\n' + text });
+      tMsgs.push({ role: 'assistant', content: localReply });
+      saveTurnTo(sid0, text, localReply, '【我的问题】\n' + text);
       return;
     }
 
@@ -1028,7 +1072,7 @@
         if (cfg().model.id === 'deepseek-flash') fpayload.temperature = 1.0;
         if (!freeToolsOff && freeDepth < 3 && window.PHAITOOLS && window.PHAITOOLS.list) {
           try {
-            var ftl = window.PHAITOOLS.list({ free: true });
+            var ftl = [];
             if (ftl.length) fpayload.tools = ftl;
           } catch (e) {}
         }
@@ -1092,9 +1136,9 @@
           try { PHHAISTATS.record(cfg().provider, cfg().model.id, lastUsage, (furi || '').length + 200, fout.length); } catch (e) {}
         }
         lastUsage = null;
-        msgs.push({ role: 'user', content: furi });
-        msgs.push({ role: 'assistant', content: fout || '(空)' });
-        saveTurn(text, fout, furi);
+        tMsgs.push({ role: 'user', content: furi });
+        tMsgs.push({ role: 'assistant', content: fout || '(空)' });
+        saveTurnTo(sid0, text, fout, furi);
       }).catch(function (e) {
         var m = errText(e);
         if (m) renderError(node, m, text);
@@ -1194,7 +1238,7 @@
           if (!toolsOff && toolDepth < 3 && window.PHAITOOLS && window.PHAITOOLS.list) {
             try {
               /* 白嫖模式只挂「不涉及博客内容」的工具(联网搜索/抓网页) */
-              var tl = freeMode() ? window.PHAITOOLS.list({ free: true }) : window.PHAITOOLS.list();
+              var tl = freeMode() ? [] : window.PHAITOOLS.list().filter(function (t) { return t.function.name !== 'web_search'; });
               if (tl.length) payload.tools = tl;
             } catch (e) {}
           }
@@ -1309,8 +1353,8 @@
           }
           lastUsage = null;
           /* 存带上下文的完整消息：下一轮它就成了稳定前缀，命中缓存 */
-          msgs.push({ role: 'user', content: res.uc });
-          msgs.push({ role: 'assistant', content: out || '(空)' });
+          tMsgs.push({ role: 'user', content: res.uc });
+          tMsgs.push({ role: 'assistant', content: out || '(空)' });
           if (hits.length) {
             if (res.idxs) {
               res.idxs.forEach(function (ii) {
@@ -1321,7 +1365,7 @@
               fullSent[hits[0].title] = 1;
             }
           }
-          saveTurn(text, out, res.uc);
+          saveTurnTo(sid0, text, out, res.uc);
           maybeConsolidate();
         });
       })
@@ -1391,16 +1435,18 @@
     lsSet(LS.cur, curId);
     return s;
   }
-  /* 把一条问答存进当前会话(msgs 保存完整上下文,log 用于展示) */
-  function saveTurn(q, a, uc) {
+  /* 把一条问答存进「指定会话」:切走也能落盘到原会话,不会被串到新会话 */
+  function saveTurnTo(sid, q, a, uc) {
     if (!a && !uc) return;
-    var s = curSession();
+    var s = findSession(sid);
+    if (!s) return;
     s.log.push({ q: q, a: a });
     s.msgs.push({ role: 'user', content: uc }, { role: 'assistant', content: a || '(空)' });
     if (!s.title) s.title = String(q).slice(0, 40);
     s.ts = Date.now();
     persistSessions();
   }
+  function saveTurn(q, a, uc) { saveTurnTo(curId, q, a, uc); }
   /* 把某会话的对话渲染到聊天区 */
   function renderLog(lg) {
     thread.innerHTML = '';
@@ -1667,6 +1713,24 @@
           : '强爽模式：每轮读全站（全文/摘要），不够顶配再补相关文章全文');
     }
   }
+
+  /* 联网搜索手动开关(仿 DeepSeek) */
+  var webBtn = $('ai-web');
+  function applyWeb() {
+    var on = webOn();
+    if (webBtn) webBtn.classList.toggle('on', on);
+    if (webBtn) {
+      webBtn.setAttribute('title', on ? '联网搜索:开' : '联网搜索:关');
+      webBtn.setAttribute('aria-label', on ? '联网搜索:开' : '联网搜索:关');
+    }
+  }
+  if (webBtn) {
+    webBtn.addEventListener('click', function () {
+      lsSet(LS.web, webOn() ? '0' : '1');
+      applyWeb();
+    });
+  }
+  applyWeb();
 
   /* Kimi 官方工具开关 */
   var kimiToolsToggle = $('ai-kimi-tools');

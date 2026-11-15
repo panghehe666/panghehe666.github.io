@@ -684,3 +684,13 @@
 #ai-chat.light .ai-srcchip:hover { color: #00728a; border-color: rgba(0, 133, 161, .45); }
 #ai-chat.light .ai-srclist a { color: #00728a; background: #f6f8fa; }
 #ai-chat.light .ai-srcsite { color: #98a1ab; }
+
+/* 联网搜索开关激活态 */
+#ai-chat .ai-ico-btn.on {
+  color: #4fc3d9;
+  background: rgba(0, 133, 161, .14);
+}
+#ai-chat.light .ai-ico-btn.on {
+  color: #00728a;
+  background: #e6f4f8;
+}
