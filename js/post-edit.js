@@ -340,7 +340,7 @@
 
   function wikiRender() {
     var el = wikiPop();
-    el.innerHTML = '<div class="pe-wiki-hd">插入文章引用' + (wikiQ ? ' · 匹配「' + esc(wikiQ) + '」' : '') + '</div>' +
+    el.innerHTML = '<div class="pe-wiki-hd">插入 [[文章标题]]' + (wikiQ ? ' · 匹配「' + esc(wikiQ) + '」' : '') + '</div>' +
       wikiItems.map(function (p, i) {
         return '<div class="pe-wiki-item' + (i === wikiSel ? ' on' : '') + '" data-i="' + i + '">' +
           '<span class="pe-wiki-tt">' + esc(p.t) + '</span>' +
@@ -399,7 +399,8 @@
     var info = wikiCaret();
     var hit = wikiMatch(info);
     if (!p || !info || !hit) { wikiClose(); return; }
-    var text = '[' + p.t + '](' + p.u + ')';
+    var text = '[[' + p.t + ']]';
+    var done = false;
     try {
       var sel = window.getSelection();
       var r = document.createRange();
@@ -407,9 +408,27 @@
       r.setEnd(info.node, info.off);
       sel.removeAllRanges();
       sel.addRange(r);
-      document.execCommand('insertText', false, text);
-    } catch (e) {
-      try { vd.insertValue(text); } catch (e2) {}
+      done = document.execCommand('insertText', false, text);
+    } catch (e) {}
+    if (!done) {
+      /* 兜底:直接改文本节点并通知编辑器同步(部分 WebView 不支持 execCommand) */
+      try {
+        var node = info.node, off = info.off;
+        var before = node.textContent.slice(0, off - hit.len);
+        var after = node.textContent.slice(off);
+        node.textContent = before + text + after;
+        var host = wikiHost();
+        if (host) {
+          try { host.dispatchEvent(new InputEvent('input', { bubbles: true })); }
+          catch (e1) { try { host.dispatchEvent(new Event('input', { bubbles: true })); } catch (e2) {} }
+        }
+        var r2 = document.createRange();
+        r2.setStart(node, (before + text).length);
+        r2.collapse(true);
+        var s2 = window.getSelection();
+        s2.removeAllRanges();
+        s2.addRange(r2);
+      } catch (e3) {}
     }
     markDirty();
     wikiClose();

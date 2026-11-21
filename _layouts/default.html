@@ -74,6 +74,7 @@
     <script src="{{ '/js/private-crypto.js' | prepend: site.baseurl }}"></script>
     <script src="{{ '/js/secrets-boot.js' | prepend: site.baseurl }}"></script>
     <script src="{{ '/js/admin.js' | prepend: site.baseurl }}"></script>
+    {% if page.layout == 'post' %}<script src="{{ '/js/wiki-links.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M' }}" defer></script>{% endif %}
 
 <img src="/img/icon_wechat.png" width="0" height="0" />
 
