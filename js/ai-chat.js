@@ -225,27 +225,103 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  /* 极简 markdown：代码块 / 行内码 / 粗体 / 链接 / 列表 / 换行 */
+  /* ---------- Markdown 渲染:标题/引用/列表/表格/代码块/分隔线/行内格式 ---------- */
   function md(src) {
-    var blocks = [], inls = [];
-    var s = String(src || '');
-    s = s.replace(/```([\s\S]*?)```/g, function (_, c) {
-      blocks.push('<pre><code>' + esc(c.replace(/^[A-Za-z0-9+#._-]*\r?\n/, '').replace(/\s+$/, '')) + '</code></pre>');
-      return '\u0000' + (blocks.length - 1) + '\u0000';
+    var text = String(src || '').replace(/\r\n?/g, '\n');
+    var codes = [];
+    text = text.replace(/```([^\n`]*)\n([\s\S]*?)```/g, function (_, lang, code) {
+      codes.push('<pre><code' + (lang.trim() ? ' class="language-' + esc(lang.trim()) + '"' : '') + '>' +
+        esc(code.replace(/\s+$/, '')) + '</code></pre>');
+      return '\u0000' + (codes.length - 1) + '\u0000';
     });
-    s = esc(s);
-    s = s.replace(/`([^`\n]+)`/g, function (_, c) {
+    var lines = text.split('\n');
+    var out = [];
+    var i = 0;
+    var boundary = /^(#{1,6}\s|\s*>|\s*[-*+]\s+|\s*\d+[.)]\s+|\s*\|)/;
+    while (i < lines.length) {
+      var ln = lines[i];
+      if (!ln.trim()) { i++; continue; }
+      var cm = ln.match(/^\u0000(\d+)\u0000$/);
+      if (cm) { out.push(codes[+cm[1]] || ''); i++; continue; }
+      var hm = ln.match(/^(#{1,6})\s+(.*)$/);
+      if (hm) {
+        var lv = hm[1].length;
+        out.push('<h' + lv + '>' + inlineMd(hm[2]) + '</h' + lv + '>');
+        i++; continue;
+      }
+      if (/^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/.test(ln)) { out.push('<hr>'); i++; continue; }
+      if (/^\s*>\s?/.test(ln)) {
+        var q = [];
+        while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+          q.push(inlineMd(lines[i].replace(/^\s*>\s?/, '')));
+          i++;
+        }
+        out.push('<blockquote>' + q.join('<br>') + '</blockquote>');
+        continue;
+      }
+      var lm = ln.match(/^\s*([-*+]|\d+[.)])\s+/);
+      if (lm) {
+        var ordered = /^\d/.test(lm[1]);
+        var ptn = ordered ? /^\s*\d+[.)]\s+(.*)$/ : /^\s*[-*+]\s+(.*)$/;
+        var items = [];
+        while (i < lines.length) {
+          var im = lines[i].match(ptn);
+          if (!im) break;
+          items.push(im[1]);
+          i++;
+        }
+        var tag = ordered ? 'ol' : 'ul';
+        out.push('<' + tag + '>' + items.map(function (t) { return '<li>' + inlineMd(t) + '</li>'; }).join('') + '</' + tag + '>');
+        continue;
+      }
+      if (/^\s*\|/.test(ln)) {
+        var rows = [];
+        while (i < lines.length && /^\s*\|/.test(lines[i])) { rows.push(lines[i]); i++; }
+        out.push(renderTable(rows));
+        continue;
+      }
+      var para = [];
+      while (i < lines.length && lines[i].trim() && !boundary.test(lines[i]) && !/^\u0000\d+\u0000$/.test(lines[i])) {
+        para.push(lines[i]);
+        i++;
+      }
+      if (para.length) out.push('<p>' + para.map(inlineMd).join('<br>') + '</p>');
+    }
+    return out.join('');
+  }
+
+  function renderTable(rows) {
+    var cells = rows.map(function (l) {
+      return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (c) { return c.trim(); });
+    });
+    var isSep = function (r) { return r.length > 0 && r.every(function (c) { return /^:?-{2,}:?$/.test(c); }); };
+    var head = cells[0] || [];
+    var body = (cells.length > 1 && isSep(cells[1])) ? cells.slice(2) : cells.slice(1);
+    return '<table><thead><tr>' + head.map(function (c) { return '<th>' + inlineMd(c) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      body.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + inlineMd(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
+      '</tbody></table>';
+  }
+
+  function inlineMd(s) {
+    var inls = [];
+    var t = esc(String(s == null ? '' : s));
+    t = t.replace(/`([^`\n]+)`/g, function (_, c) {
       inls.push('<code>' + c + '</code>');
       return '\u0001' + (inls.length - 1) + '\u0001';
     });
-    s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
-    s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]*)\)/g,
-      '<a href="$2" target="_blank" rel="noopener">$1</a>');
-    s = s.replace(/^\s*[-*]\s+/gm, '· ');
-    s = s.replace(/\n/g, '<br>');
-    s = s.replace(/\u0001(\d+)\u0001/g, function (_, i) { return inls[+i] || ''; });
-    s = s.replace(/\u0000(\d+)\u0000/g, function (_, i) { return blocks[+i] || ''; });
-    return s;
+    t = t.replace(/!\[([^\]]*)\]\((https?:[^)\s]+|\/[^)\s]*)\)/g, function (_, alt, u) {
+      inls.push('<img src="' + u + '" alt="' + alt + '" loading="lazy">');
+      return '\u0001' + (inls.length - 1) + '\u0001';
+    });
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]*)\)/g, function (_, txt, u) {
+      inls.push('<a href="' + u + '" target="_blank" rel="noopener">' + txt + '</a>');
+      return '\u0001' + (inls.length - 1) + '\u0001';
+    });
+    t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    t = t.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+    t = t.replace(/\u0001(\d+)\u0001/g, function (_, n) { return inls[+n] || ''; });
+    return t;
   }
 
   function nearBottom() {
