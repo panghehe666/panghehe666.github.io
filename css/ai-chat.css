@@ -984,3 +984,6 @@
 #ai-chat .ai-reason-wrap.collapsed .ai-reason { display: none; }
 #ai-chat.light .ai-reason-hd { color: #8b979f; }
 #ai-chat.light .ai-reason-hd:hover { color: #45505a; }
+
+/* 停止生成标记 */
+#ai-chat .ai-stop-tag { margin-top: 6px; font-size: 12px; opacity: .8; }

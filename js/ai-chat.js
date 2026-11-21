@@ -814,11 +814,13 @@
     toBottom();
   }
 
+  var lastNode = null, stoppedFlag = false;
   function addAssistant() {
     var d = document.createElement('div');
     d.className = 'ai-a';
     d.innerHTML = '<div class="ai-dots"><i></i><i></i><i></i></div>';
     thread.appendChild(d);
+    lastNode = d;
     toBottom();
     return d;
   }
@@ -906,7 +908,11 @@
         (!done && !text ? '<span class="ai-caret">▍</span>' : '') + '</div></div>';
     }
     if (text) html += '<div class="ai-txt">' + md(text) + '</div>';
-    else if (!reason) html = '<div class="ai-dots"><i></i><i></i><i></i></div>';
+    else if (!reason) {
+      html = done
+        ? '<div class="ai-dim">已停止生成</div>'
+        : '<div class="ai-dots"><i></i><i></i><i></i></div>';
+    }
     if (done && hits && hits.length) {
       var seen = {}, links = [];
       hits.forEach(function (h) {
@@ -1214,6 +1220,7 @@
 
   /* 正常回答流程:webBlock = 联网资料(可空),preNode = 复用已建气泡(可空) */
   function runAsk(text, sid0, tMsgs, webBlock, preNode) {
+    stoppedFlag = false;
     /* 记忆类问题本地直接答,不发请求(零 token、零等待) */
     var localReply = memLocal(text);
     if (localReply) {
@@ -1340,6 +1347,7 @@
         tMsgs.push({ role: 'assistant', content: fout || '(空)' });
         saveTurnTo(sid0, text, fout, furi);
       }).catch(function (e) {
+        if (stoppedFlag || (e && e.name === 'AbortError')) { stoppedFlag = false; return; }
         var m = errText(e);
         if (m) renderError(node, m, text);
         else render(node, '', '', [], true);
@@ -1571,6 +1579,7 @@
         });
       })
       .catch(function (e) {
+        if (stoppedFlag || (e && e.name === 'AbortError')) { stoppedFlag = false; return; }
         var m = errText(e);
         if (m) renderError(node, m, text);
         else render(node, '', '', [], true);
@@ -1608,6 +1617,20 @@
     busy = false;
     ctrl = null;
     updateSend();
+    var n = lastNode;
+    if (n && n.parentNode) {
+      var hasTxt = !!n.querySelector('.ai-txt');
+      var hasReason = !!n.querySelector('.ai-reason');
+      if (!hasTxt && !hasReason) {
+        n.innerHTML = '<div class="ai-dim">已停止生成</div>';
+      } else if (hasTxt && !n.querySelector('.ai-stop-tag')) {
+        var tag = document.createElement('div');
+        tag.className = 'ai-dim ai-stop-tag';
+        tag.textContent = '已停止生成 · 回答不完整';
+        n.appendChild(tag);
+      }
+      stoppedFlag = true;
+    }
   }
 
   /* ---------------- 会话管理 ---------------- */
