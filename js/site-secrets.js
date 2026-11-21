@@ -5,4 +5,4 @@
    {"gh":"github_pat_...","ds":"sk-...","kimi":"sk-..."}。
    未配置时为空字符串。
    ============================================================ */
-window.SITE_SECRETS_CIPHER = "hc/0jSC+78r3u4AItrG8NrQU/Kk83lwftasrDlecsiJeGukaSWe7FnSYK944e+r8v/ABIshz23LnHBUfjzD3spX7xKFRDYA5uygY4kvEDJ956oFtFHQcrV0pgfyTEhjHxqlMiEXAT4+pormQqCMCsKusSIB5FPpbzWtedTc0Mc1WCR3RUL/0+0kV2TXmswWp+PEnTPV8fvoAXXTmFhKn/czMX1jGtV68wDUJ8DelL7Fff/gj0g1MQ6pwUk4N1hoQtk2r/ffEji/ptZd/g09e+EQo01KsV1kFxFWTO5GoctIaj7c8cp04pX+N";
+window.SITE_SECRETS_CIPHER = "Br82kDVjkq73v3oH/EUIohCaFBbGHnArVscPTNW/iDu27XbcHVWpuZw6blrybIQGqGPu7AJ0bSyMcnFtaCRACL5ki4YUcSVy9u+rQIfWIbAVC3IP8wRS/4fKI5Y6FgCi4F64mlEM+ep3OVaYLMbTgUlLMGkeKDKSUIWMt9CPiZk7d3UwsdJbtbdpH6IPI27awMjLoywufaQDKRnDXVraE+WMRivI4Zd+LFn0Vr9JR5q3JE6PomSdqAmk53z+Kipw8mLE5G1C9U79+JTGcrOJpYPOD4kwcIyNsLvne7TQskv9ltkNldKl4Ia9";
