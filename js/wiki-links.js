@@ -31,9 +31,9 @@
   }
 
   function walkAndLink() {
-    var host = document.querySelector('.post-container') ||
-               document.querySelector('article .post-container') ||
+    var host = document.querySelector('article .post-container') ||
                document.querySelector('article') ||
+               document.querySelector('.post-container') ||
                null;
     if (!host) return;
     loadMap().then(function (map) {
