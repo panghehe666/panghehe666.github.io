@@ -902,3 +902,36 @@
 
 /* 模型菜单:确保在最上层、在面板内可见 */
 #ai-chat .ai-model-menu { z-index: 60; }
+
+/* ============================================================
+   首屏比例:整体垂直居中偏下、标题更大(参照 Grok 截图)
+   ============================================================ */
+#ai-chat.hero-on .ai-body {
+  display: flex; flex-direction: column;
+  justify-content: center;
+  padding-bottom: 6vh;
+}
+#ai-chat .ai-hello { padding: 0 16px; }
+#ai-chat .ai-hi1 {
+  font-size: 29px; line-height: 1.28; font-weight: 650;
+  letter-spacing: .005em; margin: 0 0 10px; text-align: center;
+}
+#ai-chat .ai-hi2 {
+  font-size: 13px; line-height: 1.6; margin: 0 0 24px; text-align: center;
+}
+#ai-chat .ai-hero {
+  margin: 0 0 28px;
+  padding: 12px 12px 10px;
+  border-radius: 22px;
+}
+#ai-chat .ai-hero-input { font-size: 15px; padding: 7px 4px; }
+#ai-chat .ai-hero-bar { gap: 9px; }
+#ai-chat .ai-chips { gap: 2px; }
+#ai-chat .ai-chip { padding: 16px 4px; font-size: 14px; }
+#ai-chat .ai-chip .ai-chip-ico { width: 17px; height: 17px; }
+
+@media (max-width: 430px) {
+  #ai-chat .ai-hi1 { font-size: 26px; }
+  #ai-chat .ai-hero { margin-bottom: 22px; }
+  #ai-chat .ai-chip { padding: 14px 4px; font-size: 13.5px; }
+}
