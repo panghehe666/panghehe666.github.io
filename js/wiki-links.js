@@ -1,43 +1,70 @@
 /* ============================================================
    PHH Blog · [[双链]] 渲染
-   文章正文里的 [[文章标题]] / [[文章标题|显示文字]] 自动变成链接。
-   标题→链接的映射来自 /graph.json(构建时生成)。
+   - [[文章标题]] / [[文章标题|显示文字]] → 文章链接
+   - 目标文章不存在时,保留原文并标成「未解析」样式(虚线下划线)
+   - 标题映射:/graph.json + 本地预览缓存(phh_local_posts)
+   - local-preview.js 会动态插入内容,用 MutationObserver 兜底再扫
    ============================================================ */
 (function () {
   'use strict';
-  var MAP = null;
+  var MAP = null, obsTimer = null, mo = null;
 
   function loadMap() {
     if (MAP) return Promise.resolve(MAP);
+    var base = {};
     return fetch('/graph.json?v=' + Date.now())
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        MAP = {};
         (d.posts || []).forEach(function (p) {
-          if (p && p.t && p.u) MAP[String(p.t).trim()] = p.u;
+          if (p && p.t && p.u) base[String(p.t).trim()] = p.u;
         });
-        return MAP;
+        return base;
       })
-      .catch(function () { MAP = {}; return MAP; });
+      .catch(function () { return base; })
+      .then(function (m) {
+        /* 合并本机刚保存、Pages 还没发布的文章 */
+        try {
+          var store = JSON.parse(localStorage.getItem('phh_local_posts') || '{}');
+          Object.keys(store).forEach(function (k) {
+            var rec = store[k] || {};
+            if (rec.title && rec.url) m[String(rec.title).trim()] = rec.url;
+            if (rec.title && !rec.url && k) {
+              var mm = String(k).match(/^(\d{4})-(\d{1,2})-(\d{1,2})-(.+)\.(md|markdown)$/);
+              if (mm) {
+                var p2 = function (n) { return (n.length < 2 ? '0' : '') + n; };
+                m[String(rec.title).trim()] =
+                  '/' + mm[1] + '/' + p2(mm[2]) + '/' + p2(mm[3]) + '/' + mm[4] + '/';
+              }
+            }
+          });
+        } catch (e) {}
+        MAP = m;
+        return m;
+      });
   }
 
   function injectStyle() {
     if (document.getElementById('post-wikilink-style')) return;
     var st = document.createElement('style');
     st.id = 'post-wikilink-style';
-    st.textContent = '.post-wikilink{color:#0085a1;border-bottom:1px dashed rgba(0,133,161,.5);text-decoration:none;}' +
-      '.post-wikilink:hover{border-bottom-style:solid;text-decoration:none;}';
+    st.textContent =
+      '.post-wikilink{color:#0085a1;border-bottom:1px dashed rgba(0,133,161,.5);text-decoration:none;}' +
+      '.post-wikilink:hover{border-bottom-style:solid;text-decoration:none;}' +
+      '.post-wikilink-missing{color:#9aa5b1;border-bottom:1px dashed rgba(154,165,177,.6);cursor:help;}';
     (document.head || document.body).appendChild(st);
   }
 
+  function hostEl() {
+    return document.querySelector('article div.post-container') ||
+           document.querySelector('div.post-container') ||
+           document.querySelector('article') ||
+           null;
+  }
+
   function walkAndLink() {
-    var host = document.querySelector('article .post-container') ||
-               document.querySelector('article') ||
-               document.querySelector('.post-container') ||
-               null;
+    var host = hostEl();
     if (!host) return;
     loadMap().then(function (map) {
-      if (!map || !Object.keys(map).length) return;
       var walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null);
       var texts = [], n;
       while ((n = walker.nextNode())) {
@@ -48,6 +75,7 @@
         var tag = par.nodeName;
         if (tag === 'PRE' || tag === 'CODE' || tag === 'A' || tag === 'SCRIPT' ||
             tag === 'STYLE' || tag === 'TEXTAREA') continue;
+        if (par.closest && par.closest('.post-wikilink-missing')) continue;
         texts.push(n);
       }
       texts.forEach(function (tn) {
@@ -57,15 +85,22 @@
         var last = 0, m, changed = false;
         while ((m = re.exec(s))) {
           var key = m[1].trim();
+          var label = String(m[2] || key).trim();
           var url = map[key];
-          if (!url) continue;
           changed = true;
           if (m.index > last) frag.appendChild(document.createTextNode(s.slice(last, m.index)));
-          var a = document.createElement('a');
-          a.href = url;
-          a.className = 'post-wikilink';
-          a.textContent = String(m[2] || key).trim();
-          frag.appendChild(a);
+          var el;
+          if (url) {
+            el = document.createElement('a');
+            el.href = url;
+            el.className = 'post-wikilink';
+          } else {
+            el = document.createElement('span');
+            el.className = 'post-wikilink-missing';
+            el.title = '没有找到标题为「' + key + '」的文章';
+          }
+          el.textContent = label;
+          frag.appendChild(el);
           last = m.index + m[0].length;
         }
         if (!changed) return;
@@ -75,12 +110,30 @@
     });
   }
 
+  function schedule() {
+    if (obsTimer) clearTimeout(obsTimer);
+    obsTimer = setTimeout(walkAndLink, 120);
+  }
+
+  function bindObserver() {
+    if (mo || !window.MutationObserver) return;
+    var host = hostEl();
+    if (!host) return;
+    mo = new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        if (muts[i].addedNodes && muts[i].addedNodes.length) { schedule(); return; }
+      }
+    });
+    try { mo.observe(host, { childList: true, subtree: true }); } catch (e) {}
+  }
+
   function boot() {
     injectStyle();
     walkAndLink();
-    /* 私密文章是解密后插入的 HTML,延迟再扫两次 */
-    setTimeout(walkAndLink, 1800);
-    setTimeout(walkAndLink, 4000);
+    bindObserver();
+    /* 本地预览/私密解密是后插入的,再兜几次 */
+    setTimeout(function () { walkAndLink(); bindObserver(); }, 1200);
+    setTimeout(function () { walkAndLink(); bindObserver(); }, 3000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
