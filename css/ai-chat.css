@@ -736,3 +736,81 @@
 #ai-chat.light .ai-web-bar .ai-web-cnt { color: #6a737d; }
 #ai-chat.light .ai-web-bar .ai-web-tm { color: #8b949e; }
 #ai-chat.light .ai-web-bar.fold { opacity: .55; }
+
+/* ============================================================
+   新对话首屏(Grok 风格):大标题 + Ask 胶囊 + 常见问题列表
+   ============================================================ */
+#ai-chat .ai-hello { padding: 40px 18px 6px; text-align: left; }
+#ai-chat .ai-hi1 {
+  font-size: 25px; line-height: 1.35; font-weight: 600;
+  letter-spacing: .01em; color: #eef3f8; text-align: center;
+  margin: 0 0 8px;
+}
+#ai-chat .ai-hi2 { font-size: 13px; line-height: 1.7; color: #7b8492; text-align: center; margin-bottom: 22px; }
+
+#ai-chat .ai-hero {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 9px; margin: 0 0 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid rgba(255, 255, 255, .08);
+}
+#ai-chat .ai-hero-plus {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #cfdae3; background: rgba(255, 255, 255, .07);
+  transition: background .16s, transform .16s;
+}
+#ai-chat .ai-hero-plus svg { width: 16px; height: 16px; }
+#ai-chat .ai-hero-plus:hover { background: rgba(255, 255, 255, .12); transform: scale(1.04); }
+#ai-chat .ai-hero-ask {
+  flex: 1; min-width: 0; text-align: left;
+  background: none; border: 0; padding: 0 2px;
+  font-size: 14px; color: #8b95a1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#ai-chat .ai-hero-mode, #ai-chat .ai-hero-model {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
+  height: 28px; padding: 0 9px; border-radius: 14px;
+  font-size: 12.5px; color: #a3aebb; white-space: nowrap;
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid rgba(255, 255, 255, .06);
+  transition: .16s;
+}
+#ai-chat .ai-hero-mode:hover, #ai-chat .ai-hero-model:hover { color: #e2e9f0; background: rgba(255, 255, 255, .1); }
+#ai-chat .ai-hero-mode .ai-caret { width: 10px; height: 10px; opacity: .7; }
+#ai-chat .ai-hero-model { max-width: 44%; overflow: hidden; }
+#ai-chat .ai-hero-model span:last-child { overflow: hidden; text-overflow: ellipsis; }
+
+/* 模型图标(菜单 + 底栏 + 首屏) */
+#ai-chat .ai-mi { width: 14px; height: 14px; flex: 0 0 auto; opacity: .9; color: #7fd3e6; }
+#ai-chat .ai-pill-ico { display: inline-flex; align-items: center; }
+#ai-chat .ai-pill-ico .ai-mi { width: 12px; height: 12px; color: currentColor; opacity: .85; }
+
+/* 常见问题:行式列表(带图标) */
+#ai-chat .ai-chips { margin: 0; display: flex; flex-direction: column; gap: 0; text-align: left; }
+#ai-chat .ai-chip {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left;
+  padding: 13px 4px;
+  background: none; border: 0; border-radius: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  font-size: 13.5px; line-height: 1.5; color: #b9c3ce;
+  transition: color .16s, background .16s;
+}
+#ai-chat .ai-chip:last-child { border-bottom: 0; }
+#ai-chat .ai-chip .ai-chip-ico { width: 16px; height: 16px; flex: 0 0 auto; opacity: .55; }
+#ai-chat .ai-chip:hover { color: #f0f5fa; background: rgba(255, 255, 255, .03); }
+#ai-chat .ai-chip:active { background: rgba(255, 255, 255, .05); }
+
+/* 浅色 */
+#ai-chat.light .ai-hi1 { color: #16191d; }
+#ai-chat.light .ai-hi2 { color: #7a828c; }
+#ai-chat.light .ai-hero { background: #f4f6f8; border-color: #e6eaee; }
+#ai-chat.light .ai-hero-plus { color: #3a424b; background: #e9edf1; }
+#ai-chat.light .ai-hero-plus:hover { background: #dfe5ea; }
+#ai-chat.light .ai-hero-ask { color: #8d959e; }
+#ai-chat.light .ai-hero-mode, #ai-chat.light .ai-hero-model { color: #5b6672; background: #eef1f4; border-color: #e3e7eb; }
+#ai-chat.light .ai-hero-mode:hover, #ai-chat.light .ai-hero-model:hover { background: #e6ebf0; color: #24292f; }
+#ai-chat.light .ai-chip { color: #4b5560; border-bottom-color: #eef1f4; }
+#ai-chat.light .ai-chip:hover { color: #16191d; background: #f6f8fa; }
+#ai-chat.light .ai-mi { color: #0a7a92; }

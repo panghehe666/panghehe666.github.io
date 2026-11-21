@@ -67,11 +67,16 @@
   }
 
   /* ---------------- 联网搜索(Responses API,服务端执行,流式) ---------------- */
-  function kimiSearchStream(q, onDelta) {
+  function kimiSearchStream(q, onDelta, outerSignal) {
     var key = kimiKey();
     if (!key) return Promise.reject(new Error('没配置 Kimi API Key'));
     var ctl = window.AbortController ? new AbortController() : null;
     var timer = setTimeout(function () { try { ctl && ctl.abort(); } catch (e) {} }, 100000);
+    /* 外部(界面上的停止按钮)可以中断本次搜索 */
+    if (ctl && outerSignal) {
+      if (outerSignal.aborted) { try { ctl.abort(); } catch (e) {} }
+      else { try { outerSignal.addEventListener('abort', function () { try { ctl.abort(); } catch (e) {} }); } catch (e) {} }
+    }
     var body = {
       model: 'kimi-k3',
       input: q,
@@ -144,7 +149,14 @@
       return { text: text, sources: srcs };
     }).catch(function (e) {
       clearTimeout(timer);
-      if (e && e.name === 'AbortError') throw new Error('搜索超时(100 秒),稍后再试');
+      if (e && e.name === 'AbortError') {
+        if (outerSignal && outerSignal.aborted) {
+          var ae = new Error('已停止');
+          ae.name = 'AbortError';
+          throw ae;
+        }
+        throw new Error('搜索超时(100 秒),稍后再试');
+      }
       throw e;
     });
   }
@@ -164,11 +176,11 @@
     return { text: text, sources: srcs };
   }
 
-  function webSearch(q, onDelta) {
+  function webSearch(q, onDelta, signal) {
     var qq = String(q || '').trim();
     if (!qq) return Promise.reject(new Error('缺少问题'));
     if (!kimiToolsEnabled()) return Promise.reject(new Error('Kimi 官方工具开关是关闭的'));
-    return kimiSearchStream(qq, onDelta);
+    return kimiSearchStream(qq, onDelta, signal);
   }
 
   register('web_search', '联网搜索实时信息。需要今天的新闻、最新进展、价格、事件、政策等实时信息时调用本工具;返回搜索后的整理答案和来源网页。', {

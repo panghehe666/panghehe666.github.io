@@ -760,10 +760,11 @@
     var t0 = Date.now();
     var timer = null;
     var ended = false;
+    var EST = '（预计 10~30s）';
     function tick() {
       if (ended) return;
       var tm = bar.querySelector('.ai-web-tm');
-      if (tm) tm.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
+      if (tm) tm.textContent = '已用时 ' + ((Date.now() - t0) / 1000).toFixed(1) + 's' + EST;
     }
     tick();
     timer = setInterval(tick, 200);
@@ -779,10 +780,22 @@
         var tm = bar.querySelector('.ai-web-tm');
         if (txt) txt.textContent = '';
         if (cnt) cnt.textContent = n ? ('搜索到 ' + n + ' 个网页') : '未触发联网搜索';
-        if (tm) tm.textContent = '用时 ' + sec + 's';
+        if (tm) tm.textContent = '用时 ' + sec + 's' + EST;
         bar.classList.add('done');
         /* 短暂停留后弱化,保留最终摘要 */
         setTimeout(function () { bar.classList.add('fold'); }, 2600);
+      },
+      stop: function () {
+        if (ended) return;
+        ended = true;
+        if (timer) { clearInterval(timer); timer = null; }
+        var txt = bar.querySelector('.ai-web-txt');
+        var cnt = bar.querySelector('.ai-web-cnt');
+        var tm = bar.querySelector('.ai-web-tm');
+        if (txt) txt.textContent = '已停止';
+        if (cnt) cnt.textContent = '';
+        if (tm) tm.textContent = '';
+        bar.classList.add('fail', 'fold');
       },
       fail: function () {
         if (ended) return;
@@ -1057,7 +1070,9 @@
       lastAsk = text;
       busy = true;
       updateSend();
-      return PHAITOOLS.webSearch(text).then(function (r) {
+      /* 和回答流共用 ctrl:搜索阶段点「停止」也能立刻中断 */
+      ctrl = window.AbortController ? new AbortController() : null;
+      return PHAITOOLS.webSearch(text, null, ctrl ? ctrl.signal : undefined).then(function (r) {
         var txt = String((r && r.text) || '').trim();
         var src = (r && r.sources) || [];
         var block = '';
@@ -1085,10 +1100,17 @@
         updateSend();
         return runAsk(text, sid0, tMsgs, block, wnode);
       }, function (e) {
+        var aborted = !!(ctrl && ctrl.signal && ctrl.signal.aborted);
+        busy = false;
+        ctrl = null;
+        updateSend();
+        if (aborted) {
+          /* 用户主动停止:只显示已停止,不再继续回答 */
+          try { wbar.stop(); } catch (e3) {}
+          return;
+        }
         /* 搜索失败也别卡住:状态条降级提示,退回普通回答 */
         try { wbar.fail(); } catch (e2) {}
-        busy = false;
-        updateSend();
         return runAsk(text, sid0, tMsgs, '', wnode);
       });
     }
@@ -1681,11 +1703,12 @@
     'Token 怎么才能用得久一点?',
     '你为什么会开始写博客?'
   ];
+  var CHIP_ICON = '<svg class="ai-chip-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h16M4 12h10.5M4 17.5h13"/></svg>';
   CHIPS.forEach(function (t) {
     var b = document.createElement('button');
     b.type = 'button';
     b.className = 'ai-chip';
-    b.textContent = t;
+    b.innerHTML = CHIP_ICON + '<span>' + esc(t) + '</span>';
     b.addEventListener('click', function () { ask(t); });
     chipsEl.appendChild(b);
   });
@@ -1733,6 +1756,13 @@
     input.style.height = Math.min(input.scrollHeight, 112) + 'px';
   }
 
+  /* 模型图标:DeepSeek = 四芒星, Kimi = 月牙 */
+  var MODEL_ICONS = {
+    ds: '<svg class="ai-mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4l1.7 4.9a1.8 1.8 0 0 0 1.2 1.2l4.9 1.7-4.9 1.7a1.8 1.8 0 0 0-1.2 1.2L12 18.9l-1.7-4.9a1.8 1.8 0 0 0-1.2-1.2L4.2 11.2l4.9-1.7a1.8 1.8 0 0 0 1.2-1.2L12 3.4z"/></svg>',
+    kimi: '<svg class="ai-mi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.7A8.2 8.2 0 1 1 10.3 4a6.4 6.4 0 0 0 9.7 9.7z"/></svg>'
+  };
+  function modelIcon(p) { return MODEL_ICONS[p] || MODEL_ICONS.ds; }
+
   /* 模型选择菜单(DeepSeek / Kimi 全部可用模型) */
   function buildModelMenu() {
     if (!modelMenu) return;
@@ -1748,7 +1778,8 @@
         b.type = 'button';
         b.className = 'ai-mm-item';
         b.dataset.sel = pk + ':' + m.id;
-        b.innerHTML = '<span class="ai-mm-label">' + esc(m.label) + '</span>' +
+        b.innerHTML = modelIcon(pk) +
+          '<span class="ai-mm-label">' + esc(m.label) + '</span>' +
           '<span class="ai-mm-desc">' + esc(m.desc || '') + '</span>';
         b.addEventListener('click', function () {
           lsSet(LS.model, pk + ':' + m.id);
@@ -1779,15 +1810,33 @@
     if (modelMenu && modelMenu.classList.contains('on') &&
         !modelMenu.contains(e.target) && e.target !== modelBtn) closeModelMenu();
   });
-  modeBtn.addEventListener('click', function () {
+  function cycleMode() {
     var cur = lsGet(LS.mode);
     lsSet(LS.mode, cur === 'max' ? 'free' : (cur === 'free' ? 'eco' : 'max'));
     syncModel();
+  }
+  modeBtn.addEventListener('click', cycleMode);
+
+  /* 新对话首屏 hero:＋新对话 / 点击输入 / 模式 / 模型 */
+  var heroPlus = $('ai-hero-plus'), heroAsk = $('ai-hero-ask'),
+      heroMode = $('ai-hero-mode'), heroModeName = $('ai-hero-mode-name'),
+      heroModel = $('ai-hero-model'), heroModelName = $('ai-hero-model-name'),
+      heroModelIco = $('ai-hero-model-ico'), modelIco = $('ai-model-ico');
+  if (heroPlus) heroPlus.addEventListener('click', function () { newSession(); closeSheets(); });
+  if (heroAsk) heroAsk.addEventListener('click', function () { try { input.focus(); } catch (e) {} });
+  if (heroMode) heroMode.addEventListener('click', cycleMode);
+  if (heroModel) heroModel.addEventListener('click', function () {
+    if (modelBtn) modelBtn.click();
   });
   function syncModel() {
     var cur = selModel(), eco = ecoMode(), free = freeMode();
-    modelName.textContent = cur.m.label;
-    modeName.textContent = free ? '白嫖' : (eco ? '节能' : '强爽');
+    var label = cur.m.label, modeEn = free ? 'Free' : (eco ? 'Eco' : 'Max');
+    modelName.textContent = label;
+    modeName.textContent = modeEn;
+    if (heroModeName) heroModeName.textContent = modeEn;
+    if (heroModelName) heroModelName.textContent = label;
+    if (heroModelIco) heroModelIco.innerHTML = modelIcon(cur.p);
+    if (modelIco) modelIco.innerHTML = modelIcon(cur.p);
     modeBtn.classList.toggle('on', !eco);
     modeBtn.classList.toggle('free', free);
     if (tipEl) {

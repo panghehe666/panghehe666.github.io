@@ -61,8 +61,24 @@
 
     <div class="ai-body" id="ai-body">
       <div class="ai-hello" id="ai-hello">
-        <div class="ai-hi1">嗨,我是庞和合,问什么都行。</div>
-        <div class="ai-hi2">嗯,这是 AI 版的我,答案都从博客里翻。</div>
+        <div class="ai-hi1">我是 AI 版的庞和合</div>
+        <div class="ai-hi2">问什么都行,答案从博客里翻</div>
+
+        <div class="ai-hero">
+          <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="新对话" title="新对话">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button id="ai-hero-ask" class="ai-hero-ask" type="button">Ask anything…</button>
+          <button id="ai-hero-mode" class="ai-hero-mode" type="button" title="切换模式">
+            <span id="ai-hero-mode-name">Eco</span>
+            <svg class="ai-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <button id="ai-hero-model" class="ai-hero-model" type="button" title="切换模型">
+            <span id="ai-hero-model-ico" class="ai-pill-ico"></span>
+            <span id="ai-hero-model-name">DeepSeek Flash</span>
+          </button>
+        </div>
+
         <div class="ai-chips" id="ai-chips"></div>
       </div>
       <div class="ai-thread" id="ai-thread"></div>
@@ -78,6 +94,7 @@
         <div id="ai-model-menu" class="ai-model-menu"></div>
         <div class="ai-tools">
           <button id="ai-model" class="ai-pill" type="button" title="切换模型">
+            <span id="ai-model-ico" class="ai-pill-ico"></span>
             <span id="ai-model-name">DeepSeek Flash</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>
           </button>
