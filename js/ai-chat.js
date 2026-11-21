@@ -742,6 +742,60 @@
     return d;
   }
 
+  /* 独立搜索状态条:完全在思考框(.ai-reason)之外,单独成行。
+     阶段:搜索中(实时计时,200ms 局部刷新)→ 完成(真实网页数+总用时,2.6s 后弱化保留摘要)→ 失败降级 */
+  function mkSearchBar() {
+    var bar = document.createElement('div');
+    bar.className = 'ai-web-bar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML =
+      '<svg class="ai-web-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">' +
+      '<circle cx="10.6" cy="10.6" r="6.4"/><path d="M15.4 15.4L20 20"/></svg>' +
+      '<span class="ai-web-txt" aria-live="polite">正在搜索…</span>' +
+      '<span class="ai-web-cnt"></span>' +
+      '<span class="ai-web-tm">已用时 0.0s</span>';
+    var t0 = Date.now();
+    var timer = null;
+    var ended = false;
+    function tick() {
+      if (ended) return;
+      var tm = bar.querySelector('.ai-web-tm');
+      if (tm) tm.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
+    }
+    tick();
+    timer = setInterval(tick, 200);
+    return {
+      el: bar,
+      done: function (n) {
+        if (ended) return;
+        ended = true;
+        if (timer) { clearInterval(timer); timer = null; }
+        var sec = ((Date.now() - t0) / 1000).toFixed(1);
+        var txt = bar.querySelector('.ai-web-txt');
+        var cnt = bar.querySelector('.ai-web-cnt');
+        var tm = bar.querySelector('.ai-web-tm');
+        if (txt) txt.textContent = '';
+        if (cnt) cnt.textContent = n ? ('搜索到 ' + n + ' 个网页') : '未触发联网搜索';
+        if (tm) tm.textContent = '用时 ' + sec + 's';
+        bar.classList.add('done');
+        /* 短暂停留后弱化,保留最终摘要 */
+        setTimeout(function () { bar.classList.add('fold'); }, 2600);
+      },
+      fail: function () {
+        if (ended) return;
+        ended = true;
+        if (timer) { clearInterval(timer); timer = null; }
+        var txt = bar.querySelector('.ai-web-txt');
+        var cnt = bar.querySelector('.ai-web-cnt');
+        var tm = bar.querySelector('.ai-web-tm');
+        if (txt) txt.textContent = '搜索未完成,已直接回答';
+        if (cnt) cnt.textContent = '';
+        if (tm) tm.textContent = '';
+        bar.classList.add('fail');
+      }
+    };
+  }
+
   function render(node, text, reason, hits, done) {
     var html = '';
     if (reason) {
@@ -993,11 +1047,13 @@
       if (window.PHAITOOLS.resetSources) { try { window.PHAITOOLS.resetSources(); } catch (e) {} }
       hideHello();
       addUser(text);
+      var wbar = mkSearchBar();
+      thread.appendChild(wbar.el);
+      toBottom();
       var wnode = addAssistant();
       lastAsk = text;
       busy = true;
       updateSend();
-      render(wnode, '', '🔍 正在联网搜索…', [], false);
       return PHAITOOLS.webSearch(text).then(function (r) {
         var txt = String((r && r.text) || '').trim();
         var src = (r && r.sources) || [];
@@ -1017,15 +1073,8 @@
             return '[' + (i + 1) + '] ' + (s.title || '') + ' ' + (s.url || '');
           }).join('\n');
         }
-        /* 搜索统计:像 DeepSeek 那样常驻显示「搜索到 N 个网页」 */
-        try {
-          if (src.length && wnode && wnode.parentNode) {
-            var note = document.createElement('div');
-            note.className = 'ai-search-note';
-            note.textContent = '🔍 搜索到 ' + src.length + ' 个网页';
-            wnode.parentNode.insertBefore(note, wnode.nextSibling);
-          }
-        } catch (e) {}
+        /* 搜索完成:状态条展示真实网页数 + 总用时(2.6s 后自动弱化) */
+        try { wbar.done(src.length); } catch (e) {}
         if (window.PHHAISTATS) {
           try { PHHAISTATS.record('kimi', 'kimi-k3', null, text.length + 60, txt.length); } catch (e) {}
         }
@@ -1033,7 +1082,8 @@
         updateSend();
         return runAsk(text, sid0, tMsgs, block, wnode);
       }, function (e) {
-        /* 搜索失败也别卡住:退回普通回答 */
+        /* 搜索失败也别卡住:状态条降级提示,退回普通回答 */
+        try { wbar.fail(); } catch (e2) {}
         busy = false;
         updateSend();
         return runAsk(text, sid0, tMsgs, '', wnode);

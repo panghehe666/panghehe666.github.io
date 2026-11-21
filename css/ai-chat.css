@@ -694,20 +694,45 @@
   color: #00728a;
   background: #e6f4f8;
 }
-
-/* 联网搜索统计(常驻在回答上方) */
-#ai-chat .ai-search-note {
-  display: inline-block;
-  margin: 2px 0 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
+/* ============================================================
+   独立搜索状态条(思考框之外)· 单色线性图标 / 无底色 / 弱化灰
+   对齐 DeepSeek「搜索到 N 个网页」的观感
+   ============================================================ */
+#ai-chat .ai-web-bar {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 2px 2px;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #8b949e;
+  background: none;
+  border: 0;
+  transition: opacity .45s ease;
+}
+#ai-chat .ai-web-bar .ai-web-ico {
+  width: 14px; height: 14px;
+  flex: 0 0 auto;
+  opacity: .75;
+  color: #8b949e;
+}
+#ai-chat .ai-web-bar .ai-web-txt { color: #8b949e; }
+#ai-chat .ai-web-bar .ai-web-cnt { color: #8b949e; }
+#ai-chat .ai-web-bar .ai-web-tm {
+  color: #6b7280;
   font-size: 11.5px;
-  color: #7fb8c9;
-  background: rgba(0, 133, 161, .1);
-  border: 1px solid rgba(0, 133, 161, .22);
+  font-variant-numeric: tabular-nums;
 }
-#ai-chat.light .ai-search-note {
-  color: #0a7a92;
-  background: #eef7f9;
-  border-color: #d3eaf0;
-}
+#ai-chat .ai-web-bar.done .ai-web-cnt { animation: ai-web-pop .35s ease; }
+#ai-chat .ai-web-bar.done .ai-web-tm { color: #6b7280; }
+#ai-chat .ai-web-bar.fold { opacity: .45; }
+#ai-chat .ai-web-bar.fail { color: #6b7280; }
+@keyframes ai-web-pop { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+/* 浅色主题 */
+#ai-chat.light .ai-web-bar,
+#ai-chat.light .ai-web-bar .ai-web-ico,
+#ai-chat.light .ai-web-bar .ai-web-txt,
+#ai-chat.light .ai-web-bar .ai-web-cnt { color: #6a737d; }
+#ai-chat.light .ai-web-bar .ai-web-tm { color: #8b949e; }
+#ai-chat.light .ai-web-bar.fold { opacity: .55; }
