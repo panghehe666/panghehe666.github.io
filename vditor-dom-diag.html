@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vditor IR DOM 诊断</title>
+<link rel="stylesheet" href="https://registry.npmmirror.com/vditor/3.11.3/files/dist/index.css">
+<style>body{font-family:sans-serif;padding:10px}#out{white-space:pre-wrap;font-size:11px;background:#f6f8fa;padding:8px;border-radius:6px}</style>
+</head><body>
+<pre id="out">诊断中…</pre>
+<div id="ed"></div>
+<script src="https://registry.npmmirror.com/vditor/3.11.3/files/dist/index.min.js"></script>
+<script>
+var LOG = [];
+window.onerror = function(m,s,l){ LOG.push('ERR ' + m); document.getElementById('out').textContent = LOG.join('\n'); };
+try {
+  var v = new Vditor('ed', { mode: 'ir', value: '# 标题\n\n正文段落\n\n第二段', cdn: 'https://registry.npmmirror.com/vditor/3.11.3/files', height: 240, cache: {enable:false} });
+  LOG.push('Vditor typeof=' + typeof Vditor + ' | 构造完成');
+} catch(e) { LOG.push('THROW ' + e.message); }
+setTimeout(function(){
+  var out = document.getElementById('out');
+  var all = document.querySelectorAll('#ed [contenteditable]');
+  LOG.push('contenteditable 元素数=' + all.length);
+  for (var i=0;i<all.length;i++){
+    var e = all[i];
+    LOG.push(' ' + i + ': tag=' + e.tagName + ' class="' + e.className + '" attr=' + e.getAttribute('contenteditable'));
+  }
+  LOG.push('has .vditor=' + !!document.querySelector('#ed .vditor'));
+  LOG.push('has .vditor-ir=' + !!document.querySelector('#ed .vditor-ir'));
+  LOG.push('has .vditor-reset=' + !!document.querySelector('#ed .vditor-reset'));
+  var ir = document.querySelector('#ed .vditor-ir .vditor-reset') || document.querySelector('#ed .vditor-ir');
+  LOG.push('ir text: ' + JSON.stringify((ir && ir.textContent || '').slice(0,80)));
+  var box = document.querySelector('#ed .vditor');
+  if (box) LOG.push('vditor 子节点: ' + Array.prototype.map.call(box.children, function(c){ return c.className; }).join(' | '));
+  out.textContent = LOG.join('\n');
+}, 3000);
+</script>
+</body></html>
