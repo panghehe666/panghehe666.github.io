@@ -49,6 +49,15 @@
   }
   if (window.PHHSECRETS) { try { PHHSECRETS.ensure(); } catch (e) {} }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  /* 把 GitHub 的原始报错翻译成可操作的提示 */
+  function errMsg(e) {
+    var m = String((e && e.message) || e || '');
+    if (/bad credentials|invalid token|401/i.test(m)) {
+      return 'GitHub Token 已失效(Bad credentials) · <a href="/admin/">点这里去 /admin/ 重新填 Token</a>,填完回来再点保存';
+    }
+    if (/rate limit|403/i.test(m)) return 'GitHub 拒绝(403):' + esc(m) + ' · 可能是权限不足或请求太频繁,稍等再试';
+    return esc(m);
+  }
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function b64u(s) { return btoa(unescape(encodeURIComponent(s))); }
   function enc(p) { return p.split('/').map(encodeURIComponent).join('/'); }
@@ -579,7 +588,7 @@
         cacheLocalPreview(file, fileUrl(file), body);
         var el = setStatus('已添加 ✅ <b>' + esc(file) + '</b> · 本机已缓存,文章页立即显示;Pages 30–60 秒后全网生效', 'ok');
         addUndoBtn(el);
-      }).catch(function (e) { st.busy = false; setStatus('添加失败:' + esc(e.message), 'err'); });
+      }).catch(function (e) { st.busy = false; setStatus('添加失败:' + errMsg(e), 'err'); });
     } else {
       apiGet('_posts/' + st.file).then(function (d) {
         var prev = decodeURIComponent(escape(atob(d.content)));
@@ -609,7 +618,7 @@
         cacheLocalPreview(st.file, st.url, body);
         var el = setStatus('已修改 ✅ <b>' + esc(st.file) + '</b> · 本机已缓存,文章页立即显示;Pages 30–60 秒后全网生效', 'ok');
         addUndoBtn(el);
-      }).catch(function (e) { st.busy = false; setStatus('修改失败:' + esc(e.message), 'err'); });
+      }).catch(function (e) { st.busy = false; setStatus('修改失败:' + errMsg(e), 'err'); });
     }
   }
   function del() {
@@ -627,7 +636,7 @@
       lastOp = { kind: 'del', path: '_posts/' + st.file, prevContent: prev, prevSha: prevSha };
       var el = setStatus('已删除 ✅ <b>' + esc(st.file) + '</b> · Pages 约 30–60 秒后生效', 'ok');
       addUndoBtn(el);
-    }).catch(function (e) { st.busy = false; setStatus('删除失败:' + esc(e.message), 'err'); });
+    }).catch(function (e) { st.busy = false; setStatus('删除失败:' + errMsg(e), 'err'); });
   }
   function doUndo() {
     if (!lastOp || undoBusy) return;
