@@ -317,9 +317,14 @@
             ? window.PrivateCrypto.decryptWithSession(fmGet(pf.fm, 'private_cipher'))
             : Promise.reject(new Error('PrivateCrypto 未加载'));
           dec.then(function (plain) {
-            var isHtml = looksLikeHtml(plain);
-            initPlain(plain, isHtml);
-            setStatus('🔒 私密文章(' + (isHtml ? 'HTML' : 'Markdown') + '):普通编辑模式,保存时自动加密', '');
+            /* 私密文章同样按格式选编辑器:HTML → 普通编辑器,Markdown → Vditor */
+            if (looksLikeHtml(plain)) {
+              initPlain(plain, true);
+              setStatus('🔒 私密文章(HTML):普通编辑模式,保存时自动加密', '');
+            } else {
+              initEditor(plain);
+              setStatus('🔒 私密文章(Markdown):Vditor 编辑模式,保存时自动加密', '');
+            }
           }).catch(function (e) {
             initPlain('');
             setStatus('私密文章解密失败:' + esc(e.message) + ' · 先到 <a href="/admin/">/admin/</a> 用管理员密码登录一次,再回来编辑。', 'err');
