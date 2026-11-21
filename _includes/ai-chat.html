@@ -68,7 +68,7 @@
           <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="新对话" title="新对话">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
-          <button id="ai-hero-ask" class="ai-hero-ask" type="button">Ask anything…</button>
+          <textarea id="ai-hero-input" class="ai-hero-input" rows="1" placeholder="Ask anything…" enterkeyhint="send"></textarea>
           <button id="ai-hero-mode" class="ai-hero-mode" type="button" title="切换模式">
             <span id="ai-hero-mode-name">Eco</span>
             <svg class="ai-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -76,6 +76,9 @@
           <button id="ai-hero-model" class="ai-hero-model" type="button" title="切换模型">
             <span id="ai-hero-model-ico" class="ai-pill-ico"></span>
             <span id="ai-hero-model-name">DeepSeek Flash</span>
+          </button>
+          <button id="ai-hero-send" class="ai-hero-send" type="button" aria-label="发送" title="发送">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
           </button>
         </div>
 
@@ -88,10 +91,11 @@
       当前模型还没配置 API Key,<b id="ai-warn-btn">点这里设置</b>
     </div>
 
+    <div id="ai-model-menu" class="ai-model-menu"></div>
+
     <div class="ai-foot">
       <div class="ai-inputwrap">
         <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
-        <div id="ai-model-menu" class="ai-model-menu"></div>
         <div class="ai-tools">
           <button id="ai-model" class="ai-pill" type="button" title="切换模型">
             <span id="ai-model-ico" class="ai-pill-ico"></span>

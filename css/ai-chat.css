@@ -814,3 +814,48 @@
 #ai-chat.light .ai-chip { color: #4b5560; border-bottom-color: #eef1f4; }
 #ai-chat.light .ai-chip:hover { color: #16191d; background: #f6f8fa; }
 #ai-chat.light .ai-mi { color: #0a7a92; }
+
+/* ============================================================
+   新会话:只保留中间那条真输入栏(底部收起)
+   ============================================================ */
+#ai-chat.hero-on .ai-foot { display: none; }
+#ai-chat.hero-on #ai-warn { display: none; }
+#ai-chat .ai-hero { align-items: flex-end; border-radius: 24px; padding: 8px 9px 8px 10px; }
+#ai-chat .ai-hero-input {
+  flex: 1 1 auto; min-width: 0; max-height: 96px;
+  resize: none; overflow-y: auto;
+  background: none; border: 0; outline: none;
+  padding: 6px 2px; margin: 0;
+  font: inherit; font-size: 14px; line-height: 1.6; color: #e8eef5;
+  caret-color: #4fc3d9;
+}
+#ai-chat .ai-hero-input::placeholder { color: #8b95a1; }
+#ai-chat .ai-hero-send {
+  flex: 0 0 auto; width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #0c1a1f; background: #58c8dd;
+  transition: transform .16s, background .16s;
+}
+#ai-chat .ai-hero-send svg { width: 15px; height: 15px; }
+#ai-chat .ai-hero-send:hover { background: #6fd4e6; transform: translateY(-1px); }
+#ai-chat .ai-hero-send:active { transform: scale(.94); }
+#ai-chat.light .ai-hero-input { color: #16191d; }
+#ai-chat.light .ai-hero-input::placeholder { color: #8d959e; }
+#ai-chat.light .ai-hero-send { color: #fff; background: #0093ad; }
+
+/* 模型菜单:改为相对面板定位(底部输入栏隐藏时也能弹出) */
+#ai-chat .ai-model-menu {
+  left: auto; right: 14px; bottom: 82px;
+  width: min(330px, calc(100% - 28px));
+  bottom: 82px;
+}
+#ai-chat .ai-mm-item { align-items: center; }
+#ai-chat .ai-mm-item .ai-mi { margin-right: 2px; }
+
+/* 品牌图标配色 */
+#ai-chat .ai-mi.ds { color: #4d6bfe; }
+#ai-chat .ai-mi.kimi { color: #e8ecf2; }
+#ai-chat.light .ai-mi.ds { color: #4d6bfe; }
+#ai-chat.light .ai-mi.kimi { color: #16191d; }
+#ai-chat .ai-pill-ico .ai-mi.ds { color: #4d6bfe; }
+#ai-chat .ai-pill-ico .ai-mi.kimi { color: currentColor; }
