@@ -21,7 +21,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 3.6l1.5 4.2a1.8 1.8 0 0 0 1.1 1.1l4.2 1.5-4.2 1.5a1.8 1.8 0 0 0-1.1 1.1L12 17.2l-1.5-4.2a1.8 1.8 0 0 0-1.1-1.1L5.2 10.4l4.2-1.5a1.8 1.8 0 0 0 1.1-1.1L12 3.6z"/>
         </svg>
-        <span>问答</span>
+        <span class="ai-head-name">问答</span>
         <span id="ai-admin-tag" class="ai-tag">管理员</span>
       </div>
       <div class="ai-head-a">
@@ -65,21 +65,24 @@
         <div class="ai-hi2">问什么都行,答案从博客里翻</div>
 
         <div class="ai-hero">
-          <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="新对话" title="新对话">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
           <textarea id="ai-hero-input" class="ai-hero-input" rows="1" placeholder="Ask anything…" enterkeyhint="send"></textarea>
-          <button id="ai-hero-mode" class="ai-hero-mode" type="button" title="切换模式">
-            <span id="ai-hero-mode-name">Eco</span>
-            <svg class="ai-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <button id="ai-hero-model" class="ai-hero-model" type="button" title="切换模型">
-            <span id="ai-hero-model-ico" class="ai-pill-ico"></span>
-            <span id="ai-hero-model-name">DeepSeek Flash</span>
-          </button>
-          <button id="ai-hero-send" class="ai-hero-send" type="button" aria-label="发送" title="发送">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
-          </button>
+          <div class="ai-hero-bar">
+            <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="新对话" title="新对话">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            <button id="ai-hero-mode" class="ai-hero-mode" type="button" title="切换模式">
+              <span id="ai-hero-mode-name">Eco</span>
+              <svg class="ai-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <button id="ai-hero-model" class="ai-hero-model" type="button" title="切换模型">
+              <span id="ai-hero-model-ico" class="ai-pill-ico"></span>
+              <span id="ai-hero-model-name">DeepSeek Flash</span>
+            </button>
+            <span class="ai-hero-sp"></span>
+            <button id="ai-hero-send" class="ai-hero-send" type="button" aria-label="发送" title="发送">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+            </button>
+          </div>
         </div>
 
         <div class="ai-chips" id="ai-chips"></div>

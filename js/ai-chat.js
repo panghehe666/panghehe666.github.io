@@ -1810,7 +1810,8 @@
   });
   document.addEventListener('click', function (e) {
     if (modelMenu && modelMenu.classList.contains('on') &&
-        !modelMenu.contains(e.target) && e.target !== modelBtn) closeModelMenu();
+        !modelMenu.contains(e.target) && e.target !== modelBtn &&
+        !(heroModel && heroModel.contains(e.target))) closeModelMenu();
   });
   function cycleMode() {
     var cur = lsGet(LS.mode);
@@ -1847,7 +1848,8 @@
     });
   }
   if (heroMode) heroMode.addEventListener('click', cycleMode);
-  if (heroModel) heroModel.addEventListener('click', function () {
+  if (heroModel) heroModel.addEventListener('click', function (e) {
+    if (e && e.stopPropagation) e.stopPropagation();
     if (modelBtn) modelBtn.click();
   });
   function syncModel() {
