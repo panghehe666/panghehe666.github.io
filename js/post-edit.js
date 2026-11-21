@@ -194,17 +194,26 @@
     });
   }
 
-  /* 正文格式判断:HTML 文章用普通编辑器,Markdown 文章用 Vditor */
+  /* 正文格式判断:整篇以 HTML 标签为主 → 普通编辑器;含 Markdown 结构 → Vditor
+     (很多 .md 开头会内嵌一段 HTML 目录,不能只看第一行) */
   function looksLikeHtml(body) {
     var s = String(body == null ? '' : body).trim();
     if (!s) return false;
-    if (/^```/.test(s)) return false;                 /* 代码块开头的 md */
-    if (s.charAt(0) !== '<') return false;
-    var htmlTags = /<(p|div|h[1-6]|span|ul|ol|li|table|tr|td|th|br|img|blockquote|pre|code|strong|b|em|i|a|section|article|figure|figcaption|iframe|video|audio|source|hr|sup|sub|small|mark|details|summary)\b[^>]*>/i;
-    if (!htmlTags.test(s)) return false;
-    /* 粗略对比:HTML 标签出现在开头,且不是零星一两个 */
-    var m = s.match(/<[a-zA-Z][^>]*>/g);
-    return !!(m && m.length >= 1);
+    if (/^```/.test(s)) return false;                    /* 代码块开头的 md */
+    /* 有 Markdown 标题 / 分隔线 / 引用 → 按 Markdown 处理(Vditor 也能渲染内嵌 HTML) */
+    if (/^#{1,6}\s+\S/m.test(s)) return false;
+    var lines = s.split('\n');
+    var htmlLines = 0, mdLines = 0, total = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i].trim();
+      if (!l) continue;
+      total++;
+      if (/^<\/?[a-zA-Z][^>]*>/.test(l) || /<\/[a-zA-Z]+>\s*$/.test(l)) htmlLines++;
+      if (/^(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|\|)/.test(l)) mdLines++;
+    }
+    if (!total) return false;
+    /* 一半以上的行都是 HTML 标签行,才算 HTML 文章 */
+    return htmlLines >= 2 && htmlLines > mdLines && htmlLines / total >= 0.5;
   }
 
   /* ---------------- Vditor(IR 即时渲染) ---------------- */
