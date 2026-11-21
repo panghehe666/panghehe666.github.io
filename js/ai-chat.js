@@ -115,10 +115,13 @@
       if (/^https?:\/\//i.test(url)) out.push({ title: title || url, url: url });
       return '';
     });
-    if (out.length) {
-      clean = clean.replace(/(^|\n)\s*(参考)?来源\s*[:：]?\s*$/g, '').trim();
-    }
+    /* 先压缩空行再清尾标签,否则结尾的 \n\n 会让 $ 匹配不到 */
     clean = clean.replace(/\n{3,}/g, '\n\n').trim();
+    if (out.length) {
+      clean = clean.replace(/(^|\n)[ \t]*[-—]*[ \t]*((参考)?来源|参考|参考资料)[ \t]*[:：]?[ \t]*$/g, '').trim();
+      /* 去掉来源清单前遗留的分隔线 */
+      clean = clean.replace(/(^|\n)[ \t]*([-*_]\s*){2,}$/g, '').trim();
+    }
     return { list: out, clean: clean };
   }
   function stripMarkers(s) {
