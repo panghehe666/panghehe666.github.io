@@ -194,6 +194,19 @@
     });
   }
 
+  /* 正文格式判断:HTML 文章用普通编辑器,Markdown 文章用 Vditor */
+  function looksLikeHtml(body) {
+    var s = String(body == null ? '' : body).trim();
+    if (!s) return false;
+    if (/^```/.test(s)) return false;                 /* 代码块开头的 md */
+    if (s.charAt(0) !== '<') return false;
+    var htmlTags = /<(p|div|h[1-6]|span|ul|ol|li|table|tr|td|th|br|img|blockquote|pre|code|strong|b|em|i|a|section|article|figure|figcaption|iframe|video|audio|source|hr|sup|sub|small|mark|details|summary)\b[^>]*>/i;
+    if (!htmlTags.test(s)) return false;
+    /* 粗略对比:HTML 标签出现在开头,且不是零星一两个 */
+    var m = s.match(/<[a-zA-Z][^>]*>/g);
+    return !!(m && m.length >= 1);
+  }
+
   /* ---------------- Vditor(IR 即时渲染) ---------------- */
   var taEl = null;
   function initEditor(value) {
@@ -234,14 +247,18 @@
       input: function () { markDirty(); }
     });
   }
-  /* 纯文本降级模式(私密文章/Vditor 加载失败时用) */
-  function initPlain(value) {
+  /* 普通编辑器:HTML 文章 / 私密文章 / Vditor 加载失败时用 */
+  function initPlain(value, isHtml) {
     if (vd) { try { vd.destroy(); } catch (e) {} vd = null; }
     st.fallback = true;
+    st.htmlMode = !!isHtml;
     st.origValue = value || '';
     var box = $('pe-editor');
-    box.innerHTML = '<p class="pe-plain-note">纯文本编辑模式:支持 Markdown 源码,保存时按原文写入。</p>' +
-      '<textarea class="pe-ta" id="pe-ta" spellcheck="false" placeholder="在这里输入 Markdown 正文…"></textarea>';
+    box.innerHTML = (isHtml
+      ? '<p class="pe-plain-note">HTML 文章 · 普通编辑模式:直接编辑 HTML 源码,保存时按原文写入。</p>'
+      : '<p class="pe-plain-note">纯文本编辑模式:支持 Markdown 源码,保存时按原文写入。</p>') +
+      '<textarea class="pe-ta" id="pe-ta" spellcheck="false" placeholder="' +
+      (isHtml ? '在这里输入 HTML 正文…' : '在这里输入 Markdown 正文…') + '"></textarea>';
     taEl = $('pe-ta');
     taEl.value = value || '';
     taEl.addEventListener('input', markDirty);
@@ -291,16 +308,22 @@
             ? window.PrivateCrypto.decryptWithSession(fmGet(pf.fm, 'private_cipher'))
             : Promise.reject(new Error('PrivateCrypto 未加载'));
           dec.then(function (plain) {
-            initPlain(plain);
-            setStatus('🔒 私密文章:普通编辑模式(明文编辑,保存时自动加密)', '');
+            var isHtml = looksLikeHtml(plain);
+            initPlain(plain, isHtml);
+            setStatus('🔒 私密文章(' + (isHtml ? 'HTML' : 'Markdown') + '):普通编辑模式,保存时自动加密', '');
           }).catch(function (e) {
             initPlain('');
             setStatus('私密文章解密失败:' + esc(e.message) + ' · 先到 <a href="/admin/">/admin/</a> 用管理员密码登录一次,再回来编辑。', 'err');
           });
         } else {
           nameEl.textContent = st.file;
-          initEditor(pf.body);
-          setStatus('正在编辑:' + esc(st.file) + ' · 光标所在行显示源码,移开自动渲染', '');
+          if (looksLikeHtml(pf.body)) {
+            initPlain(pf.body, true);
+            setStatus('正在编辑:' + esc(st.file) + ' · HTML 文章 → 普通编辑模式', '');
+          } else {
+            initEditor(pf.body);
+            setStatus('正在编辑:' + esc(st.file) + ' · 光标所在行显示源码,移开自动渲染', '');
+          }
         }
       }).catch(function (e) { setStatus('读取失败:' + esc(e.message), 'err'); });
     } else {
