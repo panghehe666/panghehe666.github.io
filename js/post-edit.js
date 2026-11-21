@@ -311,26 +311,27 @@
     return box ? box.querySelector('[contenteditable="true"]') : null;
   }
 
+  /* Vditor IR 的光标可能挂在元素上,用 Range 取「光标前的全文」,兼容两种情况 */
   function wikiCaret() {
+    var host = wikiHost();
+    if (!host) return null;
     var sel = window.getSelection();
     if (!sel || !sel.rangeCount) return null;
     var r = sel.getRangeAt(0);
     if (!r.collapsed) return null;
     var node = r.startContainer;
-    if (!node || node.nodeType !== 3) return null;
-    var host = wikiHost();
-    if (!host || !host.contains(node)) return null;
+    if (!node || !host.contains(node)) return null;
+    var pre = document.createRange();
+    try {
+      pre.selectNodeContents(host);
+      pre.setEnd(node, r.startOffset);
+    } catch (e) { return null; }
+    var txt = pre.toString();
+    var m = txt.match(/\[\[([^\[\]\n]{0,40})$/);
+    if (!m) return null;
     var rect = null;
     try { rect = r.getBoundingClientRect(); } catch (e) {}
-    return { node: node, off: r.startOffset, rect: rect };
-  }
-
-  function wikiMatch(info) {
-    if (!info) return null;
-    var before = info.node.textContent.slice(0, info.off);
-    var m = before.match(/\[\[([^\[\]\n]{0,40})$/);
-    if (!m) return null;
-    return { q: m[1], len: m[0].length };
+    return { host: host, range: r, text: txt, q: m[1], len: m[0].length, rect: rect };
   }
 
   function wikiPop() {
@@ -378,11 +379,11 @@
 
   function wikiUpdate() {
     if (st.fallback) { wikiClose(); return; }
-    var hit = wikiMatch(wikiCaret());
+    var hit = wikiCaret();
     if (!hit) { wikiClose(); return; }
     wikiQ = hit.q;
     loadWiki().then(function (arr) {
-      var hit2 = wikiMatch(wikiCaret());
+      var hit2 = wikiCaret();
       if (!hit2) { wikiClose(); return; }
       var q = hit2.q.toLowerCase();
       var items = arr.filter(function (p) {
@@ -403,41 +404,62 @@
     wikiRender();
   }
 
+  /* 把「文本偏移量」定位到 DOM 里的 (textNode, offset) */
+  function posAt(host, offset) {
+    var walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT, null);
+    var acc = 0, n, last = null;
+    while ((n = walker.nextNode())) {
+      var len = n.nodeValue ? n.nodeValue.length : 0;
+      if (offset <= acc + len) return { node: n, offset: Math.max(0, offset - acc) };
+      acc += len;
+      last = n;
+    }
+    return last ? { node: last, offset: last.nodeValue.length } : null;
+  }
+
   function wikiInsert() {
     var p = wikiItems[wikiSel];
-    var info = wikiCaret();
-    var hit = wikiMatch(info);
-    if (!p || !info || !hit) { wikiClose(); return; }
+    var hit = wikiCaret();
+    if (!p || !hit) { wikiClose(); return; }
     var text = '[[' + p.t + ']]';
-    var done = false;
-    try {
-      var sel = window.getSelection();
-      var r = document.createRange();
-      r.setStart(info.node, Math.max(0, info.off - hit.len));
-      r.setEnd(info.node, info.off);
-      sel.removeAllRanges();
-      sel.addRange(r);
-      done = document.execCommand('insertText', false, text);
-    } catch (e) {}
-    if (!done) {
-      /* 兜底:直接改文本节点并通知编辑器同步(部分 WebView 不支持 execCommand) */
+    var start = posAt(hit.host, hit.text.length - hit.len);
+    var ok = false;
+    /* 1) 选中要替换的 [[查询,尝试原生插入 */
+    if (start) {
       try {
-        var node = info.node, off = info.off;
-        var before = node.textContent.slice(0, off - hit.len);
-        var after = node.textContent.slice(off);
-        node.textContent = before + text + after;
-        var host = wikiHost();
-        if (host) {
-          try { host.dispatchEvent(new InputEvent('input', { bubbles: true })); }
-          catch (e1) { try { host.dispatchEvent(new Event('input', { bubbles: true })); } catch (e2) {} }
-        }
+        var r = document.createRange();
+        r.setStart(start.node, start.offset);
+        r.setEnd(hit.range.startContainer, hit.range.startOffset);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        ok = document.execCommand('insertText', false, text);
+      } catch (e) { ok = false; }
+    }
+    /* 2) 原生插入不行:直接改 DOM 再通知编辑器同步 */
+    if (!ok && start) {
+      try {
         var r2 = document.createRange();
-        r2.setStart(node, (before + text).length);
-        r2.collapse(true);
-        var s2 = window.getSelection();
-        s2.removeAllRanges();
-        s2.addRange(r2);
-      } catch (e3) {}
+        r2.setStart(start.node, start.offset);
+        r2.setEnd(hit.range.startContainer, hit.range.startOffset);
+        r2.deleteContents();
+        var tn = document.createTextNode(text);
+        r2.insertNode(tn);
+        var sel2 = window.getSelection();
+        var r3 = document.createRange();
+        r3.setStart(tn, tn.nodeValue.length);
+        r3.collapse(true);
+        sel2.removeAllRanges();
+        sel2.addRange(r3);
+        var host = hit.host;
+        try { host.dispatchEvent(new InputEvent('input', { bubbles: true })); }
+        catch (e1) { try { host.dispatchEvent(new Event('input', { bubbles: true })); } catch (e2) {} }
+        ok = true;
+      } catch (e3) { ok = false; }
+    }
+    /* 3) 最后兜底:Vditor 插入到光标处 */
+    if (!ok) {
+      try { vd.insertValue(text); ok = true; } catch (e4) {}
     }
     markDirty();
     wikiClose();
@@ -467,14 +489,17 @@
       poke();
     }, true);
     box.addEventListener('blur', function () { setTimeout(wikiClose, 200); }, true);
+    /* 中文输入法组词结束也刷新 */
+    box.addEventListener('compositionend', poke, true);
     document.addEventListener('selectionchange', function () {
       if (!wikiEl || !wikiEl.classList.contains('on')) return;
       if (wikiTimer) clearTimeout(wikiTimer);
       wikiTimer = setTimeout(function () {
-        if (!wikiMatch(wikiCaret())) wikiClose(); else wikiUpdate();
+        if (!wikiCaret()) wikiClose(); else wikiUpdate();
       }, 140);
     });
   }
+
   /* 只在宽度变化(转屏)时调整编辑器;软键盘/地址栏引起的高度抖动直接忽略,避免边打字边重排 */
   var lastW = window.innerWidth, rzTimer = null;
   window.addEventListener('resize', function () {
