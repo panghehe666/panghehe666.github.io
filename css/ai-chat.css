@@ -969,3 +969,18 @@
 #ai-chat.light .ai-txt th { background: rgba(0, 0, 0, .04); }
 #ai-chat.light .ai-txt pre { background: #f4f6f8; }
 #ai-chat.light .ai-txt :not(pre) > code { background: rgba(0, 133, 161, .12); }
+
+/* ---------- 深度思考:可折叠(默认展开) ---------- */
+#ai-chat .ai-reason-wrap { margin: 0 0 10px; }
+#ai-chat .ai-reason-hd {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: none; background: transparent; color: #93a4b0;
+  font-size: 12.5px; padding: 3px 4px 3px 0; cursor: pointer;
+  letter-spacing: .02em; font-family: inherit;
+}
+#ai-chat .ai-reason-hd:hover { color: #cbd7df; }
+#ai-chat .ai-reason-chev { display: inline-block; transition: transform .2s ease; font-size: 12px; line-height: 1; }
+#ai-chat .ai-reason-wrap.collapsed .ai-reason-chev { transform: rotate(-90deg); }
+#ai-chat .ai-reason-wrap.collapsed .ai-reason { display: none; }
+#ai-chat.light .ai-reason-hd { color: #8b979f; }
+#ai-chat.light .ai-reason-hd:hover { color: #45505a; }

@@ -890,11 +890,20 @@
     };
   }
 
+  var REASON_OPEN = true, REASON_T0 = 0, REASON_T1 = 0;
   function render(node, text, reason, hits, done) {
     var html = '';
     if (reason) {
-      html += '<div class="ai-reason">' + md(reason) +
-        (!done && !text ? '<span class="ai-caret">▍</span>' : '') + '</div>';
+      var secs = 0;
+      if (REASON_T0) secs = Math.max(1, Math.round(((REASON_T1 || Date.now()) - REASON_T0) / 1000));
+      var tt = REASON_T1
+        ? ('已思考 · 用时 ' + secs + ' 秒')
+        : ('正在深度思考… ' + secs + ' 秒');
+      html += '<div class="ai-reason-wrap' + (REASON_OPEN ? '' : ' collapsed') + '">' +
+        '<button type="button" class="ai-reason-hd" aria-expanded="' + (REASON_OPEN ? 'true' : 'false') + '">' +
+        '<span class="ai-reason-tt">' + tt + '</span><span class="ai-reason-chev">⌄</span></button>' +
+        '<div class="ai-reason">' + md(reason) +
+        (!done && !text ? '<span class="ai-caret">▍</span>' : '') + '</div></div>';
     }
     if (text) html += '<div class="ai-txt">' + md(text) + '</div>';
     else if (!reason) html = '<div class="ai-dots"><i></i><i></i><i></i></div>';
@@ -909,6 +918,13 @@
     }
     var stick = nearBottom();
     node.innerHTML = html;
+    var hd = node.querySelector('.ai-reason-hd');
+    if (hd) hd.addEventListener('click', function () {
+      REASON_OPEN = !REASON_OPEN;
+      var wrap = hd.parentNode;
+      if (wrap) { if (REASON_OPEN) wrap.classList.remove('collapsed'); else wrap.classList.add('collapsed'); }
+      hd.setAttribute('aria-expanded', REASON_OPEN ? 'true' : 'false');
+    });
     /* 下一帧再滚,确保新内容已布局(思考框滚到最新一行;对话流默认跟随到底) */
     requestAnimationFrame(function () {
       var rz = node.querySelector('.ai-reason');
@@ -1260,9 +1276,9 @@
             if (ftl.length) fpayload.tools = ftl;
           } catch (e) {}
         }
-        var facc = '', frea = '';
-        var foD = function (delta) { facc += delta; render(node, stripMarkers(facc), frea, [], false); };
-        var foR = function (r) { frea += r; render(node, stripMarkers(facc), frea, [], false); };
+        var facc = '', frea = ''; REASON_T0 = 0; REASON_T1 = 0;
+        var foD = function (delta) { facc += delta; if (!REASON_T1) REASON_T1 = Date.now(); render(node, stripMarkers(facc), frea, [], false); };
+        var foR = function (r) { frea += r; if (!REASON_T0) REASON_T0 = Date.now(); render(node, stripMarkers(facc), frea, [], false); };
         return stream(fpayload, foD, foR, ctrl ? ctrl.signal : undefined).catch(function (e) {
           if (fpayload.tools && /tool|function/i.test((e.message || '') + (e.body || ''))) {
             freeToolsOff = true;
@@ -1428,9 +1444,9 @@
             } catch (e) {}
           }
 
-          var acc = '', rea = '';
-          var onD = function (delta) { acc += delta; render(node, stripMarkers(acc), rea, hits, false); };
-          var onR = function (r) { rea += r; render(node, stripMarkers(acc), rea, hits, false); };
+          var acc = '', rea = ''; REASON_T0 = 0; REASON_T1 = 0;
+          var onD = function (delta) { acc += delta; if (!REASON_T1) REASON_T1 = Date.now(); render(node, stripMarkers(acc), rea, hits, false); };
+          var onR = function (r) { rea += r; if (!REASON_T0) REASON_T0 = Date.now(); render(node, stripMarkers(acc), rea, hits, false); };
           return stream(payload, onD, onR, ctrl ? ctrl.signal : undefined).catch(function (e) {
             /* 模型不支持 tools 时自动降级:去掉工具重试一次 */
             if (payload.tools && /tool|function/i.test((e.message || '') + (e.body || ''))) {
