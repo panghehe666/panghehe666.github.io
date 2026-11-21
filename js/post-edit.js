@@ -233,7 +233,7 @@
       mode: 'ir',
       lang: 'zh_CN',
       value: value || '',
-      cdn: '/vditor',
+      cdn: 'https://registry.npmmirror.com/vditor/3.11.3/files',
       height: h,
       cache: { enable: false },
       toolbar: [
@@ -546,7 +546,7 @@
   function cacheLocalPreview(file, url, body) {
     try {
       var render = (typeof Vditor !== 'undefined' && Vditor.md2html)
-        ? Vditor.md2html(body, { mode: 'ir', cdn: '/vditor' }).catch(function () { return ''; })
+        ? Vditor.md2html(body, { mode: 'ir', cdn: 'https://registry.npmmirror.com/vditor/3.11.3/files' }).catch(function () { return ''; })
         : Promise.resolve('');
       render.then(function (h) {
         try {

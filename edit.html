@@ -36,7 +36,7 @@ nav-style: invert
   <div class="pe-status" id="pe-status"></div>
 </div>
 
-<link rel="stylesheet" href="{{ '/vditor/dist/index.css' | prepend: site.baseurl }}">
+<link rel="stylesheet" href="https://registry.npmmirror.com/vditor/3.11.3/files/dist/index.css">
 <link rel="stylesheet" href="{{ '/css/post-edit.css' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}">
-<script src="{{ '/vditor/dist/index.min.js' | prepend: site.baseurl }}" defer></script>
+<script src="https://registry.npmmirror.com/vditor/3.11.3/files/dist/index.min.js" defer onerror="this.onerror=null;var _s=document.createElement('script');_s.src='{{ '/vditor/dist/index.min.js' | prepend: site.baseurl }}';_s.defer=true;document.body.appendChild(_s);"></script>
 <script src="{{ '/js/post-edit.js' | prepend: site.baseurl }}?v={{ site.time | date: '%Y%m%d%H%M%S' }}" defer></script>
