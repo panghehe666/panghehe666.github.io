@@ -1,6 +1,6 @@
 ---
 layout:       post
-title:        "玩转 DeepSeek Harness 安卓端"
+title: "玩转 DeepSeek Harness 安卓端"
 author:       "PHH"
 header-style: text
 catalog:      true
@@ -8,6 +8,8 @@ tags:
     - 开源分享
     - 前沿科技
     - AI
+tags:
+    - 开源分享
 ---
 
 <div class="post-toc" style="background:#f7f9fb;border:1px solid #e3e8ee;border-left:4px solid #0a84ff;border-radius:8px;padding:14px 18px 10px;margin:8px 0 28px;">
@@ -52,9 +54,9 @@ tags:
 
 打开 GitHub 发布页，下载 APK（小米手机选 arm64 版）：
 
-- 发布页：<https://github.com/kelai141/dsh-mobile-apk/releases/tag/v0.14.7>
-- arm64 直链：<https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-arm64.apk>
-- x86_64（模拟器用）：<https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-x86_64.apk>
+- 发布页：[https://github.com/kelai141/dsh-mobile-apk/releases/tag/v0.14.7](https://github.com/kelai141/dsh-mobile-apk/releases/tag/v0.14.7)
+- arm64 直链：[https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-arm64.apk](https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-arm64.apk)
+- x86_64（模拟器用）：[https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-x86_64.apk](https://github.com/kelai141/dsh-mobile-apk/releases/download/v0.14.7/dsh-mobile-apk-v0.14.7-x86_64.apk)
 
 ![dsh-mobile-apk v0.14.7 发布页](/img/in-post/2026-10-17-dsh-android/01-release-v0.14.7.jpg)
 
@@ -80,7 +82,7 @@ tags:
 
 去 apklinker 下载最新的 Android System WebView 并安装（注意：下载源在境外，**需要魔法**，不会科学上网的可以看我这篇[《FreeSocks + FlClash：免费代理搭配教程》](https://panghehe666.github.io/2026/10/10/freesocks-flclash-privacy/)）：
 
-- Android System WebView 149.0.7827.164：<https://www.apklinker.com/apk/google-llc/android-system-webview/android-system-webview-149-0-7827-164-release/android-system-webview-149-0-7827-164-android-apk-download/start/>
+- Android System WebView 149.0.7827.164：[https://www.apklinker.com/apk/google-llc/android-system-webview/android-system-webview-149-0-7827-164-release/android-system-webview-149-0-7827-164-android-apk-download/start/](https://www.apklinker.com/apk/google-llc/android-system-webview/android-system-webview-149-0-7827-164-release/android-system-webview-149-0-7827-164-android-apk-download/start/)
 
 ![apklinker 上的 Android System WebView 149.0.7827.164](/img/in-post/2026-10-17-dsh-android/04-apklinker-webview.jpg)
 
@@ -92,7 +94,7 @@ tags:
 
 DSH 本身不内置模型服务，调用 DeepSeek 模型需要 API Key，这一步是**必须**的：
 
-1. 打开 <https://platform.deepseek.com> ，注册 / 登录
+1. 打开 [https://platform.deepseek.com](https://platform.deepseek.com) ，注册 / 登录
 2. 进入「API Keys」页面，点「创建 API Key」，复制并妥善保存（Key 只显示一次）
 3. 回到 DSH，在设置里配置模型提供方（Provider / 模型路由），把 API Key 填进去
 4. 配置好之后就能正常对话了
@@ -108,7 +110,7 @@ DSH 本身不内置模型服务，调用 DeepSeek 模型需要 API Key，这一�
 想让 AI 帮你把文章直接推送到 GitHub Pages 博客，需要给一个 **GitHub Token** 授权。步骤如下：
 
 1. 打开 GitHub，点右上角头像 → **Settings**
-2. 左侧拉到最下面 → **Developer settings**
+2. 左侧拉到最下面 → **Developer settings**（或直接点该链接[token生成](github.com/settings/tokens/)）
 3. 选 **Personal access tokens** → **Fine-grained tokens**（推荐）→ **Generate new token**
 4. 按需配置：
    - **Repository access** 选「Only select repositories」，只勾你的博客仓库（如 `panghehe666/panghehe666.github.io`）
