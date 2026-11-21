@@ -255,6 +255,7 @@
       after: function () { $('pe-editor').classList.remove('pe-booting'); removeLoading(); },
       input: function () { markDirty(); }
     });
+    bindWiki();
   }
   /* 普通编辑器:HTML 文章 / 私密文章 / Vditor 加载失败时用 */
   function initPlain(value, isHtml) {
@@ -281,6 +282,170 @@
   function getBody() {
     if (st.fallback && taEl) return String(taEl.value || '');
     return String((vd && vd.getValue && vd.getValue()) || '');
+  }
+
+  /* ---------------- [[ 双链自动补全(Obsidian 风格) ---------------- */
+  var WIKI = null, wikiEl = null, wikiItems = [], wikiSel = 0, wikiQ = '', wikiTimer = null, wikiBound = false;
+
+  function loadWiki() {
+    if (WIKI) return Promise.resolve(WIKI);
+    return fetch('/graph.json?v=' + Date.now()).then(function (r) { return r.json(); }).then(function (d) {
+      WIKI = (d.posts || []).map(function (p) {
+        return { t: p.t || '', u: p.u || '', d: p.d || '' };
+      }).filter(function (p) { return p.t && p.u; });
+      return WIKI;
+    }).catch(function () { WIKI = []; return WIKI; });
+  }
+
+  function wikiHost() {
+    var box = $('pe-editor');
+    return box ? box.querySelector('[contenteditable="true"]') : null;
+  }
+
+  function wikiCaret() {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return null;
+    var r = sel.getRangeAt(0);
+    if (!r.collapsed) return null;
+    var node = r.startContainer;
+    if (!node || node.nodeType !== 3) return null;
+    var host = wikiHost();
+    if (!host || !host.contains(node)) return null;
+    var rect = null;
+    try { rect = r.getBoundingClientRect(); } catch (e) {}
+    return { node: node, off: r.startOffset, rect: rect };
+  }
+
+  function wikiMatch(info) {
+    if (!info) return null;
+    var before = info.node.textContent.slice(0, info.off);
+    var m = before.match(/\[\[([^\[\]\n]{0,40})$/);
+    if (!m) return null;
+    return { q: m[1], len: m[0].length };
+  }
+
+  function wikiPop() {
+    if (wikiEl) return wikiEl;
+    wikiEl = document.createElement('div');
+    wikiEl.className = 'pe-wiki-pop';
+    wikiEl.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    document.body.appendChild(wikiEl);
+    return wikiEl;
+  }
+
+  function wikiClose() {
+    wikiItems = []; wikiSel = 0; wikiQ = '';
+    if (wikiEl) wikiEl.classList.remove('on');
+  }
+
+  function wikiRender() {
+    var el = wikiPop();
+    el.innerHTML = '<div class="pe-wiki-hd">插入文章引用' + (wikiQ ? ' · 匹配「' + esc(wikiQ) + '」' : '') + '</div>' +
+      wikiItems.map(function (p, i) {
+        return '<div class="pe-wiki-item' + (i === wikiSel ? ' on' : '') + '" data-i="' + i + '">' +
+          '<span class="pe-wiki-tt">' + esc(p.t) + '</span>' +
+          '<span class="pe-wiki-dt">' + esc(p.d || '') + '</span></div>';
+      }).join('');
+    el.classList.add('on');
+    var rect = null;
+    try { rect = wikiCaret().rect; } catch (e) {}
+    if (!rect || (!rect.width && !rect.height)) {
+      var box = $('pe-editor').getBoundingClientRect();
+      rect = { left: box.left + 20, top: box.top + 40, bottom: box.top + 60 };
+    }
+    var w = 330;
+    var left = Math.max(10, Math.min(rect.left, window.innerWidth - w - 8));
+    var top = rect.bottom + 8;
+    if (top + 250 > window.innerHeight) top = Math.max(10, rect.top - 258);
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+    Array.prototype.forEach.call(el.querySelectorAll('.pe-wiki-item'), function (item) {
+      item.addEventListener('click', function () {
+        wikiSel = +item.getAttribute('data-i');
+        wikiInsert();
+      });
+    });
+  }
+
+  function wikiUpdate() {
+    if (st.fallback) { wikiClose(); return; }
+    var hit = wikiMatch(wikiCaret());
+    if (!hit) { wikiClose(); return; }
+    wikiQ = hit.q;
+    loadWiki().then(function (arr) {
+      var hit2 = wikiMatch(wikiCaret());
+      if (!hit2) { wikiClose(); return; }
+      var q = hit2.q.toLowerCase();
+      var items = arr.filter(function (p) {
+        if (!q) return true;
+        return p.t.toLowerCase().indexOf(q) > -1 || p.u.toLowerCase().indexOf(q) > -1;
+      }).slice(0, 8);
+      if (!items.length) { wikiClose(); return; }
+      wikiItems = items;
+      wikiSel = 0;
+      wikiQ = hit2.q;
+      wikiRender();
+    });
+  }
+
+  function wikiMove(d) {
+    if (!wikiItems.length) return;
+    wikiSel = (wikiSel + d + wikiItems.length) % wikiItems.length;
+    wikiRender();
+  }
+
+  function wikiInsert() {
+    var p = wikiItems[wikiSel];
+    var info = wikiCaret();
+    var hit = wikiMatch(info);
+    if (!p || !info || !hit) { wikiClose(); return; }
+    var text = '[' + p.t + '](' + p.u + ')';
+    try {
+      var sel = window.getSelection();
+      var r = document.createRange();
+      r.setStart(info.node, Math.max(0, info.off - hit.len));
+      r.setEnd(info.node, info.off);
+      sel.removeAllRanges();
+      sel.addRange(r);
+      document.execCommand('insertText', false, text);
+    } catch (e) {
+      try { vd.insertValue(text); } catch (e2) {}
+    }
+    markDirty();
+    wikiClose();
+  }
+
+  function wikiKeydown(e) {
+    if (!wikiEl || !wikiEl.classList.contains('on')) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); wikiMove(1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); wikiMove(-1); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); wikiInsert(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); wikiClose(); }
+  }
+
+  function bindWiki() {
+    if (wikiBound) return;
+    wikiBound = true;
+    var box = $('pe-editor');
+    box.addEventListener('keydown', wikiKeydown, true);
+    function poke() {
+      if (wikiTimer) clearTimeout(wikiTimer);
+      wikiTimer = setTimeout(wikiUpdate, 70);
+    }
+    box.addEventListener('input', poke, true);
+    box.addEventListener('keyup', function (e) {
+      if (e.key === 'Enter' || e.key === 'ArrowDown' || e.key === 'ArrowUp' ||
+          e.key === 'Escape' || e.key === 'Tab') return;
+      poke();
+    }, true);
+    box.addEventListener('blur', function () { setTimeout(wikiClose, 200); }, true);
+    document.addEventListener('selectionchange', function () {
+      if (!wikiEl || !wikiEl.classList.contains('on')) return;
+      if (wikiTimer) clearTimeout(wikiTimer);
+      wikiTimer = setTimeout(function () {
+        if (!wikiMatch(wikiCaret())) wikiClose(); else wikiUpdate();
+      }, 140);
+    });
   }
   /* 只在宽度变化(转屏)时调整编辑器;软键盘/地址栏引起的高度抖动直接忽略,避免边打字边重排 */
   var lastW = window.innerWidth, rzTimer = null;

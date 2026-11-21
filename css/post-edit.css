@@ -213,3 +213,23 @@
   }
   .pe-status:empty { display: none; }
 }
+
+/* ---------- [[ 双链自动补全 ---------- */
+.pe-wiki-pop {
+  position: fixed; z-index: 2100; width: 330px; max-width: calc(100vw - 16px);
+  background: #fff; border: 1px solid #e3e8ee; border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .18); overflow: hidden; display: none;
+  font-size: 13px;
+}
+.pe-wiki-pop.on { display: block; }
+.pe-wiki-hd {
+  padding: 7px 12px; font-size: 11.5px; color: #8a96a3;
+  border-bottom: 1px solid #eef1f4; background: #fafbfc;
+}
+.pe-wiki-item {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; padding: 9px 12px; cursor: pointer;
+}
+.pe-wiki-item.on, .pe-wiki-item:hover { background: #e9f6f8; }
+.pe-wiki-tt { color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pe-wiki-dt { color: #9aa5b1; font-size: 11.5px; flex: none; }
