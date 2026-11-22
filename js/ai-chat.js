@@ -989,11 +989,12 @@
   }
 
   /* ---------------- 请求 ---------------- */
-  function endpoint() { var c = cfg(); return c.proxy || c.pv.endpoint; }
+  var _forceDirect = false;   /* 代理挂住时自动改直连重试 */
+  function endpoint() { var c = cfg(); return (!_forceDirect && c.proxy) ? c.proxy : c.pv.endpoint; }
 
   function headers() {
     var c = cfg(), h = { 'Content-Type': 'application/json' };
-    if (!c.proxy && c.key) h['Authorization'] = 'Bearer ' + c.key;
+    if ((_forceDirect || !c.proxy) && c.key) h['Authorization'] = 'Bearer ' + c.key;
     return h;
   }
 
@@ -1114,20 +1115,26 @@
     }).then(function (v) { settle(); return v; }, function (e) { settle(); throw e; });
   }
 
-  /* 带自动重试的请求:首字节前失败/5xx 时静默重试,最多 3 次,用户无感 */
+  /* 带自动重试的请求:首字节前失败/5xx 时静默重试,最多 3 次;第 3 次自动改直连(绕开挂住的代理) */
   function stream(payload, onDelta, onReason, signal) {
-    var tries = 0;
+    var tries = 0, usedDirect = false;
     function loop() {
       tries++;
-      return streamOnce(payload, onDelta, onReason, signal).catch(function (e) {
-        if (e && e.name === 'AbortError') throw e;              /* 用户主动停止:不重试 */
+      return streamOnce(payload, onDelta, onReason, signal).then(function (v) {
+        _forceDirect = false;
+        return v;
+      }, function (e) {
+        if (e && e.name === 'AbortError') { if (usedDirect) _forceDirect = false; throw e; }
         var retryable =
-          (e && e.timeout && e.noData) ||                        /* 首字节前超时 */
-          (e && typeof e.status === 'number' && e.status >= 500) || /* 服务端 5xx */
+          (e && e.timeout && e.noData) ||
+          (e && typeof e.status === 'number' && e.status >= 500) ||
           (e && /Failed to fetch|NetworkError|Load failed|network/i.test(e.message || ''));
+        var hadProxy = !!(cfg().proxy);
         if (retryable && tries < 3) {
+          if (!usedDirect && hadProxy && tries === 2) { usedDirect = true; _forceDirect = true; }
           return new Promise(function (res) { setTimeout(res, tries === 1 ? 400 : 1200); }).then(loop);
         }
+        if (usedDirect) _forceDirect = false;
         throw e;
       });
     }
