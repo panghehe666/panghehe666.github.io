@@ -99,6 +99,8 @@
     <div class="ai-foot">
       <div class="ai-inputwrap">
         <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
+        <div class="ai-files" id="ai-files"></div>
+        <input type="file" id="ai-file" multiple accept="image/*,.txt,.md,.markdown,.json,.js,.css,.log,.csv,.py,.html,.xml,.yaml,.yml,.sh,.toml,.ini,.conf" hidden>
         <div class="ai-tools">
           <button id="ai-model" class="ai-pill" type="button" title="切换模型">
             <span id="ai-model-ico" class="ai-pill-ico"></span>
@@ -110,6 +112,11 @@
             <span id="ai-mode-name">节能</span>
           </button>
           <span class="ai-spacer"></span>
+          <button id="ai-file-btn" class="ai-mic" type="button" aria-label="上传文件/图片" title="上传文件/图片">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.4 11.05l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.65 5.65l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
           <button id="ai-mic" class="ai-mic" type="button" aria-label="语音输入">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>
@@ -124,6 +131,7 @@
       </div>
       <div class="ai-tip" id="ai-tip">AI 也会出错,回答来自我的文章</div>
     </div>
+    <div class="ai-toast" id="ai-toast"></div>
 
     <!-- 设置页 -->
     <div class="ai-sheet" id="ai-sheet-set">

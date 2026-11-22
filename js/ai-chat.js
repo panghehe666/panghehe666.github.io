@@ -1155,6 +1155,20 @@
     var sid0 = curId;
     var tMsgs = msgs;
 
+    /* 附件:本轮固定带走,后续重试/工具轮次复用同一份 */
+    var turnParts = ATTACH.map(function (a) {
+      return a.kind === 'image'
+        ? { type: 'image_url', image_url: { url: a.url } }
+        : { type: 'text', text: '【附件 ' + a.name + '】\n' + a.text };
+    });
+    var attachLabel = ATTACH.map(function (a) { return '📎' + a.name; }).join(' ');
+    ATTACH = [];
+    renderFiles();
+    if (attachLabel) text = text + ' ' + attachLabel;
+    function ucParts(uc) {
+      return turnParts.length ? [{ type: 'text', text: uc }].concat(turnParts) : uc;
+    }
+
     /* 联网开关开:先搜一轮拿实时资料【只当素材】,再走正常回答流程
        —— 这样深度思考/完整长度/记忆/模式都保留,只有素材多了联网内容 */
     if (webOn() && window.PHAITOOLS && window.PHAITOOLS.webSearch) {
@@ -1273,7 +1287,7 @@
         var fmessages = [{ role: 'system', content: sysPromptFree() }]
           .concat(history)
           .concat(freeToolMsgs)
-          .concat([{ role: 'user', content: furi }]);
+          .concat([{ role: 'user', content: ucParts(furi) }]);
         var fmaxTok = cfg().provider === 'kimi' ? 4000 : 2600;
         var fpayload = { model: cfg().model.id, messages: fmessages, stream: true, max_tokens: fmaxTok };
         if (cfg().model.id === 'deepseek-flash') fpayload.temperature = 1.0;
@@ -1437,7 +1451,7 @@
           var messages = [{ role: 'system', content: sysPrompt() }]
             .concat(history)
             .concat(toolMsgs || [])
-            .concat([{ role: 'user', content: uc }]);
+            .concat([{ role: 'user', content: ucParts(uc) }]);
 
           /* Kimi 是推理模型,思考过程也占 max_tokens,多给一些余量 */
           var maxTok = cfg().provider === 'kimi' ? (eco ? 1600 : 2600) : (eco ? 800 : 1400);
@@ -1693,6 +1707,12 @@
     msgs = []; lastP = -1; fullSent = {};
     renderLog([]);
     renderSessions();
+    if (typeof heroInput !== 'undefined' && heroInput) {
+      heroInput.value = '';
+      try { heroInput.style.height = 'auto'; } catch (e) {}
+    }
+    showToast('✨ 已开启新对话');
+    if (!ROOT.classList.contains('open') && !ROOT.classList.contains('hero-on')) open();
   }
   function switchSession(id) {
     var s = findSession(id);
@@ -1829,6 +1849,90 @@
     b.addEventListener('click', function () { ask(t); });
     chipsEl.appendChild(b);
   });
+
+  /* ---------------- 附件上传 ---------------- */
+  var ATTACH = [], fileBtn = $('ai-file-btn'), fileInp = $('ai-file'), filesEl = $('ai-files');
+  var toastEl = $('ai-toast'), toastTimer = null;
+  function showToast(html) {
+    if (!toastEl) return;
+    toastEl.innerHTML = html;
+    toastEl.classList.add('on');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
+  }
+  function renderFiles() {
+    if (!filesEl) return;
+    filesEl.innerHTML = '';
+    filesEl.classList.toggle('on', !!ATTACH.length);
+    ATTACH.forEach(function (a, i) {
+      var c = document.createElement('div');
+      c.className = 'ai-file-chip';
+      c.innerHTML = '<span class="ai-file-name">' + (a.kind === 'image' ? '🖼 ' : '📄 ') + esc(a.name) + '</span>' +
+        '<button type="button" class="ai-file-x" data-i="' + i + '" aria-label="移除">×</button>';
+      filesEl.appendChild(c);
+    });
+    Array.prototype.forEach.call(filesEl.querySelectorAll('.ai-file-x'), function (b) {
+      b.addEventListener('click', function () {
+        ATTACH.splice(+b.getAttribute('data-i'), 1);
+        renderFiles();
+      });
+    });
+  }
+  function readAsDataURL(f) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader();
+      fr.onload = function () { res(fr.result); };
+      fr.onerror = function () { rej(new Error('读取失败')); };
+      fr.readAsDataURL(f);
+    });
+  }
+  function shrinkImage(dataUrl) {
+    return new Promise(function (res) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+          var maxSide = 1568;
+          var scale = Math.min(1, maxSide / Math.max(w, h));
+          if (scale >= 1 && w * h <= 2600000) { res(dataUrl); return; }
+          var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+          var cv = document.createElement('canvas');
+          cv.width = cw; cv.height = ch;
+          var ctx = cv.getContext('2d');
+          ctx.drawImage(img, 0, 0, cw, ch);
+          var mime = dataUrl.indexOf('data:image/png') === 0 ? 'image/png' : 'image/jpeg';
+          res(cv.toDataURL(mime, mime === 'image/png' ? undefined : 0.85));
+        } catch (e) { res(dataUrl); }
+      };
+      img.onerror = function () { res(dataUrl); };
+      img.src = dataUrl;
+    });
+  }
+  function onFilesPicked() {
+    var files = Array.prototype.slice.call((fileInp && fileInp.files) || []);
+    if (fileInp) fileInp.value = '';
+    if (!files.length) return;
+    var jobs = files.map(function (f) {
+      if (/^image\//.test(f.type || '')) {
+        return readAsDataURL(f).then(shrinkImage).then(function (url) {
+          ATTACH.push({ kind: 'image', name: f.name, url: url });
+        }).catch(function () { showToast('🖼 图片读取失败'); });
+      }
+      if (f.size > 300 * 1024) { showToast('「' + f.name + '」超过 300KB,只支持小文本文件'); return null; }
+      return readAsDataURL(f).then(function (d) {
+        var b64 = String(d).split(',')[1] || '';
+        var txt = '';
+        try { txt = decodeURIComponent(escape(atob(b64))); } catch (e) { txt = ''; }
+        if (!txt) { showToast('「' + f.name + '」不是可读文本'); return null; }
+        ATTACH.push({ kind: 'text', name: f.name, text: txt.slice(0, 60000) });
+      }).catch(function () { showToast('「' + f.name + '」读取失败'); });
+    });
+    Promise.all(jobs).then(function () { renderFiles(); });
+  }
+  if (fileBtn && fileInp) {
+    fileBtn.addEventListener('click', function () { fileInp.click(); });
+    fileInp.addEventListener('change', onFilesPicked);
+  }
 
   /* ---------------- 事件 ---------------- */
   fab.addEventListener('click', open);
