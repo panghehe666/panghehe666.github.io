@@ -1010,3 +1010,20 @@
 }
 #ai-chat .ai-toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 #ai-chat.light .ai-toast { background: #fff; color: #111; box-shadow: 0 8px 24px rgba(0, 0, 0, .16); }
+
+/* ---------- 上传按钮:加号(Grok 风格) ---------- */
+#ai-chat .ai-plus-btn {
+  flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #8b95a1; background: rgba(255, 255, 255, .07);
+  border: none; cursor: pointer;
+  transition: background .16s, color .16s, transform .16s;
+}
+#ai-chat .ai-plus-btn:hover { background: rgba(255, 255, 255, .14); color: #3ec4dd; transform: scale(1.04); }
+#ai-chat .ai-plus-btn svg { width: 16px; height: 16px; }
+#ai-chat.light .ai-plus-btn { color: #7a828c; background: #e9edf1; }
+#ai-chat.light .ai-plus-btn:hover { background: #dfe5ea; color: #0085a1; }
+
+/* hero 里的附件条 */
+#ai-chat .ai-hero-files { display: none; flex-wrap: wrap; gap: 6px; padding: 6px 2px 0; }
+#ai-chat .ai-hero-files.on { display: flex; }

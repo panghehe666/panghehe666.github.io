@@ -1861,20 +1861,23 @@
     toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
   }
   function renderFiles() {
-    if (!filesEl) return;
-    filesEl.innerHTML = '';
-    filesEl.classList.toggle('on', !!ATTACH.length);
-    ATTACH.forEach(function (a, i) {
-      var c = document.createElement('div');
-      c.className = 'ai-file-chip';
-      c.innerHTML = '<span class="ai-file-name">' + (a.kind === 'image' ? '🖼 ' : '📄 ') + esc(a.name) + '</span>' +
-        '<button type="button" class="ai-file-x" data-i="' + i + '" aria-label="移除">×</button>';
-      filesEl.appendChild(c);
-    });
-    Array.prototype.forEach.call(filesEl.querySelectorAll('.ai-file-x'), function (b) {
-      b.addEventListener('click', function () {
-        ATTACH.splice(+b.getAttribute('data-i'), 1);
-        renderFiles();
+    ['ai-files', 'ai-hero-files'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.innerHTML = '';
+      el.classList.toggle('on', !!ATTACH.length);
+      ATTACH.forEach(function (a, i) {
+        var c = document.createElement('div');
+        c.className = 'ai-file-chip';
+        c.innerHTML = '<span class="ai-file-name">' + (a.kind === 'image' ? '🖼 ' : '📄 ') + esc(a.name) + '</span>' +
+          '<button type="button" class="ai-file-x" data-i="' + i + '" aria-label="移除">×</button>';
+        el.appendChild(c);
+      });
+      Array.prototype.forEach.call(el.querySelectorAll('.ai-file-x'), function (b) {
+        b.addEventListener('click', function () {
+          ATTACH.splice(+b.getAttribute('data-i'), 1);
+          renderFiles();
+        });
       });
     });
   }
@@ -2052,7 +2055,7 @@
     heroInput.style.height = 'auto';
     ask(v);
   }
-  if (heroPlus) heroPlus.addEventListener('click', function () { newSession(); closeSheets(); });
+  if (heroPlus) heroPlus.addEventListener('click', function () { if (fileInp) fileInp.click(); });
   if (heroSend) heroSend.addEventListener('click', sendHero);
   if (heroInput) {
     heroInput.addEventListener('input', function () {

@@ -66,8 +66,9 @@
 
         <div class="ai-hero">
           <textarea id="ai-hero-input" class="ai-hero-input" rows="1" placeholder="Ask anything…" enterkeyhint="send"></textarea>
+          <div class="ai-hero-files" id="ai-hero-files"></div>
           <div class="ai-hero-bar">
-            <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="新对话" title="新对话">
+            <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="上传附件" title="上传附件">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
             <button id="ai-hero-mode" class="ai-hero-mode" type="button" title="切换模式">
@@ -112,10 +113,8 @@
             <span id="ai-mode-name">节能</span>
           </button>
           <span class="ai-spacer"></span>
-          <button id="ai-file-btn" class="ai-mic" type="button" aria-label="上传文件/图片" title="上传文件/图片">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.4 11.05l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.65 5.65l-9.2 9.2a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-            </svg>
+          <button id="ai-file-btn" class="ai-plus-btn" type="button" aria-label="上传文件/图片" title="上传文件/图片">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           </button>
           <button id="ai-mic" class="ai-mic" type="button" aria-label="语音输入">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
