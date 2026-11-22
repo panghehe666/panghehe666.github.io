@@ -45,8 +45,6 @@
   html.is-admin .pa-fab{display:flex}
   .pa-fab svg{width:19px;height:19px}
   .pa-edit{right:18px;bottom:82px;background:#111;color:#fff}
-  .pa-add{right:15px;bottom:77px;width:52px;height:52px;background:#0085a1;color:#fff}
-  .pa-add:hover{background:#006a80}
   .pa-edit:hover{background:#333}
 </style>
     <!-- 文章管理(仅管理员):文章页笔→编辑页;首页加→写新文章 -->
@@ -55,13 +53,6 @@
       <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 20l4-1L19.5 7.5a2.1 2.1 0 0 0-3-3L5 16l-1 4z"/>
         <path d="M13.5 6.5l3 3"/>
-      </svg>
-    </a>
-    {% endif %}
-    {% if page.url == '/' %}
-    <a class="pa-fab pa-add" id="pa-add" href="{{ site.baseurl }}/edit/" aria-label="写新文章" title="写新文章">
-      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
-        <path d="M12 5v14M5 12h14"/>
       </svg>
     </a>
     {% endif %}
