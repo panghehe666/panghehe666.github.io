@@ -3,6 +3,22 @@ layout: page
 description: "「天地本宽 而鄙者自隘」"
 ---
 
+<style>
+  .adm-post-tools{display:none;align-items:center;gap:10px;margin-top:10px;font-size:12px}
+  html.is-admin .adm-post-tools{display:flex}
+  .adm-post-tools .adm-status{color:#999}
+  .adm-post-tools .adm-status.lock{color:#9a6b00}
+  .adm-post-tools .adm-pen,.adm-post-tools .adm-del{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#555;cursor:pointer;text-decoration:none;padding:0}
+  .adm-post-tools .adm-pen:hover{border-color:#0085a1;color:#0085a1}
+  .adm-post-tools .adm-del{color:#e5484d;border-color:#f3c2c5}
+  .adm-post-tools .adm-del:hover{background:#e5484d;border-color:#e5484d;color:#fff}
+  .adm-post-tools svg{width:13px;height:13px}
+  .adm-new-bar{display:none;margin:0 0 20px}
+  html.is-admin .adm-new-bar{display:block}
+  .adm-new-btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:999px;background:#0085a1;color:#fff!important;text-decoration:none!important;font-size:14px;box-shadow:0 8px 20px rgba(0,133,161,.28)}
+  .adm-new-btn:hover{background:#006a80}
+</style>
+<div class="adm-new-bar"><a class="adm-new-btn" href="{{ site.baseurl }}/edit/">＋ 写新文章</a></div>
 {% for post in paginator.posts %}
 <div class="post-preview{% if post.tags contains '隐私' %} post-private{% endif %}">
     <a href="{{ post.url | prepend: site.baseurl }}">
