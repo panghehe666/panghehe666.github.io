@@ -15,6 +15,12 @@
   if (Date.now() - rec.ts > 2 * 3600 * 1000) return;   /* 超过 2 小时以线上为准 */
 
   var html = rec.html || '';
+  /* 缓存 HTML 缺图但 markdown 里有图:用本地渲染器重新渲染(修复旧缓存图片显示为文字) */
+  if ((!html || html.indexOf('<img') < 0) && rec.md && rec.md.indexOf('![') > -1) {
+    try {
+      if (window.PrivateCrypto && PrivateCrypto.markdownToHtml) html = PrivateCrypto.markdownToHtml(rec.md);
+    } catch (e) { html = rec.html || ''; }
+  }
   if (!html && rec.md) {
     try {
       if (window.PrivateCrypto && PrivateCrypto.markdownToHtml) html = PrivateCrypto.markdownToHtml(rec.md);
