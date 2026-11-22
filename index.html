@@ -14,6 +14,16 @@ description: "「天地本宽 而鄙者自隘」"
   .adm-post-tools .adm-del:hover{background:#e5484d;border-color:#e5484d;color:#fff}
   .adm-post-tools svg{width:13px;height:13px}
 </style>
+<style>
+  .pa-fab{position:fixed;z-index:1040;display:none;width:44px;height:44px;border-radius:50%;align-items:center;justify-content:center;border:none;cursor:pointer;text-decoration:none;box-shadow:0 10px 24px rgba(0,0,0,.28)}
+  html.is-admin .pa-fab{display:flex}
+  .pa-fab svg{width:19px;height:19px}
+  .pa-add{right:15px;bottom:77px;width:52px;height:52px;background:#0085a1;color:#fff}
+  .pa-add:hover{background:#006a80}
+</style>
+<a class="pa-fab pa-add" id="pa-add" href="{{ site.baseurl }}/edit/" aria-label="写新文章" title="写新文章">
+  <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</a>
 {% for post in paginator.posts %}
 <div class="post-preview{% if post.tags contains '隐私' %} post-private{% endif %}">
     <a href="{{ post.url | prepend: site.baseurl }}">
