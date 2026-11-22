@@ -999,7 +999,7 @@
 
   var lastUsage = null;   /* 最近一次请求的 usage(流式末尾块里) */
   var lastToolCalls = []; /* 最近一次请求的 tool_calls(流式分片累积) */
-  function stream(payload, onDelta, onReason, signal) {
+  function streamOnce(payload, onDelta, onReason, signal) {
     lastUsage = null;
     lastToolCalls = [];
     if (payload && payload.stream) {
@@ -1026,7 +1026,7 @@
       if (signal.aborted) { try { ac.abort(); } catch (e) {} }
       else if (signal.addEventListener) signal.addEventListener('abort', function () { try { ac.abort(); } catch (e) {} });
     }
-    arm(25000);
+    arm(15000);
 
     return fetch(endpoint(), {
       method: 'POST',
@@ -1106,11 +1106,32 @@
       if (timedOut) {
         var te = new Error('接口没有响应(超时),请检查网络/代理后重试');
         te.timeout = true;
+        te.noData = !sawData;
         te.status = 0;
         throw te;
       }
       throw e;
     }).then(function (v) { settle(); return v; }, function (e) { settle(); throw e; });
+  }
+
+  /* 带自动重试的请求:首字节前失败/5xx 时静默重试,最多 3 次,用户无感 */
+  function stream(payload, onDelta, onReason, signal) {
+    var tries = 0;
+    function loop() {
+      tries++;
+      return streamOnce(payload, onDelta, onReason, signal).catch(function (e) {
+        if (e && e.name === 'AbortError') throw e;              /* 用户主动停止:不重试 */
+        var retryable =
+          (e && e.timeout && e.noData) ||                        /* 首字节前超时 */
+          (e && typeof e.status === 'number' && e.status >= 500) || /* 服务端 5xx */
+          (e && /Failed to fetch|NetworkError|Load failed|network/i.test(e.message || ''));
+        if (retryable && tries < 3) {
+          return new Promise(function (res) { setTimeout(res, tries === 1 ? 400 : 1200); }).then(loop);
+        }
+        throw e;
+      });
+    }
+    return loop();
   }
 
   function errText(e) {
