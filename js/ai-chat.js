@@ -1210,6 +1210,9 @@
     if (!ready()) {
       warn.classList.add('on');
       openSheet(sheetSet);
+      /* hero 状态下提示被隐藏,补一个显眼的 toast,避免"点了没反应" */
+      ROOT.classList.remove('hero-on');
+      showToast('⚠ 还没配置 API Key,先到「设置」里填一下');
       return;
     }
 
