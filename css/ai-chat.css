@@ -1027,3 +1027,8 @@
 /* hero 里的附件条 */
 #ai-chat .ai-hero-files { display: none; flex-wrap: wrap; gap: 6px; padding: 6px 2px 0; }
 #ai-chat .ai-hero-files.on { display: flex; }
+
+/* 底部输入:加号放最左,与输入框同行 */
+#ai-chat .ai-inputrow { display: flex; align-items: flex-start; gap: 6px; }
+#ai-chat .ai-inputrow .ai-plus-btn { margin-top: 2px; flex: 0 0 auto; }
+#ai-chat .ai-inputrow textarea { flex: 1 1 auto; min-width: 0; }

@@ -99,7 +99,12 @@
 
     <div class="ai-foot">
       <div class="ai-inputwrap">
-        <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
+        <div class="ai-inputrow">
+          <button id="ai-file-btn" class="ai-plus-btn" type="button" aria-label="上传文件/图片" title="上传文件/图片">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
+        </div>
         <div class="ai-files" id="ai-files"></div>
         <input type="file" id="ai-file" multiple accept="image/*,.txt,.md,.markdown,.json,.js,.css,.log,.csv,.py,.html,.xml,.yaml,.yml,.sh,.toml,.ini,.conf" hidden>
         <div class="ai-tools">
@@ -113,9 +118,6 @@
             <span id="ai-mode-name">节能</span>
           </button>
           <span class="ai-spacer"></span>
-          <button id="ai-file-btn" class="ai-plus-btn" type="button" aria-label="上传文件/图片" title="上传文件/图片">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
           <button id="ai-mic" class="ai-mic" type="button" aria-label="语音输入">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>
