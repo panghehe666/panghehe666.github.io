@@ -67,11 +67,11 @@
   }
 
   /* ---------------- 联网搜索(Responses API,服务端执行,流式) ---------------- */
-  function kimiSearchStream(q, onDelta, outerSignal) {
+  function kimiSearchStream(q, onDelta, outerSignal, onReason) {
     var key = kimiKey();
     if (!key) return Promise.reject(new Error('没配置 Kimi API Key'));
     var ctl = window.AbortController ? new AbortController() : null;
-    var timer = setTimeout(function () { try { ctl && ctl.abort(); } catch (e) {} }, 100000);
+    var timer = setTimeout(function () { try { ctl && ctl.abort(); } catch (e) {} }, 60000);
     /* 外部(界面上的停止按钮)可以中断本次搜索 */
     if (ctl && outerSignal) {
       if (outerSignal.aborted) { try { ctl.abort(); } catch (e) {} }
@@ -107,10 +107,10 @@
         if (!r.body || !r.body.getReader) {
           return r.json().then(function (d) { return parseFull(d); });
         }
-        var reader = r.body.getReader(), dec = new TextDecoder(), buf = '', text = '', srcs = [];
+        var reader = r.body.getReader(), dec = new TextDecoder(), buf = '', text = '', srcs = [], reason = '';
         function pump() {
           return reader.read().then(function (res) {
-            if (res.done) return { text: text, sources: srcs };
+            if (res.done) return { text: text, sources: srcs, reason: reason };
             buf += dec.decode(res.value, { stream: true });
             var parts = buf.split('\n\n');
             buf = parts.pop();
@@ -126,6 +126,11 @@
               if (ev === 'response.output_text.delta' && d.delta) {
                 text += d.delta;
                 if (onDelta) { try { onDelta(text); } catch (e) {} }
+              }
+              /* 思考过程(搜索阶段的 reasoning 也实时透出,界面立刻有"深度思考") */
+              if (d && d.delta && ev.indexOf('reasoning') >= 0 && ev.indexOf('text.delta') >= 0) {
+                reason += d.delta;
+                if (onReason) { try { onReason(reason); } catch (e) {} }
               }
               if (ev === 'response.completed' && d.response) {
                 var rr = parseFull(d.response);
@@ -176,11 +181,11 @@
     return { text: text, sources: srcs };
   }
 
-  function webSearch(q, onDelta, signal) {
+  function webSearch(q, onDelta, signal, onReason) {
     var qq = String(q || '').trim();
     if (!qq) return Promise.reject(new Error('缺少问题'));
     if (!kimiToolsEnabled()) return Promise.reject(new Error('Kimi 官方工具开关是关闭的'));
-    return kimiSearchStream(qq, onDelta, signal);
+    return kimiSearchStream(qq, onDelta, signal, onReason);
   }
 
   register('web_search', '联网搜索实时信息。需要今天的新闻、最新进展、价格、事件、政策等实时信息时调用本工具;返回搜索后的整理答案和来源网页。', {

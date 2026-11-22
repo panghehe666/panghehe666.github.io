@@ -1268,7 +1268,12 @@
       updateSend();
       /* 和回答流共用 ctrl:搜索阶段点「停止」也能立刻中断 */
       ctrl = window.AbortController ? new AbortController() : null;
-      return PHAITOOLS.webSearch(text, null, ctrl ? ctrl.signal : undefined).then(function (r) {
+      /* 搜索阶段的推理实时透出到思考框:发完立刻有「深度思考」,不再干等 */
+      var wreason = '';
+      return PHAITOOLS.webSearch(text, null, ctrl ? ctrl.signal : undefined, function (re) {
+        wreason = re;
+        render(wnode, '', re, [], false);
+      }).then(function (r) {
         var txt = String((r && r.text) || '').trim();
         var src = (r && r.sources) || [];
         var block = '';
