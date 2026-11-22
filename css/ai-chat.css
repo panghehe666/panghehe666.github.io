@@ -1032,3 +1032,6 @@
 #ai-chat .ai-inputrow { display: flex; align-items: flex-start; gap: 6px; }
 #ai-chat .ai-inputrow .ai-plus-btn { margin-top: 2px; flex: 0 0 auto; }
 #ai-chat .ai-inputrow textarea { flex: 1 1 auto; min-width: 0; }
+
+/* 文件选择框必须彻底隐藏(部分浏览器/样式会覆盖 hidden 属性) */
+#ai-chat #ai-file { display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; position: absolute !important; opacity: 0; pointer-events: none; }
