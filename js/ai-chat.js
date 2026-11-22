@@ -1005,11 +1005,34 @@
     if (payload && payload.stream) {
       payload.stream_options = payload.stream_options || { include_usage: true };
     }
+
+    /* 超时看门狗:首字节 25s、空闲 60s,避免接口无响应时永远卡在三个点 */
+    var ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timedOut = false, sawData = false, tm = null;
+    function arm(ms) {
+      if (!ac) return;
+      if (tm) clearTimeout(tm);
+      tm = setTimeout(function () {
+        timedOut = true;
+        try { ac.abort(); } catch (e) {}
+      }, ms);
+    }
+    function onData() {
+      if (!sawData) { sawData = true; arm(60000); }
+      else if (ac) arm(60000);
+    }
+    function settle() { if (tm) { clearTimeout(tm); tm = null; } }
+    if (signal && ac) {
+      if (signal.aborted) { try { ac.abort(); } catch (e) {} }
+      else if (signal.addEventListener) signal.addEventListener('abort', function () { try { ac.abort(); } catch (e) {} });
+    }
+    arm(25000);
+
     return fetch(endpoint(), {
       method: 'POST',
       headers: headers(),
       body: JSON.stringify(payload),
-      signal: signal
+      signal: ac ? ac.signal : signal
     }).then(function (res) {
       if (!res.ok) {
         return res.text().then(function (t) {
@@ -1031,6 +1054,7 @@
               lastToolCalls[i] = { id: tc.id || ('call_' + i), name: (tc.function && tc.function.name) || '', args: (tc.function && tc.function.arguments) || '{}' };
             });
           }
+          onData();
           if (m.reasoning_content && onReason) onReason(m.reasoning_content);
           if (m.content) onDelta(m.content);
         });
@@ -1040,6 +1064,7 @@
         return reader.read().then(function (r) {
           if (r.done) return;
           buf += dec.decode(r.value, { stream: true });
+          onData();
           buf = buf.replace(/\r\n/g, '\n');
           var parts = buf.split('\n\n');
           buf = parts.pop();
@@ -1076,7 +1101,16 @@
         });
       }
       return pump();
-    });
+    }).catch(function (e) {
+      settle();
+      if (timedOut) {
+        var te = new Error('接口没有响应(超时),请检查网络/代理后重试');
+        te.timeout = true;
+        te.status = 0;
+        throw te;
+      }
+      throw e;
+    }).then(function (v) { settle(); return v; }, function (e) { settle(); throw e; });
   }
 
   function errText(e) {
