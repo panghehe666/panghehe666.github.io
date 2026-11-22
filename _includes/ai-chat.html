@@ -66,9 +66,8 @@
 
         <div class="ai-hero">
           <textarea id="ai-hero-input" class="ai-hero-input" rows="1" placeholder="Ask anything…" enterkeyhint="send"></textarea>
-          <div class="ai-hero-files" id="ai-hero-files"></div>
           <div class="ai-hero-bar">
-            <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="上传附件" title="上传附件">
+            <button id="ai-hero-plus" class="ai-hero-plus" type="button" aria-label="新对话" title="新对话">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
             <button id="ai-hero-mode" class="ai-hero-mode" type="button" title="切换模式">
@@ -99,14 +98,7 @@
 
     <div class="ai-foot">
       <div class="ai-inputwrap">
-        <div class="ai-inputrow">
-          <button id="ai-file-btn" class="ai-plus-btn" type="button" aria-label="上传文件/图片" title="上传文件/图片">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
-          <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
-        </div>
-        <div class="ai-files" id="ai-files"></div>
-        <input type="file" id="ai-file" multiple accept="image/*,.txt,.md,.markdown,.json,.js,.css,.log,.csv,.py,.html,.xml,.yaml,.yml,.sh,.toml,.ini,.conf" hidden>
+        <textarea id="ai-input" rows="1" placeholder="问我点什么…" enterkeyhint="send"></textarea>
         <div class="ai-tools">
           <button id="ai-model" class="ai-pill" type="button" title="切换模型">
             <span id="ai-model-ico" class="ai-pill-ico"></span>
@@ -132,7 +124,6 @@
       </div>
       <div class="ai-tip" id="ai-tip">AI 也会出错,回答来自我的文章</div>
     </div>
-    <div class="ai-toast" id="ai-toast"></div>
 
     <!-- 设置页 -->
     <div class="ai-sheet" id="ai-sheet-set">

@@ -62,9 +62,9 @@
       lsKey: 'phh_ai_key_kimi',
       secret: function () { return window.PHHSECRETS && PHHSECRETS.kimi ? PHHSECRETS.kimi() : ''; },
       models: [
+        { id: 'kimi-k2.6', label: 'Kimi K2.6', desc: '通用,性价比高' },
         { id: 'kimi-k3', label: 'Kimi K3', desc: '旗舰长文,强推理' },
-        { id: 'kimi-k3.1-pro', label: 'Kimi K3.1 Pro', desc: '最新旗舰' },
-        { id: 'kimi-k3.1-pro-highspeed', label: 'Kimi K3.1 Pro 高速', desc: '同能力,更快' }
+        { id: 'kimi-k3.1-pro', label: 'Kimi K3.1 Pro', desc: '最新旗舰,能力最强' }
       ]
     }
   };
@@ -140,11 +140,6 @@
   /* 当前选中的 {provider, model};兼容旧版 deep 开关 */
   function selModel() {
     var v = lsGet(LS.model);
-    /* 新账号已不能调用 K2.6,旧本地记录会一直 404 或卡住 */
-    if (v === 'kimi:kimi-k2.6' || v === 'kimi:kimi-k2.5' || v === 'kimi:moonshot-v1-8k' || v === 'kimi:moonshot-v1-auto') {
-      v = 'kimi:kimi-k3';
-      lsSet(LS.model, v);
-    }
     if (v) {
       var parts = v.split(':'), pv = PROVIDERS[parts[0]];
       if (pv) {
@@ -218,7 +213,7 @@
   var SESSIONS = [];      // 会话列表 [{id,title,ts,log:[{q,a}],msgs:[{role,content}]}]
   var curId = '';         // 当前会话 id
 
-  /* 节能 = 只给相关小节；强爽 = 直接读全站再回答 */
+  /* 节能 = 只给相关小节；强爽 = 先给整篇，不够再给全站 */
   function ecoMode() { return lsGet(LS.mode) !== 'max'; }
   /* 白嫖模式:纯聊天,完全不读博客文章(不检索、不带正文、不带文章列表) */
   function freeMode() { return lsGet(LS.mode) === 'free'; }
@@ -994,51 +989,27 @@
   }
 
   /* ---------------- 请求 ---------------- */
-  var _forceDirect = false;   /* 代理挂住时自动改直连重试 */
-  function endpoint() { var c = cfg(); return (!_forceDirect && c.proxy) ? c.proxy : c.pv.endpoint; }
+  function endpoint() { var c = cfg(); return c.proxy || c.pv.endpoint; }
 
   function headers() {
     var c = cfg(), h = { 'Content-Type': 'application/json' };
-    if ((_forceDirect || !c.proxy) && c.key) h['Authorization'] = 'Bearer ' + c.key;
+    if (!c.proxy && c.key) h['Authorization'] = 'Bearer ' + c.key;
     return h;
   }
 
   var lastUsage = null;   /* 最近一次请求的 usage(流式末尾块里) */
   var lastToolCalls = []; /* 最近一次请求的 tool_calls(流式分片累积) */
-  function streamOnce(payload, onDelta, onReason, signal) {
+  function stream(payload, onDelta, onReason, signal) {
     lastUsage = null;
     lastToolCalls = [];
     if (payload && payload.stream) {
       payload.stream_options = payload.stream_options || { include_usage: true };
     }
-
-    /* 超时看门狗:首字节 25s、空闲 60s,避免接口无响应时永远卡在三个点 */
-    var ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    var timedOut = false, sawData = false, tm = null;
-    function arm(ms) {
-      if (!ac) return;
-      if (tm) clearTimeout(tm);
-      tm = setTimeout(function () {
-        timedOut = true;
-        try { ac.abort(); } catch (e) {}
-      }, ms);
-    }
-    function onData() {
-      if (!sawData) { sawData = true; arm(60000); }
-      else if (ac) arm(60000);
-    }
-    function settle() { if (tm) { clearTimeout(tm); tm = null; } }
-    if (signal && ac) {
-      if (signal.aborted) { try { ac.abort(); } catch (e) {} }
-      else if (signal.addEventListener) signal.addEventListener('abort', function () { try { ac.abort(); } catch (e) {} });
-    }
-    arm(45000);
-
     return fetch(endpoint(), {
       method: 'POST',
       headers: headers(),
       body: JSON.stringify(payload),
-      signal: ac ? ac.signal : signal
+      signal: signal
     }).then(function (res) {
       if (!res.ok) {
         return res.text().then(function (t) {
@@ -1060,9 +1031,7 @@
               lastToolCalls[i] = { id: tc.id || ('call_' + i), name: (tc.function && tc.function.name) || '', args: (tc.function && tc.function.arguments) || '{}' };
             });
           }
-          onData();
-          var reasonFull = m.reasoning_content || m.reasoning || m.thinking || '';
-          if (reasonFull && onReason) onReason(reasonFull);
+          if (m.reasoning_content && onReason) onReason(m.reasoning_content);
           if (m.content) onDelta(m.content);
         });
       }
@@ -1071,7 +1040,6 @@
         return reader.read().then(function (r) {
           if (r.done) return;
           buf += dec.decode(r.value, { stream: true });
-          onData();
           buf = buf.replace(/\r\n/g, '\n');
           var parts = buf.split('\n\n');
           buf = parts.pop();
@@ -1089,8 +1057,7 @@
               var ch = o.choices && o.choices[0];
               if (!ch) continue;
               var dl = ch.delta || {};
-              var reasonBit = dl.reasoning_content || dl.reasoning || dl.thinking || '';
-              if (reasonBit && onReason) onReason(reasonBit);
+              if (dl.reasoning_content && onReason) onReason(dl.reasoning_content);
               if (dl.content) onDelta(dl.content);
               if (dl.tool_calls) {
                 dl.tool_calls.forEach(function (tc) {
@@ -1109,50 +1076,7 @@
         });
       }
       return pump();
-    }).catch(function (e) {
-      settle();
-      if (timedOut) {
-        var te = new Error('接口没有响应(超时),请检查网络/代理后重试');
-        te.timeout = true;
-        te.noData = !sawData;
-        te.status = 0;
-        throw te;
-      }
-      throw e;
-    }).then(function (v) { settle(); return v; }, function (e) { settle(); throw e; });
-  }
-
-  /* 带自动重试的请求:首字节前失败/5xx 时静默重试,最多 3 次;第 3 次自动改直连(绕开挂住的代理) */
-  function stream(payload, onDelta, onReason, signal) {
-    var tries = 0, usedDirect = false;
-    function loop() {
-      tries++;
-      return streamOnce(payload, onDelta, onReason, signal).then(function (v) {
-        _forceDirect = false;
-        return v;
-      }, function (e) {
-        /* 用户点了停止:外部 signal 已 aborted。超时是内部 abort,不能当成用户停止吞掉 */
-        if (e && e.name === 'AbortError') {
-          if (signal && signal.aborted) { if (usedDirect) _forceDirect = false; throw e; }
-          e = new Error('请求被中断');
-          e.timeout = true;
-          e.noData = true;
-        }
-        var retryable =
-          (e && e.timeout && e.noData) ||
-          (e && typeof e.status === 'number' && e.status >= 500) ||
-          (e && /Failed to fetch|NetworkError|Load failed|network/i.test(e.message || ''));
-        var hadProxy = !!(cfg().proxy);
-        /* 只静默重试 1 次,避免三个点空转一两分钟 */
-        if (retryable && tries < 2) {
-          if (!usedDirect && hadProxy && tries === 2) { usedDirect = true; _forceDirect = true; }
-          return new Promise(function (res) { setTimeout(res, tries === 1 ? 400 : 1200); }).then(loop);
-        }
-        if (usedDirect) _forceDirect = false;
-        throw e;
-      });
-    }
-    return loop();
+    });
   }
 
   function errText(e) {
@@ -1161,9 +1085,6 @@
     var pname = cfg().pv.name;
     if (e.status === 401) return pname + ' 的 Key 不对(401)。设置里检查一下 API Key。';
     if (e.status === 402) return pname + ' 账户余额不足(402),充点钱再来。';
-    if (e.status === 404 || /not found the model|resource_not_found|model_not_found/i.test((e.body || '') + (e.message || ''))) {
-      return pname + ' 模型不存在或已下线(404)。请改用 Kimi K3 / K3.1 Pro(新账号不能用 K2.6)。';
-    }
     if (e.status === 422) return '请求参数有问题(422)。' + (e.body || '').slice(0, 120);
     if (e.status === 429) return '请求太频繁(429),歇几秒再问。';
     if (e.status === 400) return '请求被拒(400)。' + (e.body || '').slice(0, 160);
@@ -1227,29 +1148,12 @@
     if (!ready()) {
       warn.classList.add('on');
       openSheet(sheetSet);
-      /* hero 状态下提示被隐藏,补一个显眼的 toast,避免"点了没反应" */
-      ROOT.classList.remove('hero-on');
-      showToast('⚠ 还没配置 API Key,先到「设置」里填一下');
       return;
     }
 
     /* 会话快照:即使中途切换会话,本轮也存回发起时的会话 */
     var sid0 = curId;
     var tMsgs = msgs;
-
-    /* 附件:本轮固定带走,后续重试/工具轮次复用同一份 */
-    var turnParts = ATTACH.map(function (a) {
-      return a.kind === 'image'
-        ? { type: 'image_url', image_url: { url: a.url } }
-        : { type: 'text', text: '【附件 ' + a.name + '】\n' + a.text };
-    });
-    var attachLabel = ATTACH.map(function (a) { return '📎' + a.name; }).join(' ');
-    ATTACH = [];
-    renderFiles();
-    if (attachLabel) text = text + ' ' + attachLabel;
-    function ucParts(uc) {
-      return turnParts.length ? [{ type: 'text', text: uc }].concat(turnParts) : uc;
-    }
 
     /* 联网开关开:先搜一轮拿实时资料【只当素材】,再走正常回答流程
        —— 这样深度思考/完整长度/记忆/模式都保留,只有素材多了联网内容 */
@@ -1268,12 +1172,7 @@
       updateSend();
       /* 和回答流共用 ctrl:搜索阶段点「停止」也能立刻中断 */
       ctrl = window.AbortController ? new AbortController() : null;
-      /* 搜索阶段的推理实时透出到思考框:发完立刻有「深度思考」,不再干等 */
-      var wreason = '';
-      return PHAITOOLS.webSearch(text, null, ctrl ? ctrl.signal : undefined, function (re) {
-        wreason = re;
-        render(wnode, '', re, [], false);
-      }).then(function (r) {
+      return PHAITOOLS.webSearch(text, null, ctrl ? ctrl.signal : undefined).then(function (r) {
         var txt = String((r && r.text) || '').trim();
         var src = (r && r.sources) || [];
         var block = '';
@@ -1357,21 +1256,6 @@
     busy = true;
     updateSend();
     ctrl = window.AbortController ? new AbortController() : null;
-    /* 三个点改成计时,避免看起来像死机;一有思考/正文/报错就停 */
-    (function armWait(n) {
-      var t0 = Date.now();
-      if (!n.querySelector('.ai-reason') && !n.querySelector('.ai-txt') && !n.querySelector('.ai-err')) {
-        n.innerHTML = '<div class="ai-dim ai-wait">正在连接模型… 0s</div>';
-      }
-      var timer = setInterval(function () {
-        if (!n.parentNode) { clearInterval(timer); return; }
-        if (n.querySelector('.ai-reason') || n.querySelector('.ai-txt') || n.querySelector('.ai-err') || !n.querySelector('.ai-wait')) {
-          clearInterval(timer); return;
-        }
-        var el = n.querySelector('.ai-wait');
-        if (el) el.textContent = '正在连接模型… ' + Math.floor((Date.now() - t0) / 1000) + 's';
-      }, 400);
-    })(node);
 
     var history = trimMsgs(msgs);
     var escalated = false;
@@ -1389,8 +1273,8 @@
         var fmessages = [{ role: 'system', content: sysPromptFree() }]
           .concat(history)
           .concat(freeToolMsgs)
-          .concat([{ role: 'user', content: ucParts(furi) }]);
-        var fmaxTok = cfg().provider === 'kimi' ? 8192 : 4096;
+          .concat([{ role: 'user', content: furi }]);
+        var fmaxTok = cfg().provider === 'kimi' ? 4000 : 2600;
         var fpayload = { model: cfg().model.id, messages: fmessages, stream: true, max_tokens: fmaxTok };
         if (cfg().model.id === 'deepseek-flash') fpayload.temperature = 1.0;
         if (!freeToolsOff && freeDepth < 3 && window.PHAITOOLS && window.PHAITOOLS.list) {
@@ -1463,8 +1347,7 @@
         tMsgs.push({ role: 'assistant', content: fout || '(空)' });
         saveTurnTo(sid0, text, fout, furi);
       }).catch(function (e) {
-        if (stoppedFlag) { stoppedFlag = false; return; }
-        if (e && e.name === 'AbortError' && ctrl && ctrl.signal && ctrl.signal.aborted) return;
+        if (stoppedFlag || (e && e.name === 'AbortError')) { stoppedFlag = false; return; }
         var m = errText(e);
         if (m) renderError(node, m, text);
         else render(node, '', '', [], true);
@@ -1477,18 +1360,7 @@
 
     loadIndex().then(function (d) { return d; }, function () { return null; })
       .then(function (d) {
-        /* 私密索引解密卡住时不要让三个点永远转 */
-        return new Promise(function (resolve) {
-          var settled = false;
-          var tm = setTimeout(function () { if (!settled) { settled = true; resolve(d); } }, 8000);
-          ensurePrivate(syncAdminState(d)).then(function () {
-            if (settled) return;
-            settled = true; clearTimeout(tm); resolve(d);
-          }, function () {
-            if (settled) return;
-            settled = true; clearTimeout(tm); resolve(d);
-          });
-        });
+        return ensurePrivate(syncAdminState(d)).then(function () { return d; }, function () { return d; });
       })
       .then(function (d) {
         var hits = [];
@@ -1565,11 +1437,10 @@
           var messages = [{ role: 'system', content: sysPrompt() }]
             .concat(history)
             .concat(toolMsgs || [])
-            .concat([{ role: 'user', content: ucParts(uc) }]);
+            .concat([{ role: 'user', content: uc }]);
 
           /* Kimi 是推理模型,思考过程也占 max_tokens,多给一些余量 */
-          /* 推理模型的思考也占 max_tokens,给太少会一直想、正文出不来 */
-          var maxTok = cfg().provider === 'kimi' ? (eco ? 4096 : 8192) : (eco ? 2048 : 4096);
+          var maxTok = cfg().provider === 'kimi' ? (eco ? 1600 : 2600) : (eco ? 800 : 1400);
           var payload = { model: cfg().model.id, messages: messages, stream: true, max_tokens: maxTok };
           if (cfg().model.id === 'deepseek-flash') payload.temperature = 1.0;
           /* 动态工具:注册表里有什么就给模型什么(白嫖模式不挂工具,保持隔离) */
@@ -1589,14 +1460,6 @@
             if (payload.tools && /tool|function/i.test((e.message || '') + (e.body || ''))) {
               toolsOff = true;
               delete payload.tools;
-              return stream(payload, onD, onR, ctrl ? ctrl.signal : undefined);
-            }
-            var missing = e && (e.status === 404 || /not found the model|resource_not_found|model_not_found/i.test((e.body || '') + (e.message || '')));
-            var fb = cfg().provider === 'kimi' ? 'kimi-k3' : (PROVIDERS.ds.models[0].id);
-            if (missing && payload.model !== fb) {
-              payload.model = fb;
-              lsSet(LS.model, cfg().provider + ':' + fb);
-              node.innerHTML = '<div class="ai-dim">这个模型不可用,已改用 ' + esc(fb) + ' 重试…</div>';
               return stream(payload, onD, onR, ctrl ? ctrl.signal : undefined);
             }
             throw e;
@@ -1637,19 +1500,35 @@
           });
         }
 
-        /* ---- 问答:节能=节选→整篇;强爽=一次读全站再回答 ---- */
+        /* ---- 问答:节能=节选→整篇;强爽=自评,不够顶配就继续找文章 ---- */
         function run() {
           if (eco) {
             return pass(0, false).then(function (res) {
-              if (res && res.acc && res.acc.indexOf('[[MORE]]') >= 0) return pass(1, true);
+              if (res.acc.indexOf('[[MORE]]') >= 0) return pass(1, false);
               return res;
             });
           }
+          /* 强爽:每轮都读全站(全文放得下给全文;放不下给摘要,不够再补相关文章全文) */
           var order = [];
           hits.forEach(function (h) { if (order.indexOf(h.p) < 0) order.push(h.p); });
           (IDX.posts || []).forEach(function (p, i) { if (order.indexOf(i) < 0) order.push(i); });
-          node.innerHTML = '<div class="ai-dim">强爽:正在读全站 ' + order.length + ' 篇…</div>';
-          return pass(0, true, order, null);
+          var fullSet = null;
+          function grow(round) {
+            var force = round >= 2;
+            return pass(0, force, order, fullSet).then(function (res) {
+              if (force) return res;
+              if (String(res.acc || '').indexOf('[[MORE]]') < 0) return res;
+              if (!fullSet) {
+                fullSet = {};
+                hits.slice(0, 3).forEach(function (h) { fullSet[h.p] = 1; });
+                if (!hits.length && order.length) fullSet[order[0]] = 1;
+                node.innerHTML = '<div class="ai-dim">全站摘要不够顶配,补相关文章全文…</div>';
+                return grow(round + 1);
+              }
+              return pass(0, true, order, fullSet);
+            });
+          }
+          return grow(0);
         }
 
         return run().then(function (res) {
@@ -1700,8 +1579,7 @@
         });
       })
       .catch(function (e) {
-        if (stoppedFlag) { stoppedFlag = false; return; }
-        if (e && e.name === 'AbortError' && ctrl && ctrl.signal && ctrl.signal.aborted) return;
+        if (stoppedFlag || (e && e.name === 'AbortError')) { stoppedFlag = false; return; }
         var m = errText(e);
         if (m) renderError(node, m, text);
         else render(node, '', '', [], true);
@@ -1815,12 +1693,6 @@
     msgs = []; lastP = -1; fullSent = {};
     renderLog([]);
     renderSessions();
-    if (typeof heroInput !== 'undefined' && heroInput) {
-      heroInput.value = '';
-      try { heroInput.style.height = 'auto'; } catch (e) {}
-    }
-    showToast('✨ 已开启新对话');
-    if (!ROOT.classList.contains('open') && !ROOT.classList.contains('hero-on')) open();
   }
   function switchSession(id) {
     var s = findSession(id);
@@ -1958,93 +1830,6 @@
     chipsEl.appendChild(b);
   });
 
-  /* ---------------- 附件上传 ---------------- */
-  var ATTACH = [], fileBtn = $('ai-file-btn'), fileInp = $('ai-file'), filesEl = $('ai-files');
-  var toastEl = $('ai-toast'), toastTimer = null;
-  function showToast(html) {
-    if (!toastEl) return;
-    toastEl.innerHTML = html;
-    toastEl.classList.add('on');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.classList.remove('on'); }, 2600);
-  }
-  function renderFiles() {
-    ['ai-files', 'ai-hero-files'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.innerHTML = '';
-      el.classList.toggle('on', !!ATTACH.length);
-      ATTACH.forEach(function (a, i) {
-        var c = document.createElement('div');
-        c.className = 'ai-file-chip';
-        c.innerHTML = '<span class="ai-file-name">' + (a.kind === 'image' ? '🖼 ' : '📄 ') + esc(a.name) + '</span>' +
-          '<button type="button" class="ai-file-x" data-i="' + i + '" aria-label="移除">×</button>';
-        el.appendChild(c);
-      });
-      Array.prototype.forEach.call(el.querySelectorAll('.ai-file-x'), function (b) {
-        b.addEventListener('click', function () {
-          ATTACH.splice(+b.getAttribute('data-i'), 1);
-          renderFiles();
-        });
-      });
-    });
-  }
-  function readAsDataURL(f) {
-    return new Promise(function (res, rej) {
-      var fr = new FileReader();
-      fr.onload = function () { res(fr.result); };
-      fr.onerror = function () { rej(new Error('读取失败')); };
-      fr.readAsDataURL(f);
-    });
-  }
-  function shrinkImage(dataUrl) {
-    return new Promise(function (res) {
-      var img = new Image();
-      img.onload = function () {
-        try {
-          var w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
-          var maxSide = 1568;
-          var scale = Math.min(1, maxSide / Math.max(w, h));
-          if (scale >= 1 && w * h <= 2600000) { res(dataUrl); return; }
-          var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
-          var cv = document.createElement('canvas');
-          cv.width = cw; cv.height = ch;
-          var ctx = cv.getContext('2d');
-          ctx.drawImage(img, 0, 0, cw, ch);
-          var mime = dataUrl.indexOf('data:image/png') === 0 ? 'image/png' : 'image/jpeg';
-          res(cv.toDataURL(mime, mime === 'image/png' ? undefined : 0.85));
-        } catch (e) { res(dataUrl); }
-      };
-      img.onerror = function () { res(dataUrl); };
-      img.src = dataUrl;
-    });
-  }
-  function onFilesPicked() {
-    var files = Array.prototype.slice.call((fileInp && fileInp.files) || []);
-    if (fileInp) fileInp.value = '';
-    if (!files.length) return;
-    var jobs = files.map(function (f) {
-      if (/^image\//.test(f.type || '')) {
-        return readAsDataURL(f).then(shrinkImage).then(function (url) {
-          ATTACH.push({ kind: 'image', name: f.name, url: url });
-        }).catch(function () { showToast('🖼 图片读取失败'); });
-      }
-      if (f.size > 300 * 1024) { showToast('「' + f.name + '」超过 300KB,只支持小文本文件'); return null; }
-      return readAsDataURL(f).then(function (d) {
-        var b64 = String(d).split(',')[1] || '';
-        var txt = '';
-        try { txt = decodeURIComponent(escape(atob(b64))); } catch (e) { txt = ''; }
-        if (!txt) { showToast('「' + f.name + '」不是可读文本'); return null; }
-        ATTACH.push({ kind: 'text', name: f.name, text: txt.slice(0, 60000) });
-      }).catch(function () { showToast('「' + f.name + '」读取失败'); });
-    });
-    Promise.all(jobs).then(function () { renderFiles(); });
-  }
-  if (fileBtn && fileInp) {
-    fileBtn.addEventListener('click', function () { fileInp.click(); });
-    fileInp.addEventListener('change', onFilesPicked);
-  }
-
   /* ---------------- 事件 ---------------- */
   fab.addEventListener('click', open);
   $('ai-close').addEventListener('click', close);
@@ -2163,7 +1948,7 @@
     heroInput.style.height = 'auto';
     ask(v);
   }
-  if (heroPlus) heroPlus.addEventListener('click', function () { if (fileInp) fileInp.click(); });
+  if (heroPlus) heroPlus.addEventListener('click', function () { newSession(); closeSheets(); });
   if (heroSend) heroSend.addEventListener('click', sendHero);
   if (heroInput) {
     heroInput.addEventListener('input', function () {
@@ -2198,7 +1983,7 @@
         ? '白嫖模式：隔离聊天（只带你的偏好记忆，不读博客内容）'
         : (eco
           ? '节能模式：只带相关小节，够不够由它自己开口要'
-          : '强爽模式：一次读完全站再回答');
+          : '强爽模式：每轮读全站（全文/摘要），不够顶配再补相关文章全文');
     }
   }
 
