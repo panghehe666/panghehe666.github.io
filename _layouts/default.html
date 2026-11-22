@@ -40,6 +40,15 @@
     {{ content }}
 
 {% if page.layout == 'post' or page.url == '/' %}
+<style>
+  .pa-fab{position:fixed;z-index:1040;display:none;width:44px;height:44px;border-radius:50%;align-items:center;justify-content:center;border:none;cursor:pointer;text-decoration:none;box-shadow:0 10px 24px rgba(0,0,0,.28)}
+  html.is-admin .pa-fab{display:flex}
+  .pa-fab svg{width:19px;height:19px}
+  .pa-edit,.pa-add{right:18px;bottom:82px;background:#111;color:#fff}
+  .pa-edit:hover{background:#333}
+  .pa-add{background:#0085a1}
+  .pa-add:hover{background:#006a80}
+</style>
     <!-- 文章管理(仅管理员):文章页笔→编辑页;首页加→写新文章 -->
     {% if page.layout == 'post' %}
     <a class="pa-fab pa-edit" id="pa-edit" href="{{ site.baseurl }}/edit/?p={{ page.path | split: '/' | last }}" aria-label="编辑这篇文章" title="编辑这篇文章">
