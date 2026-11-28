@@ -1830,6 +1830,111 @@
     chipsEl.appendChild(b);
   });
 
+  /* ---------------- 「/」文章名自动提示 ---------------- */
+  var slashMenu = null, slashEl = null, slashIdx = 0, slashList = [], slashTitles = null;
+  function slashEnsure() {
+    if (slashMenu) return;
+    slashMenu = document.createElement('div');
+    slashMenu.id = 'ai-slash-menu';
+    slashMenu.className = 'ai-slash-menu';
+    slashMenu.setAttribute('role', 'listbox');
+    panel.appendChild(slashMenu);
+    document.addEventListener('click', function (e) {
+      if (!slashMenu.contains(e.target)) slashClose();
+    });
+  }
+  function slashTitlesGet(cb) {
+    if (slashTitles) { cb(slashTitles); return; }
+    if (IDX && IDX.posts) {
+      slashTitles = IDX.posts.map(function (p) { return p.t || ''; }).filter(Boolean);
+      cb(slashTitles);
+      return;
+    }
+    loadIndex().then(function (d) {
+      slashTitles = ((d && d.posts) || []).map(function (p) { return p.t || ''; }).filter(Boolean);
+      cb(slashTitles);
+    }, function () { cb([]); });
+  }
+  function slashClose() {
+    if (slashMenu) slashMenu.classList.remove('on');
+    slashList = []; slashIdx = 0;
+  }
+  function slashOpen(el) {
+    if (!el) return;
+    slashEnsure();
+    var raw = el.value || '';
+    if (raw.charAt(0) !== '/') { slashClose(); return; }
+    var q = raw.slice(1).trim().toLowerCase();
+    slashEl = el;
+    slashTitlesGet(function (titles) {
+      if (slashEl !== el) return;               /* 期间切换了输入框 */
+      slashList = titles.filter(function (t) {
+        return !q || t.toLowerCase().indexOf(q) >= 0;
+      }).slice(0, 8);
+      if (!slashList.length) {
+        slashMenu.innerHTML = '<div class="ai-slash-empty">没有匹配的文章(输入更多关键词)</div>';
+        slashMenu.classList.add('on');
+        return;
+      }
+      slashIdx = 0;
+      slashMenu.innerHTML = slashList.map(function (t, i) {
+        return '<button type="button" class="ai-slash-item' + (i === 0 ? ' cur' : '') + '" data-i="' + i + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/></svg>' +
+          '<span>' + esc(t) + '</span></button>';
+      }).join('');
+      slashMenu.classList.add('on');
+      /* 定位:贴着当前输入框上方 */
+      try {
+        var pr = panel.getBoundingClientRect();
+        var rr = el.getBoundingClientRect();
+        slashMenu.style.left = Math.max(8, Math.round(rr.left - pr.left)) + 'px';
+        slashMenu.style.width = Math.max(220, Math.round(rr.width)) + 'px';
+        slashMenu.style.bottom = Math.round(pr.bottom - rr.top + 6) + 'px';
+      } catch (e) {}
+      slashMenu.querySelectorAll('.ai-slash-item').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var t = slashList[parseInt(b.getAttribute('data-i'), 10)];
+          if (t == null) return;
+          var el2 = slashEl;
+          slashClose();
+          if (el2) {
+            el2.value = el2.value.replace(/^\/[^\s]*[\s]?/, '') + t + ' ';
+            try { el2.focus(); } catch (e) {}
+            if (el2 === input) autosize();
+          }
+        });
+      });
+    });
+  }
+  function slashKey(el, e) {
+    if (!slashMenu || !slashMenu.classList.contains('on') || slashEl !== el) return false;
+    var items = slashMenu.querySelectorAll('.ai-slash-item');
+    if (e.key === 'Escape') { e.preventDefault(); slashClose(); return true; }
+    if (e.key === 'ArrowDown' && items.length) {
+      e.preventDefault();
+      slashIdx = (slashIdx + 1) % items.length;
+      items.forEach(function (b, i) { b.classList.toggle('cur', i === slashIdx); });
+      return true;
+    }
+    if (e.key === 'ArrowUp' && items.length) {
+      e.preventDefault();
+      slashIdx = (slashIdx - 1 + items.length) % items.length;
+      items.forEach(function (b, i) { b.classList.toggle('cur', i === slashIdx); });
+      return true;
+    }
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      var cur = slashMenu.querySelector('.ai-slash-item.cur') || items[0];
+      if (cur) cur.click();
+      return true;
+    }
+    return false;
+  }
+  function slashInput(el) {
+    if ((el.value || '').charAt(0) === '/') slashOpen(el);
+    else slashClose();
+  }
+
   /* ---------------- 事件 ---------------- */
   fab.addEventListener('click', open);
   $('ai-close').addEventListener('click', close);
@@ -1860,8 +1965,9 @@
     ask(v);
   });
 
-  input.addEventListener('input', function () { autosize(); updateSend(); });
+  input.addEventListener('input', function () { autosize(); updateSend(); slashInput(input); });
   input.addEventListener('keydown', function (e) {
+    if (slashKey(input, e)) return;
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       sendBtn.click();
@@ -1955,7 +2061,11 @@
       heroInput.style.height = 'auto';
       heroInput.style.height = Math.min(heroInput.scrollHeight, 96) + 'px';
     });
+    heroInput.addEventListener('input', function () {
+      slashInput(heroInput);
+    });
     heroInput.addEventListener('keydown', function (e) {
+      if (slashKey(heroInput, e)) return;
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
         e.preventDefault();
         sendHero();

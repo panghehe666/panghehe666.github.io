@@ -987,3 +987,38 @@
 
 /* 停止生成标记 */
 #ai-chat .ai-stop-tag { margin-top: 6px; font-size: 12px; opacity: .8; }
+
+/* ============================================================
+   「/」文章名自动提示菜单
+   ============================================================ */
+#ai-chat .ai-slash-menu {
+  display: none;
+  position: absolute;
+  z-index: 70;
+  background: #1c2027;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .45);
+  max-height: 264px;
+  overflow-y: auto;
+}
+#ai-chat .ai-slash-menu.on { display: block; }
+#ai-chat .ai-slash-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 9px 10px;
+  border: none; border-radius: 9px;
+  background: none; color: #dfe5ec;
+  font-size: 13px; line-height: 1.45; text-align: left;
+  cursor: pointer;
+}
+#ai-chat .ai-slash-item svg { width: 14px; height: 14px; flex: 0 0 auto; opacity: .6; }
+#ai-chat .ai-slash-item span {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#ai-chat .ai-slash-item.cur { background: rgba(0, 133, 161, .16); color: #7fd3e6; }
+#ai-chat .ai-slash-empty { padding: 10px 12px; font-size: 12.5px; color: #7b8492; }
+#ai-chat.light .ai-slash-menu { background: #fff; border-color: #e3e7eb; box-shadow: 0 10px 30px rgba(20, 30, 40, .14); }
+#ai-chat.light .ai-slash-item { color: #24292f; }
+#ai-chat.light .ai-slash-item.cur { background: #e6f4f8; color: #00728a; }
+#ai-chat.light .ai-slash-empty { color: #8d959e; }
