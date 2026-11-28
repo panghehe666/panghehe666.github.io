@@ -1863,8 +1863,9 @@
     if (!el) return;
     slashEnsure();
     var raw = el.value || '';
-    if (raw.charAt(0) !== '/') { slashClose(); return; }
-    var q = raw.slice(1).trim().toLowerCase();
+    var idx = raw.lastIndexOf('/');
+    if (idx < 0) { slashClose(); return; }
+    var q = raw.slice(idx + 1).trim().toLowerCase();
     slashEl = el;
     slashTitlesGet(function (titles) {
       if (slashEl !== el) return;               /* 期间切换了输入框 */
@@ -1898,7 +1899,8 @@
           var el2 = slashEl;
           slashClose();
           if (el2) {
-            el2.value = el2.value.replace(/^\/[^\s]*[\s]?/, '') + t + ' ';
+            var i2 = (el2.value || '').lastIndexOf('/');
+            el2.value = (i2 < 0 ? el2.value : el2.value.slice(0, i2)) + t + ' ';
             try { el2.focus(); } catch (e) {}
             if (el2 === input) autosize();
           }
@@ -1931,7 +1933,7 @@
     return false;
   }
   function slashInput(el) {
-    if ((el.value || '').charAt(0) === '/') slashOpen(el);
+    if ((el.value || '').indexOf('/') >= 0) slashOpen(el);
     else slashClose();
   }
 
