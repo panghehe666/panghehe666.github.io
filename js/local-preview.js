@@ -48,17 +48,23 @@
     '<span class="local-badge-s">Pages 发布后全网自动一致</span>' +
     '<button type="button" class="local-badge-x" aria-label="关闭本地预览">×</button>';
 
+  /* 隐藏线上版本的旧正文(否则和本地预览整篇重复,目录也会出现两次) */
+  var origEls = [];
   if (marker) {
-    cont.insertBefore(badge, marker);
-    cont.insertBefore(wrap, marker);
-  } else {
-    cont.insertBefore(badge, cont.firstChild);
-    cont.insertBefore(wrap, badge.nextSibling);
+    var el = marker.previousSibling;
+    while (el) {
+      if (el.nodeType === 1) { origEls.push(el); el.style.display = 'none'; }
+      el = el.previousSibling;
+    }
   }
+  cont.insertBefore(badge, marker || cont.firstChild);
+  cont.insertBefore(wrap, marker || cont.firstChild);
 
   badge.querySelector('.local-badge-x').addEventListener('click', function () {
     wrap.remove();
     badge.remove();
+    /* 恢复线上正文 */
+    origEls.forEach(function (e) { e.style.display = ''; });
     try {
       delete store[file];
       localStorage.setItem('phh_local_posts', JSON.stringify(store));

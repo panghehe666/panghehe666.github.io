@@ -141,6 +141,22 @@ layout: default
   };
   var run = function () { window.renderPostToc(document.querySelector('div.post-container')); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
+
+  /* kramdown {:toc} 会把文章 h1 标题也列进目录,和紧挨着它的正文标题重复:
+     目录第一项若与正文第一个 h1 相同,就把它删掉 */
+  function dedupeMarkdownToc() {
+    var toc = document.getElementById('markdown-toc');
+    if (!toc) return;
+    var first = toc.firstElementChild;
+    var cont = document.querySelector('div.post-container');
+    var h1 = cont && cont.querySelector('h1');
+    if (first && h1 &&
+        first.textContent.replace(/\s+/g, '') === h1.textContent.replace(/\s+/g, '')) {
+      first.parentNode.removeChild(first);
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', dedupeMarkdownToc);
+  else dedupeMarkdownToc();
 })();
 </script>
 <style>
